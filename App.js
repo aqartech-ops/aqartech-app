@@ -1,5 +1,16 @@
 import React, { useEffect, useState } from 'react';
-import { StyleSheet, Text, View, FlatList, TextInput, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { 
+  StyleSheet, 
+  Text, 
+  View, 
+  FlatList, 
+  TextInput, 
+  TouchableOpacity, 
+  ActivityIndicator, 
+  StatusBar,
+  KeyboardAvoidingView,
+  Platform
+} from 'react-native';
 import { getCompanies, createCompany } from './services/api';
 
 export default function App() {
@@ -25,92 +36,219 @@ export default function App() {
     if (!companyName.trim()) return;
 
     setSubmitting(true);
-    // بناءً على هيكل الـ DTO لديك، غالباً الحقل المطلوب هو name (أو أضف حقول أخرى إن وجدت)
     const newCompany = await createCompany({ name: companyName });
     
     if (newCompany) {
-      setCompanyName(''); // تفريغ حقل الإدخال
-      fetchCompanies();   // إعادة جلب القائمة لتحديث العرض وتأكيد التخزين
+      setCompanyName(''); 
+      fetchCompanies();   
     }
     setSubmitting(false);
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.headerTitle}>إدارة الشركات (AqarTech)</Text>
+    <KeyboardAvoidingView 
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'} 
+      style={styles.container}
+    >
+      <StatusBar barStyle="light-content" backgroundColor="#121212" />
+      
+      {/* رأس التطبيق الفخم */}
+      <View style={styles.headerContainer}>
+        <Text style={styles.headerBrand}>AQARTECH</Text>
+        <Text style={styles.headerSubtitle}>منظومة إدارة الشركات العقارية</Text>
+      </View>
 
-      {/* قسم الإدخال والتخزين */}
-      <View style={styles.formContainer}>
+      {/* قسم الإدخال الفاخر */}
+      <View style={styles.cardSection}>
+        <Text style={styles.sectionTitle}>إضافة شركة جديدة</Text>
         <TextInput
           style={styles.input}
-          placeholder="أدخل اسم الشركة الجديدة..."
-          placeholderTextColor="#888"
+          placeholder="أدخل اسم الشركة العقارية..."
+          placeholderTextColor="#777"
           value={companyName}
           onChangeText={setCompanyName}
         />
-        <TouchableOpacity style={styles.button} onPress={handleAddCompany} disabled={submitting}>
-          <Text style={styles.buttonText}>{submitting ? 'جاري الحفظ...' : 'حفظ في القاعدة'}</Text>
+        <TouchableOpacity 
+          style={[styles.button, submitting && styles.buttonDisabled]} 
+          onPress={handleAddCompany} 
+          disabled={submitting}
+          activeOpacity={0.8}
+        >
+          <Text style={styles.buttonText}>
+            {submitting ? 'جاري الحفظ...' : 'حفظ في النظام'}
+          </Text>
         </TouchableOpacity>
       </View>
 
-      <Text style={styles.subTitle}>الشركات المخزنة حالياً في قاعدة البيانات:</Text>
+      <Text style={styles.listTitle}>الشركات المسجلة مسبقاً</Text>
 
       {/* عرض القائمة */}
       {loading ? (
-        <ActivityIndicator size="large" color="#007AFF" style={{ marginTop: 20 }} />
+        <View style={styles.loaderContainer}>
+          <ActivityIndicator size="large" color="#D4AF37" />
+        </View>
       ) : (
         <FlatList
           data={companies}
           keyExtractor={(item) => (item.id ? item.id.toString() : Math.random().toString())}
-          renderItem={({ item }) => (
-            <View style={styles.item}>
-              <Text style={styles.itemText}>{item.name}</Text>
-              <Text style={styles.itemIdText}>ID: {item.id}</Text>
+          showsVerticalScrollIndicator={false}
+          renderItem={({ item, index }) => (
+            <View style={styles.itemCard}>
+              <View style={styles.itemBadge}>
+                <Text style={styles.itemBadgeText}>#{index + 1}</Text>
+              </View>
+              <View style={styles.itemInfo}>
+                <Text style={styles.itemText}>{item.name}</Text>
+                <Text style={styles.itemIdText}>معرف النظام (ID): {item.id}</Text>
+              </View>
             </View>
           )}
           ListEmptyComponent={
-            <Text style={styles.emptyText}>لا توجد شركات مسجلة حتى الآن.</Text>
+            <View style={styles.emptyContainer}>
+              <Text style={styles.emptyText}>لا توجد شركات مسجلة في القاعدة حالياً.</Text>
+            </View>
           }
         />
       )}
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 20, paddingTop: 60, backgroundColor: '#f8f9fa' },
-  headerTitle: { fontSize: 22, fontWeight: 'bold', textAlign: 'center', marginBottom: 20, color: '#333' },
-  formContainer: { marginBottom: 20 },
+  container: { 
+    flex: 1, 
+    backgroundColor: '#121212', 
+    paddingHorizontal: 20, 
+    paddingTop: 50 
+  },
+  headerContainer: {
+    alignItems: 'center',
+    marginBottom: 25,
+    borderBottomWidth: 1,
+    borderBottomColor: '#262626',
+    paddingBottom: 15,
+  },
+  headerBrand: { 
+    fontSize: 26, 
+    fontWeight: '900', 
+    color: '#D4AF37', 
+    letterSpacing: 2 
+  },
+  headerSubtitle: {
+    fontSize: 13,
+    color: '#888',
+    marginTop: 4,
+    letterSpacing: 1
+  },
+  cardSection: {
+    backgroundColor: '#1E1E1E',
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#2A2A2A',
+    marginBottom: 25,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 5,
+    elevation: 6,
+  },
+  sectionTitle: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#E0E0E0',
+    marginBottom: 12,
+    textAlign: 'right'
+  },
   input: { 
-    backgroundColor: '#fff', 
-    padding: 12, 
+    backgroundColor: '#262626', 
+    paddingHorizontal: 16,
+    paddingVertical: 12, 
     borderRadius: 8, 
     borderWidth: 1, 
-    borderColor: '#ddd', 
-    marginBottom: 10,
-    fontSize: 16,
+    borderColor: '#383838', 
+    marginBottom: 14,
+    fontSize: 15,
+    color: '#FFF',
     textAlign: 'right'
   },
   button: { 
-    backgroundColor: '#007AFF', 
-    padding: 12, 
+    backgroundColor: '#D4AF37', 
+    paddingVertical: 13, 
     borderRadius: 8, 
-    alignItems: 'center' 
+    alignItems: 'center',
+    shadowColor: '#D4AF37',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 3,
   },
-  buttonText: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
-  subTitle: { fontSize: 16, fontWeight: 'bold', marginBottom: 10, color: '#555' },
-  item: { 
-    padding: 15, 
-    backgroundColor: '#fff', 
-    marginBottom: 10, 
-    borderRadius: 8, 
+  buttonDisabled: {
+    backgroundColor: '#8C7823',
+  },
+  buttonText: { 
+    color: '#121212', 
+    fontSize: 16, 
+    fontWeight: 'bold',
+    letterSpacing: 0.5 
+  },
+  listTitle: { 
+    fontSize: 16, 
+    fontWeight: 'bold', 
+    marginBottom: 12, 
+    color: '#D4AF37',
+    textAlign: 'right'
+  },
+  loaderContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center'
+  },
+  itemCard: { 
+    padding: 16, 
+    backgroundColor: '#1A1A1A', 
+    marginBottom: 12, 
+    borderRadius: 10, 
     borderWidth: 1, 
-    borderColor: '#eee',
-    flexDirection: 'row',
+    borderColor: '#2D2D2D',
+    flexDirection: 'row-reverse',
     justifyContent: 'space-between',
     alignItems: 'center'
   },
-  itemText: { fontSize: 16, color: '#333', fontWeight: '500' },
-  itemIdText: { fontSize: 12, color: '#888' },
-  emptyText: { textAlign: 'center', color: '#888', marginTop: 20 }
+  itemBadge: {
+    backgroundColor: '#262626',
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#383838'
+  },
+  itemBadgeText: {
+    color: '#D4AF37',
+    fontSize: 12,
+    fontWeight: 'bold'
+  },
+  itemInfo: {
+    flex: 1,
+    alignItems: 'flex-end',
+    marginRight: 12
+  },
+  itemText: { 
+    fontSize: 16, 
+    color: '#F5F5F5', 
+    fontWeight: '600',
+    marginBottom: 4 
+  },
+  itemIdText: { 
+    fontSize: 11, 
+    color: '#777' 
+  },
+  emptyContainer: {
+    padding: 30,
+    alignItems: 'center'
+  },
+  emptyText: { 
+    textAlign: 'center', 
+    color: '#666', 
+    fontSize: 14 
+  }
 });
