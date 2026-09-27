@@ -1,0 +1,239 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// ==========================================
+// 1. SaaS & SUBSCRIPTION SYSTEM (الاشتراكات والشركات)
+// ==========================================
+
+model Company {
+  id        String   @id @default(uuid())
+  name      String
+  logo      String?
+  phone     String?
+  email     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  subscription Subscription?
+  users        User[]
+  properties   Property[]
+  tenants      Tenant[]
+  invoices     Invoice[]
+  expenses     Expense[]
+  documents    Document[]
+}
+
+model Plan {
+  id            String         @id @default(uuid())
+  name          String // e.g., Basic, Pro, Enterprise
+  price         Float
+  maxProperties Int
+  maxUsers      Int
+  features      String[]
+  subscriptions Subscription[]
+}
+
+model Subscription {
+  id        String             @id @default(uuid())
+  companyId String             @unique
+  company   Company            @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  planId    String
+  plan      Plan               @relation(fields: [planId], references: [id])
+  status    SubscriptionStatus @default(ACTIVE)
+  startDate DateTime           @default(now())
+  endDate   DateTime
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  EXPIRED
+  CANCELLED
+}
+
+// ==========================================
+// 2. USERS, ROLES & PERMISSIONS (إدارة المستخدمين والصلاحيات)
+// ==========================================
+
+model User {
+  id        String   @id @default(uuid())
+  companyId String
+  company   Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  name      String
+  email     String   @unique
+  phone     String?
+  password  String
+  roleId    String
+  role      Role     @relation(fields: [roleId], references: [id])
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  createdProperties Property[] @relation("CreatedBy")
+  expenses          Expense[]
+}
+
+model Role {
+  id          String       @id @default(uuid())
+  name        String // e.g., Admin, Property Manager, Accountant
+  permissions Permission[]
+  users       User[]
+}
+
+model Permission {
+  id     String @id @default(uuid())
+  action String // e.g., create:property, view:reports
+  roles  Role[]
+}
+
+// ==========================================
+// 3. PROPERTY & UNIT MANAGEMENT (إدارة العقارات والوحدات)
+// ==========================================
+
+model Property {
+  id          String       @id @default(uuid())
+  companyId   String
+  company     Company      @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  name        String
+  type        PropertyType // OWNED (مملوك) or LEASED (مؤجر)
+  address     String?
+  image       String?
+  createdById String
+  createdBy   User         @relation("CreatedBy", fields: [createdById], references: [id])
+  createdAt   DateTime     @default(now())
+
+  units    Unit[]
+  partners Partner[]
+  expenses Expense[]
+}
+
+enum PropertyType {
+  OWNED
+  MANAGED
+}
+
+model Unit {
+  id         String     @id @default(uuid())
+  propertyId String
+  property   Property   @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  unitNumber String
+  rooms      Int        @default(1)
+  status     UnitStatus @default(VACANT)
+  rentAmount Float
+
+  leases Lease[]
+}
+
+enum UnitStatus {
+  VACANT
+  OCCUPIED
+  MAINTENANCE
+}
+
+// ==========================================
+// 4. TENANTS & LEASES (المستأجرين والعقود)
+// ==========================================
+
+model Tenant {
+  id           String   @id @default(uuid())
+  companyId    String
+  company      Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  name         String
+  civilId      String?
+  phone        String
+  email        String?
+  insuranceAmt Float    @default(0.0) // مبلغ تأمين المستأجر
+  createdAt    DateTime @default(now())
+
+  leases Lease[]
+}
+
+model Lease {
+  id        String      @id @default(uuid())
+  unitId    String
+  unit      Unit        @relation(fields: [unitId], references: [id])
+  tenantId  String
+  tenant    Tenant      @relation(fields: [tenantId], references: [id])
+  startDate DateTime
+  endDate   DateTime
+  rentAmount Float
+  status    LeaseStatus @default(ACTIVE)
+
+  invoices Invoice[]
+}
+
+enum LeaseStatus {
+  ACTIVE
+  EXPIRED
+  TERMINATED
+}
+
+// ==========================================
+// 5. FINANCIALS: INVOICES & EXPENSES (الفواتير والمصروفات)
+// ==========================================
+
+model Invoice {
+  id         String        @id @default(uuid())
+  companyId  String
+  company    Company       @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  leaseId    String
+  lease      Lease         @relation(fields: [leaseId], references: [id])
+  amount     Float
+  dueDate    DateTime
+  paidAmount Float         @default(0.0)
+  status     InvoiceStatus @default(PENDING)
+  createdAt  DateTime      @default(now())
+}
+
+enum InvoiceStatus {
+  PENDING
+  PARTIAL
+  PAID
+  OVERDUE
+}
+
+model Expense {
+  id          String    @id @default(uuid())
+  companyId   String
+  company     Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  propertyId  String?
+  property    Property? @relation(fields: [propertyId], references: [id])
+  title       String
+  amount      Float
+  createdById String
+  createdBy   User      @relation(fields: [createdById], references: [id])
+  date        DateTime  @default(now())
+}
+
+model Partner {
+  id         String   @id @default(uuid())
+  propertyId String
+  property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  name       String
+  sharePct   Float // نسبة الشريك/الشركاء والنسب
+}
+
+// ==========================================
+// 6. DOCUMENTS & SYSTEM (المستندات، الانتظار والتذكير)
+// ==========================================
+
+model Document {
+  id        String   @id @default(uuid())
+  companyId String
+  company   Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  title     String
+  fileUrl   String
+  createdAt DateTime @default(now())
+}
+
+model WaitingList {
+  id        String   @id @default(uuid())
+  name      String
+  phone     String
+  note      String?
+  createdAt DateTime @default(now())
+}
