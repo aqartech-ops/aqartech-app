@@ -62,14 +62,14 @@ enum SubscriptionStatus {
 
 model User {
   id        String   @id @default(uuid())
-  companyId String
-  company   Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  companyId String?  // أصبحت اختيارية لتجنب خطأ الإدخال المباشر
+  company   Company? @relation(fields: [companyId], references: [id], onDelete: Cascade)
   name      String
   email     String   @unique
   phone     String?
-  password  String
-  roleId    String
-  role      Role     @relation(fields: [roleId], references: [id])
+  password  String?  // أصبحت اختيارية مؤقتاً
+  roleId    String?  // أصبحت اختيارية مؤقتاً
+  role      Role?    @relation(fields: [roleId], references: [id])
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
 
@@ -146,7 +146,7 @@ model Tenant {
   civilId      String?
   phone        String
   email        String?
-  insuranceAmt Float    @default(0.0) // مبلغ تأمين المستأجر
+  insuranceAmt Float    @default(0.0)
   createdAt    DateTime @default(now())
 
   leases Lease[]
@@ -214,7 +214,7 @@ model Partner {
   propertyId String
   property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
   name       String
-  sharePct   Float // نسبة الشريك/الشركاء والنسب
+  sharePct   Float
 }
 
 // ==========================================

@@ -1,10 +1,10 @@
 {
   "expo": {
-    "name": "test-app",
-    "slug": "test-app",
+    "name": "AqarTech",
+    "slug": "Aqartech",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/icon.jpeg",
     "userInterfaceStyle": "light",
     "ios": {
       "supportsTablet": true
@@ -19,6 +19,9 @@
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "plugins": [
+      "expo-sharing"
+    ]
   }
 }

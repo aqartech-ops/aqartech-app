@@ -1,254 +1,372 @@
-import React, { useEffect, useState } from 'react';
-import { 
-  StyleSheet, 
-  Text, 
-  View, 
-  FlatList, 
-  TextInput, 
-  TouchableOpacity, 
-  ActivityIndicator, 
-  StatusBar,
-  KeyboardAvoidingView,
-  Platform
-} from 'react-native';
-import { getCompanies, createCompany } from './services/api';
+import React, { useState } from 'react';
+import { StyleSheet, Text, View, TouchableOpacity, SafeAreaView, ScrollView, Pressable } from 'react-native';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
+
+import { COLORS, SIZES, SHADOWS } from './theme';
+
+import DashboardScreen from './screens/DashboardScreen';
+import CompaniesScreen from './screens/CompaniesScreen';
+import UsersScreen from './screens/UsersScreen';
+import PropertiesScreen from './screens/PropertiesScreen';
+import TenantsScreen from './screens/TenantsScreen';
+import FinancialsScreen from './screens/FinancialsScreen';
+import DocumentsScreen from './screens/DocumentsScreen';
+import SettingsScreen from './screens/SettingsScreen';
+import MaintenanceProvidersScreen from './screens/MaintenanceProvidersScreen'; // شاشة مزودي وطواقم الصيانة الجديدة
 
 export default function App() {
-  const [companies, setCompanies] = useState([]);
-  const [companyName, setCompanyName] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
+  const [activeTab, setActiveTab] = useState('dashboard');
+  const [isSidebarVisible, setIsSidebarVisible] = useState(false);
 
-  // جلب الشركات من الخادم
-  const fetchCompanies = async () => {
-    setLoading(true);
-    const data = await getCompanies();
-    setCompanies(data);
-    setLoading(false);
-  };
-
-  useEffect(() => {
-    fetchCompanies();
-  }, []);
-
-  // إضافة شركة جديدة وتخزينها في قاعدة البيانات
-  const handleAddCompany = async () => {
-    if (!companyName.trim()) return;
-
-    setSubmitting(true);
-    const newCompany = await createCompany({ name: companyName });
-    
-    if (newCompany) {
-      setCompanyName(''); 
-      fetchCompanies();   
+  const renderScreen = () => {
+    switch (activeTab) {
+      case 'dashboard': return <DashboardScreen />;
+      case 'companies': return <CompaniesScreen />;
+      case 'users': return <UsersScreen />;
+      case 'properties': return <PropertiesScreen />;
+      case 'tenants': return <TenantsScreen />;
+      case 'financials': return <FinancialsScreen />;
+      case 'documents': return <DocumentsScreen />;
+      case 'maintenance': return <MaintenanceProvidersScreen />; // تم ربطها بالشاشة الجديدة
+      case 'settings': return <SettingsScreen />;
+      default: return <DashboardScreen />;
     }
-    setSubmitting(false);
   };
+
+  const tabs = [
+    { id: 'companies', label: 'الشركات', icon: 'office-building' },
+    { id: 'users', label: 'المستخدمين', icon: 'account-group' },
+    { id: 'properties', label: 'العقارات', icon: 'home-city' },
+    { id: 'tenants', label: 'المستأجرين', icon: 'account-key' },
+    { id: 'financials', label: 'المالية', icon: 'cash-multiple' },
+    { id: 'documents', label: 'المستندات', icon: 'file-document' },
+    { id: 'settings', label: 'الإعدادات', icon: 'cog' }
+  ];
 
   return (
-    <KeyboardAvoidingView 
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'} 
-      style={styles.container}
-    >
-      <StatusBar barStyle="light-content" backgroundColor="#121212" />
-      
-      {/* رأس التطبيق الفخم */}
-      <View style={styles.headerContainer}>
-        <Text style={styles.headerBrand}>AQARTECH</Text>
-        <Text style={styles.headerSubtitle}>منظومة إدارة الشركات العقارية</Text>
+    <SafeAreaView style={styles.container}>
+      {/* شريط العنوان العلوي */}
+      <View style={styles.header}>
+        <TouchableOpacity 
+          style={styles.menuToggleButton} 
+          onPress={() => setIsSidebarVisible(!isSidebarVisible)}
+        >
+          <MaterialCommunityIcons 
+            name={isSidebarVisible ? "menu-open" : "menu"} 
+            size={24} 
+            color={COLORS.primary} 
+          />
+        </TouchableOpacity>
+
+        <View style={styles.logoContainer}>
+          <Text style={styles.logoText}>AqarTech</Text>
+        </View>
+        
+        <View style={{ width: 40 }} />
       </View>
 
-      {/* قسم الإدخال الفاخر */}
-      <View style={styles.cardSection}>
-        <Text style={styles.sectionTitle}>إضافة شركة جديدة</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="أدخل اسم الشركة العقارية..."
-          placeholderTextColor="#777"
-          value={companyName}
-          onChangeText={setCompanyName}
-        />
+      {/* الحاوية الرئيسية */}
+      <View style={styles.mainBody}>
+        
+        {/* محتوى الشاشة النشطة */}
+        <View style={styles.content}>
+          {renderScreen()}
+        </View>
+
+        {/* طبقة الضبابية للقائمة الجانبية */}
+        {isSidebarVisible && (
+          <Pressable 
+            style={styles.backdrop} 
+            onPress={() => setIsSidebarVisible(false)} 
+          />
+        )}
+
+        {/* القائمة الجانبية */}
+        {isSidebarVisible && (
+          <View style={styles.sidebar}>
+            <ScrollView 
+              showsVerticalScrollIndicator={false} 
+              contentContainerStyle={styles.sidebarScroll}
+            >
+              {tabs.map((tab) => (
+                <TouchableOpacity 
+                  key={tab.id}
+                  style={[styles.navButton, activeTab === tab.id && styles.activeNavButton]} 
+                  onPress={() => {
+                    setActiveTab(tab.id);
+                    setIsSidebarVisible(false);
+                  }}>
+                  <MaterialCommunityIcons 
+                    name={tab.icon} 
+                    size={20} 
+                    color={activeTab === tab.id ? COLORS.tabActiveText : COLORS.textMuted} 
+                    style={{ marginBottom: 4 }}
+                  />
+                  <Text style={[styles.navText, activeTab === tab.id && styles.activeNavText]}>
+                    {tab.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        )}
+
+      </View>
+
+      {/* الفوتر السفلي */}
+      <View style={styles.bottomFooterWrapper}>
+        <View style={styles.footerBar}>
+          
+          {/* 1. العقود */}
+          <TouchableOpacity 
+            style={styles.footerItem} 
+            onPress={() => setActiveTab('documents')}
+          >
+            <MaterialCommunityIcons 
+              name="file-document-outline" 
+              size={22} 
+              color={activeTab === 'documents' ? COLORS.primary : '#6E5D4F'} 
+            />
+            <Text style={[styles.footerText, activeTab === 'documents' && styles.footerTextActive]}>العقود</Text>
+          </TouchableOpacity>
+
+          {/* 2. الإيرادات */}
+          <TouchableOpacity 
+            style={styles.footerItem} 
+            onPress={() => setActiveTab('financials')}
+          >
+            <MaterialCommunityIcons 
+              name="cash-multiple" 
+              size={22} 
+              color={activeTab === 'financials' ? COLORS.primary : '#6E5D4F'} 
+            />
+            <Text style={[styles.footerText, activeTab === 'financials' && styles.footerTextActive]}>الإيرادات</Text>
+          </TouchableOpacity>
+
+          {/* مساحة فارغة ليتوسطها زر الهوم البارز */}
+          <View style={{ width: 75 }} />
+
+          {/* 3. الصيانة (مزودو الخدمة) */}
+          <TouchableOpacity 
+            style={styles.footerItem} 
+            onPress={() => setActiveTab('maintenance')}
+          >
+            <MaterialCommunityIcons 
+              name="tools" 
+              size={22} 
+              color={activeTab === 'maintenance' ? COLORS.primary : '#6E5D4F'} 
+            />
+            <Text style={[styles.footerText, activeTab === 'maintenance' && styles.footerTextActive]}>الصيانة</Text>
+          </TouchableOpacity>
+
+          {/* 4. حسابي (الإعدادات) */}
+          <TouchableOpacity 
+            style={styles.footerItem} 
+            onPress={() => setActiveTab('settings')}
+          >
+            <MaterialCommunityIcons 
+              name="account-circle-outline" 
+              size={22} 
+              color={activeTab === 'settings' ? COLORS.primary : '#6E5D4F'} 
+            />
+            <Text style={[styles.footerText, activeTab === 'settings' && styles.footerTextActive]}>حسابي</Text>
+          </TouchableOpacity>
+
+        </View>
+
+        {/* زر الرئيسية (الهوم) في المنتصف بحجم متناسق ومضبوط تماماً */}
         <TouchableOpacity 
-          style={[styles.button, submitting && styles.buttonDisabled]} 
-          onPress={handleAddCompany} 
-          disabled={submitting}
-          activeOpacity={0.8}
+          style={styles.centerHomeContainer}
+          onPress={() => setActiveTab('dashboard')}
+          activeOpacity={0.9}
         >
-          <Text style={styles.buttonText}>
-            {submitting ? 'جاري الحفظ...' : 'حفظ في النظام'}
-          </Text>
+          <View style={[styles.homeCircleButton, activeTab === 'dashboard' && styles.homeCircleActive]}>
+            <MaterialCommunityIcons 
+              name="home-variant" 
+              size={22} 
+              color={activeTab === 'dashboard' ? '#FFFFFF' : COLORS.primary} 
+            />
+            <Text style={[styles.homeCircleText, activeTab === 'dashboard' && styles.homeCircleTextActive]}>الرئيسية</Text>
+          </View>
         </TouchableOpacity>
       </View>
-
-      <Text style={styles.listTitle}>الشركات المسجلة مسبقاً</Text>
-
-      {/* عرض القائمة */}
-      {loading ? (
-        <View style={styles.loaderContainer}>
-          <ActivityIndicator size="large" color="#D4AF37" />
-        </View>
-      ) : (
-        <FlatList
-          data={companies}
-          keyExtractor={(item) => (item.id ? item.id.toString() : Math.random().toString())}
-          showsVerticalScrollIndicator={false}
-          renderItem={({ item, index }) => (
-            <View style={styles.itemCard}>
-              <View style={styles.itemBadge}>
-                <Text style={styles.itemBadgeText}>#{index + 1}</Text>
-              </View>
-              <View style={styles.itemInfo}>
-                <Text style={styles.itemText}>{item.name}</Text>
-                <Text style={styles.itemIdText}>معرف النظام (ID): {item.id}</Text>
-              </View>
-            </View>
-          )}
-          ListEmptyComponent={
-            <View style={styles.emptyContainer}>
-              <Text style={styles.emptyText}>لا توجد شركات مسجلة في القاعدة حالياً.</Text>
-            </View>
-          }
-        />
-      )}
-    </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { 
-    flex: 1, 
-    backgroundColor: '#121212', 
-    paddingHorizontal: 20, 
-    paddingTop: 50 
-  },
-  headerContainer: {
-    alignItems: 'center',
-    marginBottom: 25,
-    borderBottomWidth: 1,
-    borderBottomColor: '#262626',
-    paddingBottom: 15,
-  },
-  headerBrand: { 
-    fontSize: 26, 
-    fontWeight: '900', 
-    color: '#D4AF37', 
-    letterSpacing: 2 
-  },
-  headerSubtitle: {
-    fontSize: 13,
-    color: '#888',
-    marginTop: 4,
-    letterSpacing: 1
-  },
-  cardSection: {
-    backgroundColor: '#1E1E1E',
-    borderRadius: 12,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: '#2A2A2A',
-    marginBottom: 25,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 5,
-    elevation: 6,
-  },
-  sectionTitle: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#E0E0E0',
-    marginBottom: 12,
-    textAlign: 'right'
-  },
-  input: { 
-    backgroundColor: '#262626', 
-    paddingHorizontal: 16,
-    paddingVertical: 12, 
-    borderRadius: 8, 
-    borderWidth: 1, 
-    borderColor: '#383838', 
-    marginBottom: 14,
-    fontSize: 15,
-    color: '#FFF',
-    textAlign: 'right'
-  },
-  button: { 
-    backgroundColor: '#D4AF37', 
-    paddingVertical: 13, 
-    borderRadius: 8, 
-    alignItems: 'center',
-    shadowColor: '#D4AF37',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 3,
-  },
-  buttonDisabled: {
-    backgroundColor: '#8C7823',
-  },
-  buttonText: { 
-    color: '#121212', 
-    fontSize: 16, 
-    fontWeight: 'bold',
-    letterSpacing: 0.5 
-  },
-  listTitle: { 
-    fontSize: 16, 
-    fontWeight: 'bold', 
-    marginBottom: 12, 
-    color: '#D4AF37',
-    textAlign: 'right'
-  },
-  loaderContainer: {
+  container: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center'
+    backgroundColor: COLORS.background, 
   },
-  itemCard: { 
-    padding: 16, 
-    backgroundColor: '#1A1A1A', 
-    marginBottom: 12, 
-    borderRadius: 10, 
-    borderWidth: 1, 
-    borderColor: '#2D2D2D',
+  header: {
     flexDirection: 'row-reverse',
     justifyContent: 'space-between',
-    alignItems: 'center'
+    alignItems: 'center',
+    paddingHorizontal: 15,
+    paddingVertical: 12,
+    backgroundColor: 'transparent',
+    borderBottomWidth: 1,
+    borderColor: 'rgba(182, 141, 106, 0.15)',
   },
-  itemBadge: {
-    backgroundColor: '#262626',
-    paddingVertical: 6,
-    paddingHorizontal: 10,
-    borderRadius: 6,
+  menuToggleButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: COLORS.card,
+    alignItems: 'center',
+    justifyContent: 'center',
     borderWidth: 1,
-    borderColor: '#383838'
+    borderColor: COLORS.border,
   },
-  itemBadgeText: {
-    color: '#D4AF37',
-    fontSize: 12,
-    fontWeight: 'bold'
+  logoContainer: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 16,
+    paddingVertical: 6,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: COLORS.primary,
   },
-  itemInfo: {
+  logoText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: COLORS.textDark,
+    letterSpacing: 1,
+  },
+  mainBody: {
     flex: 1,
-    alignItems: 'flex-end',
-    marginRight: 12
+    flexDirection: 'row-reverse',
+    position: 'relative',
   },
-  itemText: { 
-    fontSize: 16, 
-    color: '#F5F5F5', 
-    fontWeight: '600',
-    marginBottom: 4 
+  backdrop: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.35)',
+    zIndex: 5,
   },
-  itemIdText: { 
-    fontSize: 11, 
-    color: '#777' 
+  sidebar: {
+    width: 100,
+    backgroundColor: 'rgba(255, 255, 255, 0.85)',
+    borderLeftWidth: 1,
+    borderColor: COLORS.border,
+    position: 'absolute',
+    right: 0,
+    top: 0,
+    bottom: 0,
+    zIndex: 10,
   },
-  emptyContainer: {
-    padding: 30,
-    alignItems: 'center'
+  sidebarScroll: {
+    paddingVertical: 10,
+    paddingHorizontal: 8,
+    alignItems: 'center',
   },
-  emptyText: { 
-    textAlign: 'center', 
-    color: '#666', 
-    fontSize: 14 
-  }
+  navButton: {
+    width: '100%',
+    paddingVertical: 14,
+    borderRadius: SIZES.radius, 
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    borderWidth: 1,
+    borderColor: COLORS.border, 
+    marginBottom: 10, 
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  activeNavButton: {
+    backgroundColor: COLORS.tabActiveBg, 
+    borderColor: COLORS.tabActiveBg, 
+  },
+  navText: {
+    color: COLORS.textMuted,
+    fontSize: 11,
+    fontWeight: 'bold',
+    textAlign: 'center',
+  },
+  activeNavText: {
+    color: COLORS.tabActiveText, 
+  },
+  content: {
+    flex: 1, 
+    backgroundColor: COLORS.background,
+  },
+
+  // تصميم الفوتر السفلي والمحاذاة
+  bottomFooterWrapper: {
+    height: 70,
+    backgroundColor: 'transparent',
+    justifyContent: 'center',
+    alignItems: 'center',
+    position: 'relative',
+    paddingBottom: 5,
+  },
+  footerBar: {
+    width: '92%',
+    height: 56,
+    backgroundColor: '#E6D7C3',
+    borderRadius: 28,
+    flexDirection: 'row-reverse',
+    justifyContent: 'space-around',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(182, 141, 106, 0.3)',
+    ...SHADOWS.floating,
+  },
+  footerItem: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  footerText: {
+    fontSize: 11,
+    color: '#6E5D4F',
+    marginTop: 2,
+    fontWeight: 'bold',
+  },
+  footerTextActive: {
+    color: COLORS.primary,
+  },
+  centerHomeContainer: { 
+    position: 'absolute', 
+    top: 6, 
+    alignItems: 'center', 
+    justifyContent: 'center', 
+  },
+  homeCircleButton: { 
+    width: 54, // تم تصغيره ليصبح متناسقاً تماماً مع ارتفاع شريط الأزرار (56)
+    height: 54, 
+    borderRadius: 27, 
+    alignItems: 'center', 
+    justifyContent: 'center', 
+    borderWidth: 0.5,
+    borderColor: '#FFFDB5', 
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 4,
+    elevation: 8, 
+  },
+  homeCircleActive: { 
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
+    elevation: 3,
+    transform: [{ scale: 0.95 }], 
+  },
+  homeCircleText: { 
+    fontSize: 9, 
+    fontWeight: 'bold', 
+    color: '#2A1F0D', 
+    marginTop: -2,
+    textShadowColor: 'rgba(255, 255, 255, 0.6)', 
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 1,
+  },
+  homeCircleTextActive: { 
+    color: '#FFFFFF', 
+    textShadowColor: 'rgba(0, 0, 0, 0.6)',
+  },
 });

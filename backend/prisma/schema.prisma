@@ -102,8 +102,8 @@ model Property {
   type        PropertyType // OWNED (مملوك) or LEASED (مؤجر)
   address     String?
   image       String?
-  createdById String
-  createdBy   User         @relation("CreatedBy", fields: [createdById], references: [id])
+  createdById String?
+  createdBy   User?         @relation("CreatedBy", fields: [createdById], references: [id])
   createdAt   DateTime     @default(now())
 
   units    Unit[]
