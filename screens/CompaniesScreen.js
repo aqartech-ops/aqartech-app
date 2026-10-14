@@ -1,18 +1,21 @@
+// screens/CompaniesScreen.js
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, FlatList, ActivityIndicator, Alert, TextInput } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, FlatList, ActivityIndicator, Alert, TextInput, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 import { COLORS, SIZES, SHADOWS } from '../theme'; 
-import { MaterialCommunityIcons } from '@expo/vector-icons'; // مكتبة الأيقونات لإضافة اللمسة الجمالية
+import { MaterialCommunityIcons } from '@expo/vector-icons'; 
 
 export default function CompaniesScreen() {
   const [companies, setCompanies] = useState([]);
   const [loading, setLoading] = useState(true);
   
+  // حقول الإدخال (شاملة خانة الاسم والبريد والهاتف)
+  const [ownerName, setOwnerName] = useState('');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
-  const API_URL = 'http://192.168.1.123:3000/company';
+  const API_URL = 'http://172.20.10.6:3000/company';
 
   const fetchCompanies = async () => {
     try {
@@ -29,8 +32,8 @@ export default function CompaniesScreen() {
   };
 
   const handleCreateCompany = async () => {
-    if (!name.trim()) {
-      Alert.alert('تنبيه', 'الرجاء إدخال اسم الشركة على الأقل');
+    if (!name.trim() || !ownerName.trim()) {
+      Alert.alert('تنبيه', 'الرجاء إدخال اسم المسؤول واسم الشركة على الأقل');
       return;
     }
 
@@ -40,6 +43,7 @@ export default function CompaniesScreen() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          ownerName,
           name,
           email: email || null,
           phone: phone || null,
@@ -47,7 +51,8 @@ export default function CompaniesScreen() {
       });
 
       if (response.ok) {
-        Alert.alert('نجاح', 'تمت إضافة الشركة بنجاح!');
+        Alert.alert('نجاح', 'تمت إضافة الشركة ومسؤولها بنجاح!');
+        setOwnerName('');
         setName('');
         setEmail('');
         setPhone('');
@@ -68,113 +73,135 @@ export default function CompaniesScreen() {
   }, []);
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>إدارة الشركات والاشتراكات</Text>
-      
-      {/* صندوق الإضافة الأبيض ذو الظل الناعم */}
-      <View style={styles.formContainer}>
+    <KeyboardAvoidingView 
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'} 
+      style={{ flex: 1 }}
+    >
+      <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
+        <Text style={styles.title}>إدارة الشركات والاشتراكات</Text>
         
-        <View style={styles.inputWrapper}>
-          <MaterialCommunityIcons name="office-building" size={22} color={COLORS.primary} style={styles.iconLeft} />
-          <TextInput
-            style={styles.input}
-            placeholder="اسم الشركة..."
-            placeholderTextColor={COLORS.textMuted}
-            value={name}
-            onChangeText={setName}
-            textAlign="right"
-          />
+        {/* صندوق الإضافة الأبيض ذو الظل الناعم */}
+        <View style={styles.formContainer}>
+
+          <View style={styles.inputWrapper}>
+            <MaterialCommunityIcons name="account-outline" size={22} color={COLORS.primary} style={styles.iconLeft} />
+            <TextInput
+              style={styles.input}
+              placeholder="اسم المسؤول..."
+              placeholderTextColor={COLORS.textMuted}
+              value={ownerName}
+              onChangeText={setOwnerName}
+              textAlign="right"
+            />
+          </View>
+        
+          <View style={styles.inputWrapper}>
+            <MaterialCommunityIcons name="office-building" size={22} color={COLORS.primary} style={styles.iconLeft} />
+            <TextInput
+              style={styles.input}
+              placeholder="اسم الشركة..."
+              placeholderTextColor={COLORS.textMuted}
+              value={name}
+              onChangeText={setName}
+              textAlign="right"
+            />
+          </View>
+
+          <View style={styles.inputWrapper}>
+            <MaterialCommunityIcons name="email-outline" size={22} color={COLORS.primary} style={styles.iconLeft} />
+            <TextInput
+              style={styles.input}
+              placeholder="البريد الإلكتروني..."
+              placeholderTextColor={COLORS.textMuted}
+              value={email}
+              onChangeText={setEmail}
+              keyboardType="email-address"
+              textAlign="right"
+            />
+          </View>
+
+          <View style={styles.inputWrapper}>
+            <MaterialCommunityIcons name="phone-outline" size={22} color={COLORS.primary} style={styles.iconLeft} />
+            <TextInput
+              style={styles.input}
+              placeholder="رقم الهاتف..."
+              placeholderTextColor={COLORS.textMuted}
+              value={phone}
+              onChangeText={setPhone}
+              keyboardType="phone-pad"
+              textAlign="right"
+            />
+          </View>
+
+          <TouchableOpacity 
+            style={styles.saveButton} 
+            onPress={handleCreateCompany}
+            disabled={submitting}>
+            <MaterialCommunityIcons name="content-save-outline" size={20} color="#FFFFFF" style={{ marginRight: 8 }} />
+            <Text style={styles.saveButtonText}>{submitting ? 'جاري الحفظ...' : 'حفظ الشركة'}</Text>
+          </TouchableOpacity>
         </View>
 
-        <View style={styles.inputWrapper}>
-          <MaterialCommunityIcons name="email-outline" size={22} color={COLORS.primary} style={styles.iconLeft} />
-          <TextInput
-            style={styles.input}
-            placeholder="البريد الإلكتروني..."
-            placeholderTextColor={COLORS.textMuted}
-            value={email}
-            onChangeText={setEmail}
-            keyboardType="email-address"
-            textAlign="right"
-          />
+        <View style={styles.headerRow}>
+          <TouchableOpacity onPress={fetchCompanies}>
+            <Text style={styles.refreshText}>تحديث القائمة</Text>
+          </TouchableOpacity>
+          <Text style={styles.subTitleHeader}>قائمة الشركات المسجلة</Text>
         </View>
 
-        <View style={styles.inputWrapper}>
-          <MaterialCommunityIcons name="phone-outline" size={22} color={COLORS.primary} style={styles.iconLeft} />
-          <TextInput
-            style={styles.input}
-            placeholder="رقم الهاتف..."
-            placeholderTextColor={COLORS.textMuted}
-            value={phone}
-            onChangeText={setPhone}
-            keyboardType="phone-pad"
-            textAlign="right"
-          />
-        </View>
-
-        <TouchableOpacity 
-          style={styles.saveButton} 
-          onPress={handleCreateCompany}
-          disabled={submitting}>
-          <MaterialCommunityIcons name="content-save-outline" size={20} color="#FFFFFF" style={{ marginRight: 8 }} />
-          <Text style={styles.saveButtonText}>{submitting ? 'جاري الحفظ...' : 'حفظ الشركة'}</Text>
-        </TouchableOpacity>
-      </View>
-
-      <View style={styles.headerRow}>
-        <TouchableOpacity onPress={fetchCompanies}>
-          <Text style={styles.refreshText}>تحديث القائمة</Text>
-        </TouchableOpacity>
-        <Text style={styles.subTitleHeader}>قائمة الشركات المسجلة</Text>
-      </View>
-
-      {loading ? (
-        <View style={styles.centerContainer}>
-          <ActivityIndicator size="large" color={COLORS.primary} />
-        </View>
-      ) : (
-        <FlatList
-          data={companies}
-          keyExtractor={(item) => item.id ? item.id.toString() : Math.random().toString()}
-          renderItem={({ item }) => (
-            <View style={styles.card}>
-              
-              {/* أيقونة ذهبية على اليسار (مثل النبتة في الصورة) */}
-              <View style={styles.cardLeftIcon}>
-                 <MaterialCommunityIcons name="domain" size={30} color={COLORS.primary} />
-              </View>
-
-              {/* نصوص تفاصيل الشركة في المنتصف */}
-              <View style={styles.cardContent}>
-                <Text style={styles.cardTitle}>{item.name}</Text>
+        {loading ? (
+          <View style={styles.centerContainer}>
+            <ActivityIndicator size="large" color={COLORS.primary} />
+          </View>
+        ) : (
+          <FlatList
+            data={companies}
+            keyExtractor={(item) => item.id ? item.id.toString() : Math.random().toString()}
+            scrollEnabled={false} // لكي يعمل الـ ScrollView الرئيسي بسلاسة مع الـ FlatList
+            renderItem={({ item }) => (
+              <View style={styles.card}>
                 
-                <Text style={styles.cardDetails}>
-                  <MaterialCommunityIcons name="circle" size={8} color={item.email ? COLORS.success : COLORS.textMuted} />
-                  {' '}البريد: {item.email || 'غير متوفر'}
-                </Text>
-                
-                <Text style={styles.cardDetails}>
-                  <MaterialCommunityIcons name="circle" size={8} color={item.phone ? COLORS.success : COLORS.textMuted} />
-                  {' '}الهاتف: {item.phone || 'غير متوفر'}
-                </Text>
-              </View>
+                <View style={styles.cardLeftIcon}>
+                   <MaterialCommunityIcons name="domain" size={30} color={COLORS.primary} />
+                </View>
 
-              {/* الدائرة البرونزية على اليمين */}
-              <View style={styles.cardRightBadge}>
-                <MaterialCommunityIcons name="shield-home-outline" size={24} color={COLORS.primary} />
-              </View>
+                <View style={styles.cardContent}>
+                  <Text style={styles.cardTitle}>{item.name}</Text>
+                  
+                  {item.ownerName ? (
+                    <Text style={styles.cardDetails}>
+                      <MaterialCommunityIcons name="account" size={12} color={COLORS.primary} />
+                      {' '}المسؤول: {item.ownerName}
+                    </Text>
+                  ) : null}
 
-            </View>
-          )}
-          contentContainerStyle={styles.listContainer}
-        />
-      )}
-    </View>
+                  <Text style={styles.cardDetails}>
+                    <MaterialCommunityIcons name="circle" size={8} color={item.email ? COLORS.success : COLORS.textMuted} />
+                    {' '}البريد: {item.email || 'غير متوفر'}
+                  </Text>
+                  
+                  <Text style={styles.cardDetails}>
+                    <MaterialCommunityIcons name="circle" size={8} color={item.phone ? COLORS.success : COLORS.textMuted} />
+                    {' '}الهاتف: {item.phone || 'غير متوفر'}
+                  </Text>
+                </View>
+
+                <View style={styles.cardRightBadge}>
+                  <MaterialCommunityIcons name="shield-home-outline" size={24} color={COLORS.primary} />
+                </View>
+
+              </View>
+            )}
+            contentContainerStyle={styles.listContainer}
+          />
+        )}
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: SIZES.padding, backgroundColor: COLORS.background },
+  container: { flexGrow: 1, padding: SIZES.padding, backgroundColor: COLORS.background },
   title: { fontSize: SIZES.large, fontWeight: 'bold', color: COLORS.textDark, marginBottom: 15, textAlign: 'right' },
   
   formContainer: {
@@ -206,8 +233,8 @@ const styles = StyleSheet.create({
   },
   
   saveButton: {
-    flexDirection: 'row-reverse', // لعكس اتجاه الأيقونة والنص
-    backgroundColor: COLORS.primary, // اللون البرونزي
+    flexDirection: 'row-reverse',
+    backgroundColor: COLORS.primary,
     padding: 15,
     borderRadius: SIZES.radius,
     alignItems: 'center',
@@ -236,7 +263,7 @@ const styles = StyleSheet.create({
     width: 50,
     height: 50,
     borderRadius: 25,
-    backgroundColor: COLORS.background, // خلفية بيج فاتحة للأيقونة
+    backgroundColor: COLORS.background,
     alignItems: 'center',
     justifyContent: 'center',
   },

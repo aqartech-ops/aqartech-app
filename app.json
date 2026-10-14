@@ -7,7 +7,10 @@
     "icon": "./assets/icon.jpeg",
     "userInterfaceStyle": "light",
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSFaceIDUsageDescription": "يستخدم التطبيق بصمة الوجه لتأمين بيانات الشركات والعقارات وحمايتها."
+      }
     },
     "android": {
       "adaptiveIcon": {

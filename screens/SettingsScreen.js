@@ -3,16 +3,54 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Switch, ScrollView, Alert } from 'react-native';
 import { COLORS, SIZES, SHADOWS } from '../theme';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import * as LocalAuthentication from 'expo-local-authentication'; // استيراد مكتبة البصمة
 
 export default function SettingsScreen() {
-  // حالات الإعدادات والتفضيلات
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [darkModeEnabled, setDarkModeEnabled] = useState(false);
   const [autoSync, setAutoSync] = useState(true);
   const [biometricLogin, setBiometricLogin] = useState(false);
   const [highSecurityMode, setHighSecurityMode] = useState(true);
 
-  // دوال التفاعل مع الأزرار والإعدادات
+  // دالة التعامل مع تفعيل بصمة الوجه الحقيقية
+  const handleBiometricToggle = async (value) => {
+    if (value) {
+      try {
+        // 1. التحقق مما إذا كان الجهاز يدعم المصادقة الحيوية (بصمة وجه / إصبع)
+        const hasHardware = await LocalAuthentication.hasHardwareAsync();
+        if (!hasHardware) {
+          Alert.alert('غير متوفر', 'جهازك لا يدعم ميزة التعرف الحيوي.');
+          return;
+        }
+
+        // 2. التحقق مما إذا كان المستخدم قد سجل بصمات مسبقاً على الهاتف
+        const isEnrolled = await LocalAuthentication.isEnrolledAsync();
+        if (!isEnrolled) {
+          Alert.alert('تنبيه', 'لا توجد بيانات حيوية مسجلة على هذا الهاتف. الرجاء إعداد بصمة الوجه أو الإصبع في إعدادات الهاتف أولاً.');
+          return;
+        }
+
+        // 3. محاولة إجراء المصادقة الفعلية (فتح Face ID للتحقق)
+        const result = await LocalAuthentication.authenticateAsync({
+          promptMessage: 'توثيق الهوية لتفعيل Face ID في AqarTech',
+          fallbackLabel: 'استخدام رمز المرور',
+        });
+
+        if (result.success) {
+          setBiometricLogin(true);
+          Alert.alert('نجاح', 'تم تفعيل تسجيل الدخول بـ Face ID بنجاح!');
+        } else {
+          setBiometricLogin(false);
+        }
+      } catch (error) {
+        Alert.alert('خطأ', 'حدث خطأ أثناء محاولة تفعيل المصادقة الحيوية.');
+        setBiometricLogin(false);
+      }
+    } else {
+      setBiometricLogin(false);
+    }
+  };
+
   const handleBackup = () => {
     Alert.alert(
       'النسخ الاحتياطي السحابي',
@@ -80,7 +118,7 @@ export default function SettingsScreen() {
           </View>
           <Switch
             value={biometricLogin}
-            onValueChange={setBiometricLogin}
+            onValueChange={handleBiometricToggle}
             trackColor={{ false: COLORS.border, true: COLORS.primary }}
           />
         </View>

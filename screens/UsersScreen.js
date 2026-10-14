@@ -13,7 +13,7 @@ export default function UsersScreen() {
   const [phone, setPhone] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
-  const API_URL = 'http://192.168.1.123:3000/user';
+  const API_URL = 'http://172.20.10.6:3000/user';
 
   const fetchUsers = async () => {
     try {

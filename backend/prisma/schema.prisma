@@ -14,6 +14,7 @@ generator client {
 model Company {
   id        String   @id @default(uuid())
   name      String
+  ownerName String?  // تم إضافة حقل اسم المسؤول هنا
   logo      String?
   phone     String?
   email     String?

@@ -1,3 +1,4 @@
+// screens/DocumentsScreen.js
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, FlatList, Alert, Modal, TextInput, ActivityIndicator, ScrollView } from 'react-native';
 import { COLORS, SIZES, SHADOWS } from '../theme';
@@ -9,14 +10,31 @@ import * as Sharing from 'expo-sharing';
 export default function DocumentsScreen() {
   const [documents, setDocuments] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [previewModalVisible, setPreviewModalVisible] = useState(false);
-  const [sourceModalVisible, setSourceModalVisible] = useState(false);
   
-  // حالة النص المستخرج / القابل للتعديل اليدوي الدقيق
-  const [editableContent, setEditableContent] = useState('');
-  const [capturedImageUri, setCapturedImageUri] = useState('');
+  // نوافذ العرض والإدخال
+  const [sourceModalVisible, setSourceModalVisible] = useState(false);
+  const [previewModalVisible, setPreviewModalVisible] = useState(false);
+  const [manualContractModal, setManualContractModal] = useState(false);
+  const [manualCheckModal, setManualCheckModal] = useState(false);
 
-  // الخطوة 1: التقاط الصورة من الكاميرا
+  // حالة النص للمستندات المصورة
+  const [editableContent, setEditableContent] = useState('');
+
+  // حالات الإدخال اليدوي للعقود
+  const [contractTitle, setContractTitle] = useState('');
+  const [firstParty, setFirstParty] = useState('شركة عقارتك للاستثمار والتطوير B2B');
+  const [secondParty, setSecondParty] = useState('');
+  const [contractAmount, setContractAmount] = useState('');
+  const [contractDetails, setContractDetails] = useState('');
+
+  // حالات الإدخال اليدوي للشيكات
+  const [checkNumber, setCheckNumber] = useState('');
+  const [bankName, setBankName] = useState('');
+  const [checkAmount, setCheckAmount] = useState('');
+  const [checkDueDate, setCheckDueDate] = useState('');
+  const [checkBeneficiary, setCheckBeneficiary] = useState('');
+
+  // 1. التقاط صورة مستند
   const takePhoto = async () => {
     try {
       setSourceModalVisible(false);
@@ -34,21 +52,12 @@ export default function DocumentsScreen() {
       });
 
       if (!result.canceled && result.assets && result.assets.length > 0) {
-        const photoUri = result.assets[0].uri;
-        setCapturedImageUri(photoUri);
-        
-        // تعيين نص افتراضي مرتب كقالب، ويمكن للمهندس تعديله بحرية مطابقة لما في الورقة
         setEditableContent(
 `[بيانات المستند أو العقد المرصود]
 - اسم المستند: عقد / فاتورة رسمية
 - الطرف الأول: شركة عقارتك للاستثمار والتطوير B2B
-- البنود والتفاصيل:
-  1. بند الإيجار أو الخدمة: تم رصد القيمة بدقة.
-  2. الشروط والأحكام: مطابقة للمواصفات المعتمدة.
-- الملاحظات: تم توثيق المستند بنجاح.`
+- التفاصيل: تم رصد المستند بنجاح.`
         );
-
-        // فتح نافذة المعاينة والتعديل اليدوي الدقيق
         setPreviewModalVisible(true);
       }
     } catch (error) {
@@ -56,7 +65,7 @@ export default function DocumentsScreen() {
     }
   };
 
-  // الخطوة 2: تأكيد النص وتوليد ملف الـ PDF المرتب
+  // 2. توليد PDF من الصورة المعدلة
   const generateFinalPdf = async () => {
     try {
       setPreviewModalVisible(false);
@@ -72,42 +81,158 @@ export default function DocumentsScreen() {
               .title { font-size: 22px; font-weight: bold; color: #B68D6A; }
               .subtitle { font-size: 13px; color: #96897F; margin-top: 5px; }
               .content-box { background: #FFFFFF; padding: 20px; border-radius: 10px; border: 1px solid #D8CFC4; font-size: 15px; white-space: pre-wrap; line-height: 1.8; }
-              .footer { margin-top: 40px; text-align: center; font-size: 11px; color: #96897F; border-top: 1px solid #D8CFC4; pt: 10px; }
+              .footer { margin-top: 40px; text-align: center; font-size: 11px; color: #96897F; border-top: 1px solid #D8CFC4; padding-top: 10px; }
             </style>
           </head>
           <body>
             <div class="header">
-              <div class="title">AqarTech B2B - النظام الرئسي للمستندات</div>
-              <div class="subtitle">سجل الموثقات والعقود الرسمية المعتمدة</div>
+              <div class="title">AqarTech B2B - النظام الرئيسي للعقارات</div>
+              <div class="subtitle">سجل المستندات والعقود الرسمية المعتمدة</div>
             </div>
-
-            <div class="content-box">
-              ${editableContent}
-            </div>
-
-            <div class="footer">
-              تم إصدار هذا المستند وتوثيقه محلياً عبر تطبيق عقارتك • التاريخ: ${new Date().toLocaleDateString('ar-EG')}
-            </div>
+            <div class="content-box">${editableContent}</div>
+            <div class="footer">تم إصدار هذا المستند وتوثيقه محلياً عبر تطبيق عقارتك • التاريخ: ${new Date().toLocaleDateString('ar-EG')}</div>
           </body>
         </html>
       `;
 
       const { uri: pdfUri } = await Print.printToFileAsync({ html: htmlContent });
-
       const newDoc = {
         id: Date.now().toString(),
-        name: 'مستند_عقارتك_' + Date.now() + '.pdf',
+        name: 'مستند_مصور_' + Date.now() + '.pdf',
         uri: pdfUri,
-        type: 'PDF رسمي موثق محلياً',
+        type: 'مستند مصور موثق',
         date: new Date().toLocaleDateString('ar-EG'),
       };
 
       setDocuments([newDoc, ...documents]);
       setLoading(false);
-      Alert.alert('نجاح تام', 'تم توليد وتوثيق ملف الـ PDF بنجاح وزر الإرسال جاهز!');
+      Alert.alert('نجاح', 'تم توليد وتوثيق ملف الـ PDF بنجاح!');
     } catch (error) {
       setLoading(false);
       Alert.alert('خطأ', 'تعذر توليد ملف الـ PDF');
+    }
+  };
+
+  // 3. توليد PDF لعقد يدوي
+  const generateManualContractPdf = async () => {
+    if (!contractTitle || !secondParty || !contractAmount) {
+      Alert.alert('تنبيه', 'الرجاء تعبئة الحقول الأساسية للعقد (عنوان العقد، الطرف الثاني، وقيمة العقد).');
+      return;
+    }
+
+    try {
+      setManualContractModal(false);
+      setLoading(true);
+
+      const htmlContent = `
+        <html dir="rtl" lang="ar">
+          <head>
+            <meta charset="utf-8">
+            <style>
+              body { font-family: 'Amiri', Arial, sans-serif; padding: 35px; color: #3E3228; background-color: #F5EFE6; }
+              .header { text-align: center; border-bottom: 2px solid #B68D6A; padding-bottom: 12px; margin-bottom: 25px; }
+              .title { font-size: 22px; font-weight: bold; color: #B68D6A; }
+              .subtitle { font-size: 13px; color: #96897F; margin-top: 5px; }
+              .details-box { background: #FFFFFF; padding: 20px; border-radius: 10px; border: 1px solid #D8CFC4; font-size: 15px; line-height: 2.0; }
+              .row { margin-bottom: 10px; border-bottom: 1px dashed #E0DCD5; padding-bottom: 5px; }
+              .footer { margin-top: 40px; text-align: center; font-size: 11px; color: #96897F; border-top: 1px solid #D8CFC4; padding-top: 10px; }
+            </style>
+          </head>
+          <body>
+            <div class="header">
+              <div class="title">AqarTech B2B - عقود الاستثمار العقاري</div>
+              <div class="subtitle">${contractTitle}</div>
+            </div>
+            <div class="details-box">
+              <div class="row"><b>الطرف الأول:</b> ${firstParty}</div>
+              <div class="row"><b>الطرف الثاني:</b> ${secondParty}</div>
+              <div class="row"><b>قيمة العقد / الاستثمار:</b> ${contractAmount}</div>
+              <div class="row"><b>تفاصيل وبنود العقد:</b><br/>${contractDetails || 'لا توجد تفاصيل إضافية مسجلة.'}</div>
+            </div>
+            <div class="footer">تم إنشاء هذا العقد الآلي وتوثيقه رسمياً عبر منصة عقارتك • التاريخ: ${new Date().toLocaleDateString('ar-EG')}</div>
+          </body>
+        </html>
+      `;
+
+      const { uri: pdfUri } = await Print.printToFileAsync({ html: htmlContent });
+      const newDoc = {
+        id: Date.now().toString(),
+        name: `عقد_${contractTitle}_${Date.now()}.pdf`,
+        uri: pdfUri,
+        type: 'عقد استثماري رسمي (إدخال يدوي)',
+        date: new Date().toLocaleDateString('ar-EG'),
+      };
+
+      setDocuments([newDoc, ...documents]);
+      setLoading(false);
+      // إعادة تعيين الحقول
+      setContractTitle(''); setSecondParty(''); setContractAmount(''); setContractDetails('');
+      Alert.alert('نجاح تام', 'تم إصدار وتوثيق عقد الشركة الرسمي كملف PDF بنجاح!');
+    } catch (error) {
+      setLoading(false);
+      Alert.alert('خطأ', 'تعذر إصدار عقد الـ PDF');
+    }
+  };
+
+  // 4. توليد PDF لشيك يدوي
+  const generateManualCheckPdf = async () => {
+    if (!checkNumber || !bankName || !checkAmount || !checkDueDate) {
+      Alert.alert('تنبيه', 'الرجاء تعبئة بيانات الشيك الأساسية (رقم الشيك، البنك، المبلغ، وتاريخ الاستحقاق).');
+      return;
+    }
+
+    try {
+      setManualCheckModal(false);
+      setLoading(true);
+
+      const htmlContent = `
+        <html dir="rtl" lang="ar">
+          <head>
+            <meta charset="utf-8">
+            <style>
+              body { font-family: 'Amiri', Arial, sans-serif; padding: 35px; color: #3E3228; background-color: #F5EFE6; }
+              .header { text-align: center; border-bottom: 2px solid #27AE60; padding-bottom: 12px; margin-bottom: 25px; }
+              .title { font-size: 22px; font-weight: bold; color: #27AE60; }
+              .subtitle { font-size: 13px; color: #96897F; margin-top: 5px; }
+              .details-box { background: #FFFFFF; padding: 20px; border-radius: 10px; border: 1px solid #D8CFC4; font-size: 15px; line-height: 2.0; }
+              .row { margin-bottom: 10px; border-bottom: 1px dashed #E0DCD5; padding-bottom: 5px; }
+              .footer { margin-top: 40px; text-align: center; font-size: 11px; color: #96897F; border-top: 1px solid #D8CFC4; padding-top: 10px; }
+            </style>
+          </head>
+          <body>
+            <div class="header">
+              <div class="title">AqarTech B2B - سجل الشيكات المالية والضمانات</div>
+              <div class="subtitle">إيصال وتوثيق شيك بنكي معتمد</div>
+            </div>
+            <div class="details-box">
+              <div class="row"><b>رقم الشيك:</b> ${checkNumber}</div>
+              <div class="row"><b>البنك المسحب عليه:</b> ${bankName}</div>
+              <div class="row"><b>المبلغ الإجمالي:</b> ${checkAmount}</div>
+              <div class="row"><b>تاريخ الاستحقاق:</b> ${checkDueDate}</div>
+              <div class="row"><b>المستفيد / الجهة:</b> ${checkBeneficiary || 'شركة عقارتك للاستثمار'}</div>
+            </div>
+            <div class="footer">تم اعتماد وتوثيق هذا الشيك المالي رقمياً عبر منصة عقارتك • التاريخ: ${new Date().toLocaleDateString('ar-EG')}</div>
+          </body>
+        </html>
+      `;
+
+      const { uri: pdfUri } = await Print.printToFileAsync({ html: htmlContent });
+      const newDoc = {
+        id: Date.now().toString(),
+        name: `شيك_${checkNumber}_${Date.now()}.pdf`,
+        uri: pdfUri,
+        type: 'سند شيك بنكي رسمي (إدخال يدوي)',
+        date: new Date().toLocaleDateString('ar-EG'),
+      };
+
+      setDocuments([newDoc, ...documents]);
+      setLoading(false);
+      // إعادة تعيين الحقول
+      setCheckNumber(''); setBankName(''); setCheckAmount(''); setCheckDueDate(''); setCheckBeneficiary('');
+      Alert.alert('نجاح تام', 'تم توثيق بيانات الشيك وإصدار ملف الـ PDF بنجاح!');
+    } catch (error) {
+      setLoading(false);
+      Alert.alert('خطأ', 'تعذر إصدار شيك الـ PDF');
     }
   };
 
@@ -119,25 +244,38 @@ export default function DocumentsScreen() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>إدارة المستندات والعقود (الضبط الدقيق)</Text>
+      <Text style={styles.title}>إدارة العقود والشيكات والمستندات</Text>
       
+      {/* أزرار العمليات المنفصلة */}
+      <View style={styles.actionsGrid}>
+        <TouchableOpacity style={styles.actionBtn} onPress={() => setManualContractModal(true)}>
+          <MaterialCommunityIcons name="file-document-edit" size={22} color="#FFFFFF" style={{ marginLeft: 5 }} />
+          <Text style={styles.actionBtnText}>إدخال عقد يدوي</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity style={[styles.actionBtn, { backgroundColor: '#27AE60' }]} onPress={() => setManualCheckModal(true)}>
+          <MaterialCommunityIcons name="cash-multiple" size={22} color="#FFFFFF" style={{ marginLeft: 5 }} />
+          <Text style={styles.actionBtnText}>إدخال شيك يدوي</Text>
+        </TouchableOpacity>
+      </View>
+
       <TouchableOpacity style={styles.mainUploadButton} onPress={() => setSourceModalVisible(true)}>
-        <MaterialCommunityIcons name="file-document-edit-outline" size={24} color="#FFFFFF" style={{ marginLeft: 8 }} />
-        <Text style={styles.mainUploadButtonText}>تصوير مستند جديد وتوثيقه كـ PDF</Text>
+        <MaterialCommunityIcons name="camera-plus-outline" size={24} color="#FFFFFF" style={{ marginLeft: 8 }} />
+        <Text style={styles.mainUploadButtonText}>تصوير مستند ورقي (كامرًا) وتحويله لـ PDF</Text>
       </TouchableOpacity>
 
       {loading && (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={COLORS.primary} />
-          <Text style={styles.loadingText}>جاري تجهيز وتنسيق ملف الـ PDF الرسمي...</Text>
+          <Text style={styles.loadingText}>جاري إصدار وتوثيق ملف الـ PDF الرسمي باسم الشركة...</Text>
         </View>
       )}
 
       {documents.length === 0 && !loading ? (
         <View style={styles.emptyCard}>
           <MaterialCommunityIcons name="folder-text-outline" size={50} color={COLORS.primary} style={{marginBottom: 15}} />
-          <Text style={styles.cardTitle}>لا توجد مستندات مسجلة حالياً</Text>
-          <Text style={styles.cardDetails}>صور أي مستند ورقي، راجع نصوصه وتعديلها بدقة، ثم حوله مباشرة إلى PDF احترافي.</Text>
+          <Text style={styles.cardTitle}>لا توجد عقود أو شيكات مسجلة حالياً</Text>
+          <Text style={styles.cardDetails}>قم بإدخال بيانات العقود أو الشيكات يدوياً، أو صور المستندات لتحويلها تلقائياً إلى ملفات PDF رسمية.</Text>
         </View>
       ) : (
         <FlatList
@@ -160,17 +298,15 @@ export default function DocumentsScreen() {
         />
       )}
 
-      {/* نافذة اختيار مصدر المستند (كاميرا) */}
+      {/* نافذة اختيار الكاميرا للمستندات */}
       <Modal animationType="fade" transparent={true} visible={sourceModalVisible} onRequestClose={() => setSourceModalVisible(false)}>
         <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setSourceModalVisible(false)}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>مصدر المستند الورقي</Text>
-            
+            <Text style={styles.modalTitle}>تصوير مستند ورقي</Text>
             <TouchableOpacity style={styles.modalOption} onPress={takePhoto}>
               <MaterialCommunityIcons name="camera-outline" size={24} color={COLORS.primary} />
-              <Text style={styles.modalOptionText}>التقاط صورة بالكاميرا</Text>
+              <Text style={styles.modalOptionText}>فتح الكاميرا الآن</Text>
             </TouchableOpacity>
-
             <TouchableOpacity style={styles.modalCancel} onPress={() => setSourceModalVisible(false)}>
               <Text style={styles.modalCancelText}>إلغاء</Text>
             </TouchableOpacity>
@@ -178,26 +314,93 @@ export default function DocumentsScreen() {
         </TouchableOpacity>
       </Modal>
 
-      {/* نافذة المعاينة والتعديل الدقيق للنصوص قبل توليد الـ PDF */}
+      {/* نافذة إدخال عقد يدوي */}
+      <Modal animationType="slide" transparent={true} visible={manualContractModal} onRequestClose={() => setManualContractModal(false)}>
+        <View style={styles.previewOverlay}>
+          <View style={styles.previewContainer}>
+            <View style={styles.previewHeader}>
+              <Text style={styles.previewTitle}>إدخال بيانات عقد استثماري جديد</Text>
+              <TouchableOpacity onPress={() => setManualContractModal(false)}>
+                <MaterialCommunityIcons name="close" size={24} color={COLORS.textDark} />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={{ flex: 1, marginVertical: 10 }}>
+              <Text style={styles.inputLabel}>عنوان العقد أو المشروع:</Text>
+              <TextInput style={styles.inputBox} value={contractTitle} onChangeText={setContractTitle} placeholder="مثال: عقد إيجار وتطوير برج الأفق" placeholderTextColor="#96897F" />
+
+              <Text style={styles.inputLabel}>الطرف الثاني (المستثمر / العميل):</Text>
+              <TextInput style={styles.inputBox} value={secondParty} onChangeText={setSecondParty} placeholder="اسم الشركة أو الشخص الطرف الثاني" placeholderTextColor="#96897F" />
+
+              <Text style={styles.inputLabel}>قيمة العقد المالية:</Text>
+              <TextInput style={styles.inputBox} value={contractAmount} onChangeText={setContractAmount} placeholder="مثال: 50,000 ريال عماني" placeholderTextColor="#96897F" keyboardType="default" />
+
+              <Text style={styles.inputLabel}>بنود وتفاصيل العقد:</Text>
+              <TextInput style={[styles.inputBox, { height: 100, textAlignVertical: 'top' }]} multiline={true} value={contractDetails} onChangeText={setContractDetails} placeholder="اكتب شروط وبنود العقد هنا..." placeholderTextColor="#96897F" />
+            </ScrollView>
+
+            <TouchableOpacity style={styles.generateButton} onPress={generateManualContractPdf}>
+              <MaterialCommunityIcons name="file-pdf-box" size={20} color="#FFFFFF" style={{ marginLeft: 8 }} />
+              <Text style={styles.generateButtonText}>إصدار وتوثيق العقد كـ PDF</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* نافذة إدخال شيك يدوي */}
+      <Modal animationType="slide" transparent={true} visible={manualCheckModal} onRequestClose={() => setManualCheckModal(false)}>
+        <View style={styles.previewOverlay}>
+          <View style={styles.previewContainer}>
+            <View style={styles.previewHeader}>
+              <Text style={styles.previewTitle}>إدخال بيانات شيك بنكي جديد</Text>
+              <TouchableOpacity onPress={() => setManualCheckModal(false)}>
+                <MaterialCommunityIcons name="close" size={24} color={COLORS.textDark} />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={{ flex: 1, marginVertical: 10 }}>
+              <Text style={styles.inputLabel}>رقم الشيك:</Text>
+              <TextInput style={styles.inputBox} value={checkNumber} onChangeText={setCheckNumber} placeholder="مثال: CHQ-988210" placeholderTextColor="#96897F" />
+
+              <Text style={styles.inputLabel}>اسم البنك المسحب عليه:</Text>
+              <TextInput style={styles.inputBox} value={bankName} onChangeText={setBankName} placeholder="مثال: بنك مسقط / بنك ظفار" placeholderTextColor="#96897F" />
+
+              <Text style={styles.inputLabel}>مبلغ الشيك:</Text>
+              <TextInput style={styles.inputBox} value={checkAmount} onChangeText={setCheckAmount} placeholder="مثال: 12,500 ر.ع" placeholderTextColor="#96897F" />
+
+              <Text style={styles.inputLabel}>تاريخ الاستحقاق:</Text>
+              <TextInput style={styles.inputBox} value={checkDueDate} onChangeText={setCheckDueDate} placeholder="مثال: 2026/12/31" placeholderTextColor="#96897F" />
+
+              <Text style={styles.inputLabel}>المستفيد:</Text>
+              <TextInput style={styles.inputBox} value={checkBeneficiary} onChangeText={setCheckBeneficiary} placeholder="شركة عقارتك للاستثمار" placeholderTextColor="#96897F" />
+            </ScrollView>
+
+            <TouchableOpacity style={[styles.generateButton, { backgroundColor: '#27AE60' }]} onPress={generateManualCheckPdf}>
+              <MaterialCommunityIcons name="file-pdf-box" size={20} color="#FFFFFF" style={{ marginLeft: 8 }} />
+              <Text style={styles.generateButtonText}>إصدار وتوثيق الشيك كـ PDF</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* نافذة المعاينة للنصوص المصورة */}
       <Modal animationType="slide" transparent={true} visible={previewModalVisible} onRequestClose={() => setPreviewModalVisible(false)}>
         <View style={styles.previewOverlay}>
           <View style={styles.previewContainer}>
             <View style={styles.previewHeader}>
-              <Text style={styles.previewTitle}>مراجعة وتعديل محتوى المستند</Text>
+              <Text style={styles.previewTitle}>مراجعة وتعديل محتوى المستند المصور</Text>
               <TouchableOpacity onPress={() => setPreviewModalVisible(false)}>
                 <MaterialCommunityIcons name="close" size={24} color={COLORS.textDark} />
               </TouchableOpacity>
             </View>
 
-            <Text style={styles.previewSubTitle}>قم بمراجعة أو تعديل النصوص والجداول لتظهر بدقة 100% في ملف الـ PDF:</Text>
-
-            <ScrollView style={{ width: '100%', flex: 1, marginVertical: 10 }}>
+            <ScrollView style={{ flex: 1, marginVertical: 10 }}>
               <TextInput
-                style={styles.textInputArea}
+                style={[styles.inputBox, { height: 200, textAlignVertical: 'top' }]}
                 multiline={true}
                 value={editableContent}
                 onChangeText={setEditableContent}
-                placeholder="اكتب أو عدل محتوى المستند هنا..."
+                placeholder="عدل محتوى المستند هنا..."
                 placeholderTextColor="#96897F"
               />
             </ScrollView>
@@ -216,10 +419,23 @@ export default function DocumentsScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, padding: SIZES.padding, backgroundColor: COLORS.background },
   title: { fontSize: SIZES.large, fontWeight: 'bold', color: COLORS.textDark, marginBottom: 15, textAlign: 'right' },
-  mainUploadButton: {
+  actionsGrid: { flexDirection: 'row-reverse', justifyContent: 'space-between', marginBottom: 10 },
+  actionBtn: {
+    flex: 1,
     flexDirection: 'row-reverse',
     backgroundColor: COLORS.primary,
-    padding: 15,
+    padding: 12,
+    borderRadius: SIZES.radius,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginHorizontal: 4,
+    ...SHADOWS.floating,
+  },
+  actionBtnText: { color: '#FFFFFF', fontWeight: 'bold', fontSize: 13 },
+  mainUploadButton: {
+    flexDirection: 'row-reverse',
+    backgroundColor: '#34495E',
+    padding: 14,
     borderRadius: SIZES.radius,
     alignItems: 'center',
     justifyContent: 'center',
@@ -254,11 +470,11 @@ const styles = StyleSheet.create({
   modalCancel: { marginTop: 5, padding: 10 },
   modalCancelText: { color: COLORS.textMuted, fontWeight: 'bold', fontSize: SIZES.font },
   previewOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' },
-  previewContainer: { backgroundColor: COLORS.card, borderTopLeftRadius: 25, borderTopRightRadius: 25, padding: 20, height: '75%', ...SHADOWS.floating },
+  previewContainer: { backgroundColor: COLORS.card, borderTopLeftRadius: 25, borderTopRightRadius: 25, padding: 20, height: '80%', ...SHADOWS.floating },
   previewHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
   previewTitle: { fontSize: SIZES.medium, fontWeight: 'bold', color: COLORS.textDark },
-  previewSubTitle: { fontSize: 12, color: COLORS.textMuted, textAlign: 'right', marginBottom: 10 },
-  textInputArea: { backgroundColor: COLORS.background, borderWidth: 1, borderColor: COLORS.border, borderRadius: SIZES.radius, padding: 15, fontSize: 14, color: COLORS.textDark, textAlign: 'right', minHeight: 200, textAlignVertical: 'top' },
+  inputLabel: { fontSize: 13, fontWeight: 'bold', color: COLORS.textDark, marginBottom: 5, textAlign: 'right', marginTop: 10 },
+  inputBox: { backgroundColor: COLORS.background, borderWidth: 1, borderColor: COLORS.border, borderRadius: SIZES.radius, padding: 12, fontSize: 14, color: COLORS.textDark, textAlign: 'right' },
   generateButton: { flexDirection: 'row-reverse', backgroundColor: COLORS.primary, padding: 15, borderRadius: SIZES.radius, alignItems: 'center', justifyContent: 'center', marginTop: 15, ...SHADOWS.floating },
   generateButtonText: { color: '#FFFFFF', fontWeight: 'bold', fontSize: SIZES.medium },
 });

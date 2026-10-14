@@ -12,8 +12,8 @@ export default function PropertiesScreen() {
   const [type, setType] = useState('OWNED'); 
   const [submitting, setSubmitting] = useState(false);
 
-  const API_URL = 'http://192.168.1.123:3000/property';
-  const COMPANIES_API_URL = 'http://192.168.1.123:3000/company';
+  const API_URL = 'http://172.20.10.6:3000/property';
+  const COMPANIES_API_URL = 'http://172.20.10.6:3000/company';
 
   const fetchProperties = async () => {
     try {
