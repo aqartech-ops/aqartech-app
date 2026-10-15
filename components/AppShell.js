@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Modal, Pressable, StyleSheet, View, useWindowDimensions } from 'react-native';
+import { Modal, Platform, Pressable, ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { COLORS, FONT, RADIUS, SPACING } from '../theme';
@@ -7,19 +7,24 @@ import { BREAKPOINTS } from '../services/config';
 import { useI18n } from '../i18n';
 import { useSession } from '../services/session';
 import { IconButton, Row, Txt } from './ui';
+import BottomBar from './BottomBar';
+import SearchModal from './SearchModal';
+
+const IS_APP = Platform.OS !== 'web';
 
 /**
- * Responsive frame around every screen:
- *   desktop/tablet-landscape → fixed sidebar
- *   phone/tablet-portrait    → top bar + slide-in menu
+ * Frame around every screen.
+ *   App (phone & tablet): top bar (menu · title · search) + side menu + floating bottom bar.
+ *   Web: fixed sidebar on wide screens, top bar + side menu on narrow ones (web layout gets its own pass later).
  * `items` = [{ key, icon, label }] already filtered by permissions.
  */
 export default function AppShell({ items, active, onNavigate, children }) {
   const { width } = useWindowDimensions();
   const { t, isRTL } = useI18n();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
   const insets = useSafeAreaInsets();
-  const wide = width >= BREAKPOINTS.desktop;
+  const fixedSidebar = !IS_APP && width >= BREAKPOINTS.desktop;
 
   const go = (key) => {
     onNavigate(key);
@@ -29,29 +34,39 @@ export default function AppShell({ items, active, onNavigate, children }) {
   const title = useMemo(() => items.find((i) => i.key === active)?.label ?? '', [items, active]);
 
   return (
-    <SafeAreaView style={styles.root} edges={['top', 'bottom']}>
+    <SafeAreaView style={styles.root} edges={IS_APP ? ['top'] : ['top', 'bottom']}>
       <View style={[styles.body, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
-        {wide ? (
+        {fixedSidebar ? (
           <View style={{ width: 260 }}>
-            <Sidebar items={items} active={active} onSelect={go} />
+            <Sidebar items={items} active={active} onSelect={go} onSearch={() => setSearchOpen(true)} />
           </View>
         ) : null}
 
         <View style={{ flex: 1 }}>
-          {!wide ? (
+          {!fixedSidebar ? (
             <Row style={styles.topBar}>
               <IconButton icon="menu" size={26} label={t('common.menu')} onPress={() => setMenuOpen(true)} style={{ padding: 10 }} />
-              <Txt size="medium" weight="weightBold" style={{ flex: 1 }}>{title}</Txt>
+              <Txt size="medium" weight="weightBold" style={{ flex: 1 }} numberOfLines={1}>{title}</Txt>
+              <IconButton icon="magnify" size={26} label={t('search.title')} onPress={() => setSearchOpen(true)} style={{ padding: 10 }} />
               <Brand compact />
             </Row>
           ) : null}
           <View style={{ flex: 1 }}>{children}</View>
+          {IS_APP ? (
+            <BottomBar
+              items={items}
+              active={active}
+              onSelect={go}
+              onMore={() => setMenuOpen(true)}
+              bottomInset={insets.bottom}
+            />
+          ) : null}
         </View>
       </View>
 
-      {/* Phone/tablet menu: a Modal always renders above everything and receives touches on every platform. */}
+      {/* Side menu: a Modal always renders above everything and receives touches on every platform. */}
       <Modal
-        visible={!wide && menuOpen}
+        visible={!fixedSidebar && menuOpen}
         transparent
         animationType="fade"
         statusBarTranslucent
@@ -59,11 +74,21 @@ export default function AppShell({ items, active, onNavigate, children }) {
       >
         <View style={[styles.drawerLayer, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
           <View style={[styles.drawer, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
-            <Sidebar items={items} active={active} onSelect={go} />
+            <Sidebar
+              items={items}
+              active={active}
+              onSelect={go}
+              onSearch={() => {
+                setMenuOpen(false);
+                setSearchOpen(true);
+              }}
+            />
           </View>
           <Pressable style={styles.backdrop} onPress={() => setMenuOpen(false)} accessibilityLabel={t('common.close')} />
         </View>
       </Modal>
+
+      <SearchModal visible={searchOpen} onClose={() => setSearchOpen(false)} items={items} onNavigate={onNavigate} />
     </SafeAreaView>
   );
 }
@@ -80,7 +105,7 @@ function Brand({ compact }) {
   );
 }
 
-function Sidebar({ items, active, onSelect }) {
+function Sidebar({ items, active, onSelect, onSearch }) {
   const { t, row, lang, setLang } = useI18n();
   const { me, signOut } = useSession();
   const displayName = me?.kind === 'admin' ? me.admin.name : me?.user?.name;
@@ -88,11 +113,15 @@ function Sidebar({ items, active, onSelect }) {
 
   return (
     <View style={styles.sidebar}>
-      <View style={{ padding: SPACING.lg }}>
+      <View style={{ padding: SPACING.lg, gap: SPACING.md }}>
         <Brand />
+        <Pressable onPress={onSearch} style={[styles.searchButton, { flexDirection: row }]} accessibilityRole="search">
+          <MaterialCommunityIcons name="magnify" size={20} color={COLORS.textMuted} />
+          <Txt muted>{t('search.placeholder')}</Txt>
+        </Pressable>
       </View>
 
-      <View style={{ flex: 1, paddingHorizontal: SPACING.sm, gap: 2 }}>
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingHorizontal: SPACING.sm, gap: 2 }}>
         {items.map((item) => {
           const selected = item.key === active;
           return (
@@ -119,7 +148,7 @@ function Sidebar({ items, active, onSelect }) {
             </Pressable>
           );
         })}
-      </View>
+      </ScrollView>
 
       <View style={styles.sidebarFooter}>
         <Pressable onPress={() => setLang(lang === 'ar' ? 'en' : 'ar')} style={[styles.navItem, { flexDirection: row }]}>
@@ -174,6 +203,16 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.primary,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  searchButton: {
+    alignItems: 'center',
+    gap: SPACING.sm,
+    backgroundColor: COLORS.surfaceSoft,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: RADIUS.pill,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.sm,
   },
   drawerLayer: { flex: 1 },
   backdrop: { flex: 1, backgroundColor: COLORS.overlay },

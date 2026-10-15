@@ -109,6 +109,10 @@ export const rolesApi = {
   remove: (id) => api.delete(`/roles/${id}`),
 };
 
+export const searchApi = {
+  run: (q) => api.get('/search', { q }),
+};
+
 export const adminApi = {
   companies: () => api.get('/admin/companies'),
   updateSubscription: (companyId, data) => api.patch(`/admin/companies/${companyId}/subscription`, data),

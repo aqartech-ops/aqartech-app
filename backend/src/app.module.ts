@@ -8,9 +8,10 @@ import { PlansModule } from './plans/plans.module.js';
 import { CompanyModule } from './company/company.module.js';
 import { UserModule } from './user/user.module.js';
 import { AdminModule } from './admin/admin.module.js';
+import { SearchModule } from './search/search.controller.js';
 
 @Module({
-  imports: [PrismaModule, CommonModule, AuthModule, PlansModule, CompanyModule, UserModule, AdminModule],
+  imports: [PrismaModule, CommonModule, AuthModule, PlansModule, CompanyModule, UserModule, AdminModule, SearchModule],
   controllers: [AppController],
   providers: [AppService],
 })
