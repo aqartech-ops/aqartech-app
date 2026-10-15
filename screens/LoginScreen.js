@@ -1,413 +1,367 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, TextInput, ActivityIndicator, Alert, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
-import { COLORS, SIZES, SHADOWS } from '../theme'; 
-import { MaterialCommunityIcons } from '@expo/vector-icons'; 
+import React, { useEffect, useState } from 'react';
+import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { COLORS, RADIUS, SPACING } from '../theme';
+import { BREAKPOINTS } from '../services/config';
+import { useI18n } from '../i18n';
+import { useSession } from '../services/session';
+import { plansApi } from '../services/api';
+import { formatOMR } from '../services/money';
+import { Button, Card, ErrorBox, Field, Row, Segmented, Txt, errorText } from '../components/ui';
 
-export default function LoginScreen({ navigation, onLoginSuccess }) {
-  const [isRegistering, setIsRegistering] = useState(false); // للتبديل بين الدخول وإنشاء حساب
+// Three modes: customer sign in, customer registration, platform-team sign in.
+export default function LoginScreen() {
+  const { t, lang, setLang } = useI18n();
+  const { width } = useWindowDimensions();
+  const [mode, setMode] = useState('signIn'); // signIn | register | admin
+  const wide = width >= BREAKPOINTS.desktop;
 
-  // حقول تسجيل الدخول
+  return (
+    <SafeAreaView style={styles.root}>
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <View style={[styles.split, wide && { flexDirection: 'row' }]}>
+          {wide ? <BrandPanel /> : null}
+          <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
+            <Row style={{ justifyContent: 'space-between', width: '100%', maxWidth: 520 }}>
+              {!wide ? <BrandMark /> : <View />}
+              <Button
+                small
+                variant="ghost"
+                icon="translate"
+                title={lang === 'ar' ? 'English' : 'العربية'}
+                onPress={() => setLang(lang === 'ar' ? 'en' : 'ar')}
+              />
+            </Row>
+
+            <Card style={styles.card}>
+              {mode === 'register' ? (
+                <RegisterForm onSwitch={() => setMode('signIn')} />
+              ) : (
+                <SignInForm admin={mode === 'admin'} onSwitch={() => setMode('register')} />
+              )}
+            </Card>
+
+            <Pressable onPress={() => setMode(mode === 'admin' ? 'signIn' : 'admin')} style={{ padding: SPACING.sm }}>
+              <Txt muted size="small" style={{ textAlign: 'center' }}>
+                {mode === 'admin' ? t('auth.backToUserSignIn') : t('auth.adminSignIn')}
+              </Txt>
+            </Pressable>
+          </ScrollView>
+        </View>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
+  );
+}
+
+function BrandMark() {
+  const { t } = useI18n();
+  return (
+    <Row>
+      <View style={styles.logo}>
+        <MaterialCommunityIcons name="home-city" size={20} color={COLORS.onPrimary} />
+      </View>
+      <Txt size="medium" weight="weightBold">{t('app.name')}</Txt>
+    </Row>
+  );
+}
+
+function BrandPanel() {
+  const { t } = useI18n();
+  return (
+    <View style={styles.brandPanel}>
+      <View style={[styles.logo, { width: 56, height: 56, borderRadius: RADIUS.md, backgroundColor: COLORS.surface }]}>
+        <MaterialCommunityIcons name="home-city" size={30} color={COLORS.primary} />
+      </View>
+      <Txt size="large" weight="weightBold" style={{ color: COLORS.onPrimary, textAlign: 'center' }}>{t('app.name')}</Txt>
+      <Txt size="medium" style={{ color: COLORS.onPrimary, opacity: 0.9, textAlign: 'center' }}>{t('app.tagline')}</Txt>
+    </View>
+  );
+}
+
+function SignInForm({ admin, onSwitch }) {
+  const { t } = useI18n();
+  const { signIn, adminSignIn } = useSession();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  
-  // حقول إنشاء حساب جديد (شركة جديدة)
-  const [companyName, setCompanyName] = useState('');
-  const [ownerName, setOwnerName] = useState('');
-  const [regEmail, setRegEmail] = useState('');
-  const [regPassword, setRegPassword] = useState('');
-  const [phone, setPhone] = useState('');
-  
-  // خيارات الباقات ودورة السداد الافتراضية
-  const [selectedPlan, setSelectedPlan] = useState('PRO'); // BASIC, PRO, ENTERPRISE
-  const [billingCycle, setBillingCycle] = useState('MONTHLY'); // MONTHLY أو YEARLY
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState(null);
 
-  const [loading, setLoading] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
-
-  // روابط السيرفر
-  const LOGIN_API = 'http://localhost:3000/auth/login';
-  const REGISTER_API = 'http://localhost:3000/auth/register-company';
-
-  // قائمة الباقات الافتراضية الواضحة
-  const defaultPlans = [
-    { id: 'BASIC', name: 'الباقة الأساسية', priceMonthly: '15 ر.ع', priceYearly: '150 ر.ع', maxProp: '10 عقارات' },
-    { id: 'PRO', name: 'الباقة المتقدمة', priceMonthly: '35 ر.ع', priceYearly: '350 ر.ع', maxProp: '50 عقاراً' },
-    { id: 'ENTERPRISE', name: 'باقة الشركات الكبرى', priceMonthly: '75 ر.ع', priceYearly: '750 ر.ع', maxProp: 'عقارات غير محدودة' },
-  ];
-
-  const handleLogin = async () => {
-    if (!email.trim() || !password.trim()) {
-      Alert.alert('تنبيه', 'الرجاء إدخال البريد الإلكتروني وكلمة المرور');
-      return;
-    }
-
+  const submit = async () => {
+    setError(null);
+    setBusy(true);
     try {
-      setLoading(true);
-      const response = await fetch(LOGIN_API, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        Alert.alert('نجاح', 'تم تسجيل الدخول بنجاح');
-        if (onLoginSuccess) onLoginSuccess(data);
-      } else {
-        Alert.alert('خطأ في تسجيل الدخول', data.message || 'البريد الإلكتروني أو كلمة المرور غير صحيحة');
-      }
-    } catch (error) {
-      console.error('خطأ الاتصال:', error);
-      Alert.alert('خطأ', 'تعذر الاتصال بالخادم، تأكد من تشغيل السيرفر');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleRegister = async () => {
-    if (!companyName.trim() || !ownerName.trim() || !regEmail.trim() || !regPassword.trim()) {
-      Alert.alert('تنبيه', 'الرجاء تعبئة جميع الحقول الإجبارية لإنشاء الحساب');
-      return;
-    }
-
-    try {
-      setLoading(true);
-      const response = await fetch(REGISTER_API, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          companyName,
-          ownerName,
-          email: regEmail,
-          password: regPassword,
-          phone,
-          planId: selectedPlan,
-          billingCycle,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        Alert.alert('نجاح', 'تم إنشاء الحساب والشركة بنجاح، يمكنك تسجيل الدخول الآن');
-        setIsRegistering(false);
-      } else {
-        Alert.alert('خطأ في التسجيل', data.message || 'فشل إنشاء الحساب، حاول مرة أخرى');
-      }
-    } catch (error) {
-      console.error('خطأ الاتصال:', error);
-      Alert.alert('خطأ', 'تعذر الاتصال بالخادم، تأكد من تشغيل السيرفر');
-    } finally {
-      setLoading(false);
+      await (admin ? adminSignIn : signIn)(email.trim(), password);
+    } catch (e) {
+      setError(e);
+      setBusy(false);
     }
   };
 
   return (
-    <KeyboardAvoidingView 
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'} 
-      style={{ flex: 1 }}
+    <View style={{ gap: SPACING.lg }}>
+      <View style={{ gap: 4 }}>
+        <Txt size="title" weight="weightBold">{admin ? t('auth.adminSignInTitle') : t('auth.welcomeBack')}</Txt>
+        {!admin ? <Txt muted>{t('auth.signInSubtitle')}</Txt> : null}
+      </View>
+      <ErrorBox error={error} />
+      <Field
+        label={t('auth.email')}
+        value={email}
+        onChangeText={setEmail}
+        autoCapitalize="none"
+        autoComplete="email"
+        keyboardType="email-address"
+        inputMode="email"
+      />
+      <Field
+        label={t('auth.password')}
+        value={password}
+        onChangeText={setPassword}
+        secure
+        autoComplete="current-password"
+        onSubmitEditing={submit}
+      />
+      <Button title={t('auth.signIn')} onPress={submit} loading={busy} disabled={!email || !password} />
+      {!admin ? (
+        <Row style={{ justifyContent: 'center' }}>
+          <Txt muted>{t('auth.noAccount')}</Txt>
+          <Button small variant="ghost" title={t('auth.createAccount')} onPress={onSwitch} />
+        </Row>
+      ) : null}
+    </View>
+  );
+}
+
+function RegisterForm({ onSwitch }) {
+  const { t, lang } = useI18n();
+  const { register } = useSession();
+  const [form, setForm] = useState({
+    accountType: 'COMPANY',
+    companyName: '',
+    ownerName: '',
+    email: '',
+    phone: '',
+    password: '',
+    planCode: '',
+    billingCycle: 'MONTHLY',
+  });
+  const [plans, setPlans] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState(null);
+
+  const set = (key) => (value) => setForm((f) => ({ ...f, [key]: value }));
+
+  useEffect(() => {
+    plansApi.list().then(setPlans).catch((e) => {
+      setPlans([]);
+      setError(e);
+    });
+  }, []);
+
+  const visiblePlans = (plans ?? []).filter((p) => p.audience === 'ANY' || p.audience === form.accountType);
+
+  // Keep the selected plan valid when the account type changes
+  useEffect(() => {
+    if (visiblePlans.length && !visiblePlans.some((p) => p.code === form.planCode)) {
+      setForm((f) => ({ ...f, planCode: visiblePlans[0].code }));
+    }
+  }, [form.accountType, plans]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const fieldError = (name) => (error?.field === name ? errorText(t, error) : undefined);
+
+  const submit = async () => {
+    setError(null);
+    setBusy(true);
+    try {
+      await register({ ...form, email: form.email.trim(), locale: lang });
+    } catch (e) {
+      setError(e);
+      setBusy(false);
+    }
+  };
+
+  const individual = form.accountType === 'INDIVIDUAL';
+
+  return (
+    <View style={{ gap: SPACING.lg }}>
+      <View style={{ gap: 4 }}>
+        <Txt size="title" weight="weightBold">{t('auth.registerTitle')}</Txt>
+        <Txt muted>{t('auth.registerSubtitle')}</Txt>
+      </View>
+      {error && !error.field ? <ErrorBox error={error} /> : null}
+
+      <View style={{ gap: SPACING.sm }}>
+        <Txt weight="weightMedium" size="small">{t('auth.accountType')}</Txt>
+        <TypeOption
+          icon="domain"
+          title={t('auth.typeCompany')}
+          hint={t('auth.typeCompanyHint')}
+          selected={!individual}
+          onPress={() => set('accountType')('COMPANY')}
+        />
+        <TypeOption
+          icon="account-key-outline"
+          title={t('auth.typeIndividual')}
+          hint={t('auth.typeIndividualHint')}
+          selected={individual}
+          onPress={() => set('accountType')('INDIVIDUAL')}
+        />
+      </View>
+
+      <Field label={t('auth.ownerName')} value={form.ownerName} onChangeText={set('ownerName')} error={fieldError('ownerName')} />
+      {!individual ? (
+        <Field label={t('auth.companyName')} value={form.companyName} onChangeText={set('companyName')} error={fieldError('companyName')} />
+      ) : null}
+      <Field
+        label={t('auth.email')}
+        value={form.email}
+        onChangeText={set('email')}
+        autoCapitalize="none"
+        keyboardType="email-address"
+        inputMode="email"
+        error={fieldError('email')}
+      />
+      <Field
+        label={`${t('auth.phone')} (${t('common.optional')})`}
+        value={form.phone}
+        onChangeText={set('phone')}
+        keyboardType="phone-pad"
+        inputMode="tel"
+        error={fieldError('phone')}
+      />
+      <Field
+        label={t('auth.password')}
+        value={form.password}
+        onChangeText={set('password')}
+        secure
+        autoComplete="new-password"
+        hint={t('auth.passwordHint')}
+        error={fieldError('password')}
+      />
+
+      <View style={{ gap: SPACING.sm }}>
+        <Txt weight="weightMedium" size="small">{t('auth.choosePlan')}</Txt>
+        <Segmented
+          value={form.billingCycle}
+          onChange={set('billingCycle')}
+          options={[
+            { value: 'MONTHLY', label: t('auth.monthly') },
+            { value: 'YEARLY', label: t('auth.yearly') },
+          ]}
+        />
+        {plans === null ? (
+          <Txt muted>{t('common.loading')}</Txt>
+        ) : visiblePlans.length === 0 ? (
+          <Txt muted>{t('auth.noPlans')}</Txt>
+        ) : (
+          visiblePlans.map((plan) => (
+            <PlanOption
+              key={plan.code}
+              plan={plan}
+              lang={lang}
+              yearly={form.billingCycle === 'YEARLY'}
+              selected={form.planCode === plan.code}
+              onPress={() => set('planCode')(plan.code)}
+            />
+          ))
+        )}
+        {fieldError('planCode') ? <Txt size="small" style={{ color: COLORS.danger }}>{fieldError('planCode')}</Txt> : null}
+      </View>
+
+      <Button
+        title={t('auth.createAccount')}
+        onPress={submit}
+        loading={busy}
+        disabled={!form.ownerName || !form.email || !form.password || !form.planCode || (!individual && !form.companyName)}
+      />
+      <Row style={{ justifyContent: 'center' }}>
+        <Txt muted>{t('auth.haveAccount')}</Txt>
+        <Button small variant="ghost" title={t('auth.signIn')} onPress={onSwitch} />
+      </Row>
+    </View>
+  );
+}
+
+function TypeOption({ icon, title, hint, selected, onPress }) {
+  const { row } = useI18n();
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="radio"
+      accessibilityState={{ checked: selected }}
+      style={[styles.option, { flexDirection: row }, selected && styles.optionSelected]}
     >
-      <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
-        
-        {/* أيقونة أو شعار التطبيق في الأعلى */}
-        <View style={styles.logoContainer}>
-          <View style={styles.logoCircle}>
-            <MaterialCommunityIcons name="shield-home-outline" size={50} color={COLORS.primary} />
-          </View>
-          <Text style={styles.appName}>نظام AqarTech</Text>
-          <Text style={styles.appSubtitle}>
-            {isRegistering ? 'إنشاء حساب شركة جديدة واختيار الباقة' : 'تسجيل الدخول إلى حسابك'}
-          </Text>
-        </View>
+      <MaterialCommunityIcons name={icon} size={24} color={selected ? COLORS.primaryDark : COLORS.textMuted} />
+      <View style={{ flex: 1, gap: 2 }}>
+        <Txt weight="weightMedium">{title}</Txt>
+        <Txt muted size="small">{hint}</Txt>
+      </View>
+      <MaterialCommunityIcons
+        name={selected ? 'radiobox-marked' : 'radiobox-blank'}
+        size={22}
+        color={selected ? COLORS.primary : COLORS.borderStrong}
+      />
+    </Pressable>
+  );
+}
 
-        {/* نموذج تسجيل الدخول أو إنشاء حساب */}
-        <View style={styles.formContainer}>
-          
-          {!isRegistering ? (
-            /* ================= نموذج تسجيل الدخول ================= */
-            <>
-              <View style={styles.inputWrapper}>
-                <MaterialCommunityIcons name="email-outline" size={22} color={COLORS.primary} style={styles.iconLeft} />
-                <TextInput
-                  style={styles.input}
-                  placeholder="البريد الإلكتروني..."
-                  placeholderTextColor={COLORS.textMuted}
-                  value={email}
-                  onChangeText={setEmail}
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                  textAlign="right"
-                />
-              </View>
-
-              <View style={styles.inputWrapper}>
-                <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={styles.iconRight}>
-                  <MaterialCommunityIcons name={showPassword ? "eye-off-outline" : "eye-outline"} size={22} color={COLORS.textMuted} />
-                </TouchableOpacity>
-                <TextInput
-                  style={styles.input}
-                  placeholder="كلمة المرور..."
-                  placeholderTextColor={COLORS.textMuted}
-                  value={password}
-                  onChangeText={setPassword}
-                  secureTextEntry={!showPassword}
-                  textAlign="right"
-                />
-                <MaterialCommunityIcons name="lock-outline" size={22} color={COLORS.primary} style={styles.iconLeft} />
-              </View>
-
-              <TouchableOpacity 
-                style={styles.loginButton} 
-                onPress={handleLogin}
-                disabled={loading}>
-                {loading ? (
-                  <ActivityIndicator color="#FFFFFF" />
-                ) : (
-                  <>
-                    <MaterialCommunityIcons name="login" size={20} color="#FFFFFF" style={{ marginRight: 8 }} />
-                    <Text style={styles.loginButtonText}>دخول</Text>
-                  </>
-                )}
-              </TouchableOpacity>
-
-              <TouchableOpacity 
-                style={styles.switchModeButton} 
-                onPress={() => setIsRegistering(true)}>
-                <Text style={styles.switchModeText}>ليس لديك حساب؟ <Text style={styles.linkText}>انشئ حساب شركة جديدة</Text></Text>
-              </TouchableOpacity>
-            </>
-          ) : (
-            /* ================= نموذج إنشاء حساب وباقات افتراضية ================= */
-            <>
-              <View style={styles.inputWrapper}>
-                <MaterialCommunityIcons name="office-building" size={22} color={COLORS.primary} style={styles.iconLeft} />
-                <TextInput
-                  style={styles.input}
-                  placeholder="اسم الشركة العقارية..."
-                  placeholderTextColor={COLORS.textMuted}
-                  value={companyName}
-                  onChangeText={setCompanyName}
-                  textAlign="right"
-                />
-              </View>
-
-              <View style={styles.inputWrapper}>
-                <MaterialCommunityIcons name="account-outline" size={22} color={COLORS.primary} style={styles.iconLeft} />
-                <TextInput
-                  style={styles.input}
-                  placeholder="اسم المسؤول / المالك..."
-                  placeholderTextColor={COLORS.textMuted}
-                  value={ownerName}
-                  onChangeText={setOwnerName}
-                  textAlign="right"
-                />
-              </View>
-
-              <View style={styles.inputWrapper}>
-                <MaterialCommunityIcons name="email-outline" size={22} color={COLORS.primary} style={styles.iconLeft} />
-                <TextInput
-                  style={styles.input}
-                  placeholder="البريد الإلكتروني للإدارة..."
-                  placeholderTextColor={COLORS.textMuted}
-                  value={regEmail}
-                  onChangeText={setRegEmail}
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                  textAlign="right"
-                />
-              </View>
-
-              <View style={styles.inputWrapper}>
-                <MaterialCommunityIcons name="phone-outline" size={22} color={COLORS.primary} style={styles.iconLeft} />
-                <TextInput
-                  style={styles.input}
-                  placeholder="رقم الهاتف..."
-                  placeholderTextColor={COLORS.textMuted}
-                  value={phone}
-                  onChangeText={setPhone}
-                  keyboardType="phone-pad"
-                  textAlign="right"
-                />
-              </View>
-
-              <View style={styles.inputWrapper}>
-                <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={styles.iconRight}>
-                  <MaterialCommunityIcons name={showPassword ? "eye-off-outline" : "eye-outline"} size={22} color={COLORS.textMuted} />
-                </TouchableOpacity>
-                <TextInput
-                  style={styles.input}
-                  placeholder="كلمة المرور..."
-                  placeholderTextColor={COLORS.textMuted}
-                  value={regPassword}
-                  onChangeText={setRegPassword}
-                  secureTextEntry={!showPassword}
-                  textAlign="right"
-                />
-                <MaterialCommunityIcons name="lock-outline" size={22} color={COLORS.primary} style={styles.iconLeft} />
-              </View>
-
-              {/* اختيار دورة السداد (شهري أو سنوي) */}
-              <Text style={styles.sectionLabel}>دورة السداد:</Text>
-              <View style={styles.billingContainer}>
-                <TouchableOpacity 
-                  style={[styles.billingOption, billingCycle === 'MONTHLY' && styles.billingActive]}
-                  onPress={() => setBillingCycle('MONTHLY')}
-                >
-                  <Text style={[styles.billingText, billingCycle === 'MONTHLY' && styles.billingTextActive]}>شهري</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity 
-                  style={[styles.billingOption, billingCycle === 'YEARLY' && styles.billingActive]}
-                  onPress={() => setBillingCycle('YEARLY')}
-                >
-                  <Text style={[styles.billingText, billingCycle === 'YEARLY' && styles.billingTextActive]}>سنوي (توفير)</Text>
-                </TouchableOpacity>
-              </View>
-
-              {/* قسم الباقات الافتراضية الواضحة */}
-              <Text style={styles.sectionLabel}>اختر الباقة المناسبة لشركتك:</Text>
-              {defaultPlans.map((plan) => (
-                <TouchableOpacity
-                  key={plan.id}
-                  style={[styles.planCard, selectedPlan === plan.id && styles.planCardActive]}
-                  onPress={() => setSelectedPlan(plan.id)}
-                >
-                  <View style={{ flexDirection: 'row-reverse', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <Text style={[styles.planTitle, selectedPlan === plan.id && styles.planTitleActive]}>{plan.name}</Text>
-                    <Text style={[styles.planPrice, selectedPlan === plan.id && styles.planPriceActive]}>
-                      {billingCycle === 'MONTHLY' ? plan.priceMonthly : plan.priceYearly}
-                    </Text>
-                  </View>
-                  <Text style={styles.planDetails}>{plan.maxProp}</Text>
-                </TouchableOpacity>
-              ))}
-
-              <TouchableOpacity 
-                style={styles.loginButton} 
-                onPress={handleRegister}
-                disabled={loading}>
-                {loading ? (
-                  <ActivityIndicator color="#FFFFFF" />
-                ) : (
-                  <>
-                    <MaterialCommunityIcons name="account-plus" size={20} color="#FFFFFF" style={{ marginRight: 8 }} />
-                    <Text style={styles.loginButtonText}>إنشاء الحساب والاشتراك</Text>
-                  </>
-                )}
-              </TouchableOpacity>
-
-              <TouchableOpacity 
-                style={styles.switchModeButton} 
-                onPress={() => setIsRegistering(false)}>
-                <Text style={styles.switchModeText}>لديك حساب بالفعل؟ <Text style={styles.linkText}>تسجيل الدخول</Text></Text>
-              </TouchableOpacity>
-            </>
-          )}
-
-        </View>
-
-      </ScrollView>
-    </KeyboardAvoidingView>
+function PlanOption({ plan, lang, yearly, selected, onPress }) {
+  const { t, row, isRTL } = useI18n();
+  const name = lang === 'ar' ? plan.nameAr : plan.nameEn;
+  const price = yearly ? plan.priceYearly : plan.priceMonthly;
+  const limitText = ['properties', 'users']
+    .map((k) => `${t(`plan.limits.${k}`)}: ${plan.limits?.[k] ?? t('common.unlimited')}`)
+    .join(' · ');
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="radio"
+      accessibilityState={{ checked: selected }}
+      style={[styles.option, { flexDirection: row }, selected && styles.optionSelected]}
+    >
+      <View style={{ flex: 1, gap: 2 }}>
+        <Txt weight="weightBold">{name}</Txt>
+        <Txt muted size="small">{limitText}</Txt>
+      </View>
+      <View style={{ alignItems: isRTL ? 'flex-start' : 'flex-end' }}>
+        <Txt weight="weightBold" style={{ color: COLORS.primaryDark }}>{formatOMR(price, lang)}</Txt>
+        <Txt muted size="small">{yearly ? t('auth.perYear') : t('auth.perMonth')}</Txt>
+      </View>
+    </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flexGrow: 1, justifyContent: 'center', padding: SIZES.padding * 1.5, backgroundColor: COLORS.background },
-  logoContainer: { alignItems: 'center', marginBottom: 25 },
-  logoCircle: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: COLORS.card,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 12,
-    ...SHADOWS.floating,
-  },
-  appName: { fontSize: SIZES.large * 1.1, fontWeight: 'bold', color: COLORS.textDark, marginBottom: 4 },
-  appSubtitle: { fontSize: SIZES.small, color: COLORS.textMuted, textAlign: 'center' },
-  
-  formContainer: {
-    backgroundColor: COLORS.card,
-    padding: 20,
-    borderRadius: SIZES.radius,
-    ...SHADOWS.floating,
-  },
-  
-  inputWrapper: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'transparent',
-    borderRadius: SIZES.radius,
-    marginBottom: 12,
-    paddingHorizontal: 15,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  iconLeft: { marginRight: 10 },
-  iconRight: { marginLeft: 10 },
-  input: {
-    flex: 1,
-    color: COLORS.textDark,
-    paddingVertical: 12,
-    fontSize: SIZES.font,
-  },
-
-  sectionLabel: { color: COLORS.textDark, fontSize: SIZES.font, fontWeight: 'bold', marginBottom: 8, marginTop: 5, textAlign: 'right' },
-  
-  billingContainer: {
-    flexDirection: 'row-reverse',
-    justifyContent: 'space-between',
-    marginBottom: 12,
-  },
-  billingOption: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    borderRadius: SIZES.radius,
-    paddingVertical: 10,
-    alignItems: 'center',
-    marginHorizontal: 4,
-  },
-  billingActive: {
-    borderColor: COLORS.primary,
-    backgroundColor: COLORS.primary + '15',
-  },
-  billingText: { color: COLORS.textMuted, fontWeight: 'bold', fontSize: SIZES.font },
-  billingTextActive: { color: COLORS.primary },
-
-  planCard: {
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    borderRadius: SIZES.radius,
-    padding: 12,
-    marginBottom: 10,
-    backgroundColor: 'transparent',
-  },
-  planCardActive: {
-    borderColor: COLORS.primary,
-    backgroundColor: COLORS.primary + '15',
-    borderWidth: 2,
-  },
-  planTitle: { color: COLORS.textDark, fontWeight: 'bold', fontSize: SIZES.font },
-  planTitleActive: { color: COLORS.primary },
-  planPrice: { color: COLORS.textDark, fontWeight: 'bold', fontSize: SIZES.font },
-  planPriceActive: { color: COLORS.primary },
-  planDetails: { color: COLORS.textMuted, fontSize: SIZES.small, textAlign: 'right', marginTop: 4 },
-
-  loginButton: {
-    flexDirection: 'row-reverse',
+  root: { flex: 1, backgroundColor: COLORS.background },
+  split: { flex: 1 },
+  scroll: { flexGrow: 1, alignItems: 'center', justifyContent: 'center', padding: SPACING.lg, gap: SPACING.lg },
+  card: { width: '100%', maxWidth: 520, padding: SPACING.xl },
+  brandPanel: {
+    width: '40%',
+    maxWidth: 520,
     backgroundColor: COLORS.primary,
-    padding: 15,
-    borderRadius: SIZES.radius,
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 10,
+    gap: SPACING.md,
+    padding: SPACING.xxl,
   },
-  loginButtonText: { color: '#FFFFFF', fontWeight: 'bold', fontSize: SIZES.medium },
-
-  switchModeButton: { marginTop: 15, alignItems: 'center' },
-  switchModeText: { color: COLORS.textMuted, fontSize: SIZES.font },
-  linkText: { color: COLORS.primary, fontWeight: 'bold' },
+  logo: {
+    width: 36,
+    height: 36,
+    borderRadius: RADIUS.sm,
+    backgroundColor: COLORS.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  option: {
+    alignItems: 'center',
+    gap: SPACING.md,
+    padding: SPACING.md,
+    borderRadius: RADIUS.md,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    backgroundColor: COLORS.surface,
+  },
+  optionSelected: { borderColor: COLORS.primary, backgroundColor: COLORS.primarySoft, borderWidth: 1.5 },
 });

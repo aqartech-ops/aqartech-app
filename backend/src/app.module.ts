@@ -1,28 +1,16 @@
 import { Module } from '@nestjs/common';
-import { createObserveModule } from '@nestjs/observe';
 import { AppController } from './app.controller.js';
 import { AppService } from './app.service.js';
 import { PrismaModule } from './prisma/prisma.module.js';
+import { CommonModule } from './common/common.module.js';
+import { AuthModule } from './auth/auth.module.js';
+import { PlansModule } from './plans/plans.module.js';
 import { CompanyModule } from './company/company.module.js';
-import { PropertyModule } from './property/property.module.js';
 import { UserModule } from './user/user.module.js';
-
-export const { ObserveModule, ObserveInstrument } = createObserveModule();
+import { AdminModule } from './admin/admin.module.js';
 
 @Module({
-  imports: [
-    // Distributed tracing, auto-correlated logs, request/job metrics, error
-    // telemetry, alarms, and more — out of the box. Sign up at https://observe.nestjs.com
-    ObserveModule.forRoot({
-      appKey: 'YOUR_APP_KEY',
-      appSecret: 'YOUR_APP_SECRET',
-      serviceId: 'backend',
-    }),
-    PrismaModule,
-    CompanyModule,
-    PropertyModule,
-    UserModule,
-  ],
+  imports: [PrismaModule, CommonModule, AuthModule, PlansModule, CompanyModule, UserModule, AdminModule],
   controllers: [AppController],
   providers: [AppService],
 })

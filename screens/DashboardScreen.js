@@ -1,290 +1,189 @@
-// screens/DashboardScreen.js
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
-import { COLORS, SIZES, SHADOWS } from '../theme';
+import React, { useCallback, useEffect, useState } from 'react';
+import { StyleSheet, View, useWindowDimensions } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { COLORS, RADIUS, SPACING } from '../theme';
+import { BREAKPOINTS } from '../services/config';
+import { useI18n } from '../i18n';
+import { useSession } from '../services/session';
+import { adminApi, plansApi } from '../services/api';
+import { Badge, Card, ErrorBox, Row, STATUS_TONE, Screen, Txt } from '../components/ui';
 
-export default function DashboardScreen() {
-  const handleAddAction = (actionName) => {
-    Alert.alert('إجراء جديد', `سيتم فتح نافذة: ${actionName}`);
-  };
+export default function DashboardScreen({ onNavigate }) {
+  const { isAdmin } = useSession();
+  return isAdmin ? <AdminDashboard onNavigate={onNavigate} /> : <CompanyDashboard />;
+}
+
+function useColumns() {
+  const { width } = useWindowDimensions();
+  if (width >= BREAKPOINTS.desktop) return 4;
+  if (width >= BREAKPOINTS.tablet) return 2;
+  return 1;
+}
+
+function Grid({ columns, children }) {
+  const { row } = useI18n();
+  const items = React.Children.toArray(children);
+  return (
+    <View style={{ flexDirection: row, flexWrap: 'wrap', marginHorizontal: -SPACING.sm }}>
+      {items.map((child, i) => (
+        <View key={i} style={{ width: `${100 / columns}%`, padding: SPACING.sm }}>
+          {child}
+        </View>
+      ))}
+    </View>
+  );
+}
+
+function Kpi({ icon, label, value, hint, tone = COLORS.primary }) {
+  return (
+    <Card style={{ gap: SPACING.sm, height: '100%' }}>
+      <Row>
+        <View style={[styles.kpiIcon, { backgroundColor: COLORS.primarySoft }]}>
+          <MaterialCommunityIcons name={icon} size={20} color={tone} />
+        </View>
+        <Txt muted style={{ flex: 1 }}>{label}</Txt>
+      </Row>
+      <Txt size="large" weight="weightBold">{value}</Txt>
+      {hint ? <Txt muted size="small">{hint}</Txt> : null}
+    </Card>
+  );
+}
+
+function CompanyDashboard() {
+  const { t, lang, row } = useI18n();
+  const { me, refresh } = useSession();
+  const columns = useColumns();
+  const [usage, setUsage] = useState(null);
+  const [error, setError] = useState(null);
+  const subscription = me.subscription;
+
+  const load = useCallback(async () => {
+    setError(null);
+    try {
+      await refresh();
+      setUsage(await plansApi.usage());
+    } catch (e) {
+      setError(e);
+    }
+  }, [refresh]);
+
+  useEffect(() => {
+    load();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const planName = subscription ? (lang === 'ar' ? subscription.plan.nameAr : subscription.plan.nameEn) : '—';
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 40, paddingHorizontal: 16, paddingTop: 15 }}>
-      
-      {/* رأس الصفحة: العنوان والترحيب */}
-      <View style={styles.headerContainer}>
-        <Text style={styles.title}>لوحة القيادة</Text>
-        <Text style={styles.welcomeSubtitle}>مرحباً بعودتك، المهندس رضوان الهنائي </Text>
-      </View>
+    <Screen title={t('dashboard.hello', { name: me.user.name })} subtitle={t('dashboard.overview')}>
+      <ErrorBox error={error} onRetry={load} />
 
-      {/* أزرار الإجراءات السريعة (مخصصة للموبايل) */}
-      <View style={styles.actionButtonsRow}>
-        <TouchableOpacity 
-          style={styles.primaryActionButton} 
-          onPress={() => handleAddAction('إضافة مستأجر جديد')}
-        >
-          <MaterialCommunityIcons name="account-plus-outline" size={18} color="#FFFFFF" style={{ marginLeft: 6 }} />
-          <Text style={styles.primaryActionText}>مستأجر جديد</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity 
-          style={styles.secondaryActionButton} 
-          onPress={() => handleAddAction('إضافة عقار')}
-        >
-          <MaterialCommunityIcons name="home-plus-outline" size={18} color={COLORS.primary} style={{ marginLeft: 6 }} />
-          <Text style={styles.secondaryActionText}>إضافة عقار</Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* بطاقات الإحصائيات (شبكة من عمودين لتناسب الهواتف) */}
-      <View style={styles.gridRow}>
-        
-        {/* بطاقة: إجمالي العقارات */}
-        <View style={styles.statCardHalf}>
-          <View style={styles.cardHeaderRow}>
-            <Text style={styles.cardLabel}>إجمالي العقارات</Text>
-            <View style={styles.iconBox}>
-              <MaterialCommunityIcons name="home-outline" size={20} color="#D97706" />
-            </View>
-          </View>
-          <Text style={styles.cardValue}>8</Text>
-        </View>
-
-        {/* بطاقة: إجمالي الوحدات */}
-        <View style={styles.statCardHalf}>
-          <View style={styles.cardHeaderRow}>
-            <Text style={styles.cardLabel}>إجمالي الوحدات</Text>
-            <View style={styles.iconBox}>
-              <MaterialCommunityIcons name="domain" size={20} color="#0284C7" />
-            </View>
-          </View>
-          <Text style={styles.cardValue}>285</Text>
-        </View>
-
-      </View>
-
-      <View style={styles.gridRow}>
-        
-        {/* بطاقة: المستأجرين النشطين */}
-        <View style={styles.statCardHalf}>
-          <View style={styles.cardHeaderRow}>
-            <Text style={styles.cardLabel}>المستأجرين النشطين</Text>
-            <View style={styles.iconBox}>
-              <MaterialCommunityIcons name="account-group-outline" size={20} color="#D97706" />
-            </View>
-          </View>
-          <Text style={styles.cardValue}>237</Text>
-        </View>
-
-        {/* بطاقة: الوحدات الشاغرة */}
-        <View style={styles.statCardHalf}>
-          <View style={styles.cardHeaderRow}>
-            <Text style={styles.cardLabel}>الوحدات الشاغرة</Text>
-            <View style={styles.iconBox}>
-              <MaterialCommunityIcons name="chart-bar" size={20} color="#16A34A" />
-            </View>
-          </View>
-          <Text style={styles.cardValue}>47</Text>
-        </View>
-
-      </View>
-
-      {/* البطاقات المالية (عرض كامل لتوضيح الأرقام براحة) */}
-      <View style={styles.statCardFull}>
-        <View style={styles.cardHeaderRow}>
-          <Text style={styles.cardLabel}>إجمالي الإيجارات المحصلة (هذا الشهر)</Text>
-          <View style={styles.iconBox}>
-            <MaterialCommunityIcons name="cash-check" size={20} color="#16A34A" />
+      {subscription && subscription.status !== 'ACTIVE' ? (
+        <View style={[styles.banner, { flexDirection: row }, subscription.status === 'PENDING' ? styles.bannerWarn : styles.bannerDanger]}>
+          <MaterialCommunityIcons
+            name={subscription.status === 'PENDING' ? 'clock-outline' : 'alert-circle-outline'}
+            size={22}
+            color={subscription.status === 'PENDING' ? COLORS.warning : COLORS.danger}
+          />
+          <View style={{ flex: 1, gap: 2 }}>
+            <Txt weight="weightBold">
+              {subscription.status === 'PENDING' ? t('plan.pendingTitle') : t('plan.inactiveTitle')}
+            </Txt>
+            <Txt>{subscription.status === 'PENDING' ? t('plan.pendingBody') : t('plan.inactiveBody')}</Txt>
           </View>
         </View>
-        <Text style={styles.cardFinancialValue}>OMR 0.00</Text>
-        <TouchableOpacity style={styles.detailsLink} onPress={() => Alert.alert('التفاصيل', 'عرض تفاصيل الإيرادات المحصلة')}>
-          <Text style={styles.detailsLinkText}>عرض التفاصيل</Text>
-        </TouchableOpacity>
-      </View>
+      ) : null}
 
-      <View style={styles.statCardFull}>
-        <View style={styles.cardHeaderRow}>
-          <Text style={styles.cardLabel}>إجمالي الإيجارات المستحقة (هذا الشهر)</Text>
-          <View style={styles.iconBox}>
-            <MaterialCommunityIcons name="wallet-outline" size={20} color="#D97706" />
+      <Grid columns={columns}>
+        <Kpi icon="home-percent-outline" label={t('dashboard.occupancy')} value="—" hint={t('dashboard.kpiEmpty')} />
+        <Kpi icon="cash-check" label={t('dashboard.collection')} value="—" hint={t('dashboard.kpiEmpty')} />
+        <Kpi icon="chart-line" label={t('dashboard.noi')} value="—" hint={t('dashboard.kpiEmpty')} />
+        <Kpi icon="alert-octagon-outline" label={t('dashboard.arrears')} value="—" hint={t('dashboard.kpiEmpty')} />
+      </Grid>
+
+      <View style={{ height: SPACING.md }} />
+
+      <Card style={{ gap: SPACING.lg }}>
+        <Row style={{ justifyContent: 'space-between', flexWrap: 'wrap' }}>
+          <View style={{ gap: 2 }}>
+            <Txt muted size="small">{t('plan.yourPlan')}</Txt>
+            <Txt size="medium" weight="weightBold">{planName}</Txt>
           </View>
-        </View>
-        <Text style={styles.cardFinancialValue}>OMR 0.00</Text>
-        <TouchableOpacity style={styles.detailsLink} onPress={() => Alert.alert('التفاصيل', 'عرض تفاصيل المستحقات')}>
-          <Text style={styles.detailsLinkText}>عرض التفاصيل</Text>
-        </TouchableOpacity>
-      </View>
+          {subscription ? <Badge label={t(`plan.status.${subscription.status}`)} tone={STATUS_TONE[subscription.status]} /> : null}
+        </Row>
+        <Txt weight="weightMedium">{t('plan.usage')}</Txt>
+        {['properties', 'units', 'users', 'owners'].map((key) => (
+          <UsageBar key={key} label={t(`plan.limits.${key}`)} used={usage?.used?.[key] ?? 0} limit={usage?.limits?.[key]} />
+        ))}
+      </Card>
+    </Screen>
+  );
+}
 
-      <View style={styles.statCardFull}>
-        <View style={styles.cardHeaderRow}>
-          <Text style={styles.cardLabel}>إجمالي المصروفات (هذا الشهر)</Text>
-          <View style={styles.iconBox}>
-            <MaterialCommunityIcons name="file-document-edit-outline" size={20} color="#DC2626" />
-          </View>
-        </View>
-        <Text style={styles.cardFinancialValue}>OMR 0.00</Text>
+function UsageBar({ label, used, limit }) {
+  const { t, row } = useI18n();
+  const unlimited = limit === null || limit === undefined;
+  const ratio = unlimited ? 0 : limit === 0 ? 1 : Math.min(1, used / limit);
+  const color = ratio >= 1 ? COLORS.danger : ratio >= 0.8 ? COLORS.warning : COLORS.primary;
+  return (
+    <View style={{ gap: 6 }}>
+      <Row style={{ justifyContent: 'space-between' }}>
+        <Txt>{label}</Txt>
+        <Txt muted>{unlimited ? `${used} · ${t('common.unlimited')}` : `${used} ${t('common.of')} ${limit}`}</Txt>
+      </Row>
+      <View style={[styles.track, { flexDirection: row }]}>
+        <View style={{ width: `${ratio * 100}%`, backgroundColor: color, borderRadius: RADIUS.pill }} />
       </View>
+    </View>
+  );
+}
 
-      {/* بطاقة عقود تنتهي قريباً مع التفاصيل */}
-      <View style={styles.statCardFull}>
-        <View style={styles.cardHeaderRow}>
-          <Text style={styles.cardLabel}>عقود تنتهي قريباً</Text>
-          <View style={styles.iconBox}>
-            <MaterialCommunityIcons name="file-alert-outline" size={20} color="#0284C7" />
-          </View>
-        </View>
-        <Text style={styles.cardValue}>205</Text>
-        
-        <View style={styles.contractSubDetails}>
-          <Text style={styles.contractSubText}>• (5) خلال أسبوعين</Text>
-          <Text style={styles.contractSubText}>• (11) خلال شهر</Text>
-          <Text style={styles.contractSubText}>• (16) خلال 3 أشهر</Text>
-          <Text style={[styles.contractSubText, { color: '#DC2626' }]}>• (173) انتهى دون إجراء</Text>
-        </View>
-      </View>
+function AdminDashboard({ onNavigate }) {
+  const { t } = useI18n();
+  const columns = useColumns();
+  const [companies, setCompanies] = useState(null);
+  const [error, setError] = useState(null);
 
-    </ScrollView>
+  const load = useCallback(() => {
+    setError(null);
+    adminApi.companies().then(setCompanies).catch(setError);
+  }, []);
+  useEffect(load, [load]);
+
+  const count = (status) => (companies ?? []).filter((c) => c.subscription?.status === status).length;
+
+  return (
+    <Screen title={t('dashboard.adminHello')}>
+      <ErrorBox error={error} onRetry={load} />
+      <Grid columns={columns}>
+        <Kpi icon="domain" label={t('companies.title')} value={companies ? companies.length : '—'} />
+        <Kpi icon="check-decagram-outline" label={t('plan.status.ACTIVE')} value={companies ? count('ACTIVE') : '—'} tone={COLORS.success} />
+        <Kpi icon="clock-outline" label={t('plan.status.PENDING')} value={companies ? count('PENDING') : '—'} tone={COLORS.warning} />
+        <Kpi icon="pause-circle-outline" label={t('plan.status.SUSPENDED')} value={companies ? count('SUSPENDED') : '—'} tone={COLORS.danger} />
+      </Grid>
+      {count('PENDING') > 0 ? (
+        <View style={{ marginTop: SPACING.md }}>
+          <Card style={{ gap: SPACING.sm }}>
+            <Txt weight="weightBold">{t('plan.status.PENDING')}: {count('PENDING')}</Txt>
+            <Txt muted onPress={() => onNavigate?.('companies')} style={{ color: COLORS.primaryDark }}>
+              {t('companies.title')}
+            </Txt>
+          </Card>
+        </View>
+      ) : null}
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { 
-    flex: 1, 
-    backgroundColor: COLORS.background 
+  kpiIcon: { width: 36, height: 36, borderRadius: RADIUS.sm, alignItems: 'center', justifyContent: 'center' },
+  banner: {
+    gap: SPACING.md,
+    padding: SPACING.lg,
+    borderRadius: RADIUS.lg,
+    marginBottom: SPACING.lg,
+    alignItems: 'flex-start',
   },
-  headerContainer: {
-    alignItems: 'flex-end',
-    marginBottom: 15,
-  },
-  title: { 
-    fontSize: 22, 
-    fontWeight: 'bold', 
-    color: COLORS.textDark, 
-    marginBottom: 2, 
-    textAlign: 'right' 
-  },
-  welcomeSubtitle: {
-    fontSize: 12,
-    color: COLORS.textMuted,
-  },
-  actionButtonsRow: {
-    flexDirection: 'row-reverse',
-    justifyContent: 'space-between',
-    marginBottom: 15,
-  },
-  primaryActionButton: {
-    flex: 1,
-    flexDirection: 'row-reverse',
-    backgroundColor: COLORS.primary,
-    paddingVertical: 12,
-    borderRadius: SIZES.radius,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginLeft: 8,
-    ...SHADOWS.floating,
-  },
-  primaryActionText: {
-    color: '#FFFFFF',
-    fontWeight: 'bold',
-    fontSize: 12,
-  },
-  secondaryActionButton: {
-    flex: 1,
-    flexDirection: 'row-reverse',
-    backgroundColor: COLORS.card,
-    borderWidth: 1,
-    borderColor: COLORS.primary,
-    paddingVertical: 12,
-    borderRadius: SIZES.radius,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 8,
-    ...SHADOWS.floating,
-  },
-  secondaryActionText: {
-    color: COLORS.primary,
-    fontWeight: 'bold',
-    fontSize: 12,
-  },
-  gridRow: {
-    flexDirection: 'row-reverse',
-    justifyContent: 'space-between',
-    marginBottom: 12,
-  },
-  statCardHalf: {
-    width: '48%',
-    backgroundColor: COLORS.card,
-    borderRadius: SIZES.radius,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: 'rgba(182, 141, 106, 0.2)',
-    ...SHADOWS.floating,
-  },
-  statCardFull: {
-    width: '100%',
-    backgroundColor: COLORS.card,
-    borderRadius: SIZES.radius,
-    padding: 16,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: 'rgba(182, 141, 106, 0.2)',
-    ...SHADOWS.floating,
-  },
-  cardHeaderRow: {
-    flexDirection: 'row-reverse',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  cardLabel: {
-    fontSize: 12,
-    fontWeight: 'bold',
-    color: COLORS.textMuted,
-    textAlign: 'right',
-    flex: 1,
-  },
-  iconBox: {
-    width: 30,
-    height: 30,
-    borderRadius: 8,
-    backgroundColor: 'rgba(182, 141, 106, 0.1)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  cardValue: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: COLORS.textDark,
-    textAlign: 'right',
-  },
-  cardFinancialValue: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: COLORS.textDark,
-    textAlign: 'right',
-    marginBottom: 4,
-  },
-  detailsLink: {
-    marginTop: 4,
-    alignItems: 'flex-end',
-  },
-  detailsLinkText: {
-    fontSize: 11,
-    color: COLORS.primary,
-    fontWeight: 'bold',
-  },
-  contractSubDetails: {
-    marginTop: 10,
-    borderTopWidth: 1,
-    borderColor: 'rgba(182, 141, 106, 0.15)',
-    paddingTop: 8,
-  },
-  contractSubText: {
-    fontSize: 12,
-    color: COLORS.textMuted,
-    textAlign: 'right',
-    marginBottom: 4,
-  },
+  bannerWarn: { backgroundColor: COLORS.warningSoft },
+  bannerDanger: { backgroundColor: COLORS.dangerSoft },
+  track: { height: 8, borderRadius: RADIUS.pill, backgroundColor: COLORS.surfaceSoft, overflow: 'hidden' },
 });
