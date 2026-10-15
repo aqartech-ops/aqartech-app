@@ -31,13 +31,38 @@ export default {
   sections: {
     dashboard: 'لوحة التحكم',
     properties: 'العقارات',
-    tenants: 'المستأجرون',
+    tenants: 'المستأجرون والعقود',
     financials: 'المالية',
     maintenance: 'الصيانة',
     documents: 'المستندات',
     owners: 'الملاك',
     users: 'المستخدمون والأدوار',
     settings: 'الإعدادات',
+    companies: 'المشتركون',
+  },
+
+  // أسماء قصيرة للشريط السفلي
+  tabs: {
+    dashboard: 'الرئيسية',
+    properties: 'العقارات',
+    tenants: 'العقود',
+    financials: 'المالية',
+    maintenance: 'الصيانة',
+    documents: 'المستندات',
+    owners: 'الملاك',
+    users: 'الفريق',
+    settings: 'الإعدادات',
+    companies: 'المشتركون',
+    more: 'المزيد',
+  },
+
+  search: {
+    title: 'البحث',
+    placeholder: 'ابحث عن أي شيء…',
+    hint: 'اكتب أي حرف أو كلمة — أسماء، بريد إلكتروني، أرقام هواتف.',
+    noResults: 'لا توجد نتائج لـ «{{query}}»',
+    sections: 'الأقسام',
+    users: 'المستخدمون',
     companies: 'المشتركون',
   },
 

@@ -31,13 +31,38 @@ export default {
   sections: {
     dashboard: 'Dashboard',
     properties: 'Properties',
-    tenants: 'Tenants',
+    tenants: 'Tenants & leases',
     financials: 'Financials',
     maintenance: 'Maintenance',
     documents: 'Documents',
     owners: 'Owners',
     users: 'Users & roles',
     settings: 'Settings',
+    companies: 'Subscribers',
+  },
+
+  // Short labels for the bottom bar
+  tabs: {
+    dashboard: 'Home',
+    properties: 'Properties',
+    tenants: 'Leases',
+    financials: 'Finance',
+    maintenance: 'Maintenance',
+    documents: 'Documents',
+    owners: 'Owners',
+    users: 'Team',
+    settings: 'Settings',
+    companies: 'Subscribers',
+    more: 'More',
+  },
+
+  search: {
+    title: 'Search',
+    placeholder: 'Search anything…',
+    hint: 'Type any letter or word — names, emails, phone numbers.',
+    noResults: 'No results for "{{query}}"',
+    sections: 'Sections',
+    users: 'Users',
     companies: 'Subscribers',
   },
 
