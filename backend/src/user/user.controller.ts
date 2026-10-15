@@ -1,34 +1,38 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from '@nestjs/common';
 import { UserService } from './user.service.js';
-import { CreateUserDto } from './dto/create-user.dto.js';
-import { UpdateUserDto } from './dto/update-user.dto.js';
+import { Auth, RequirePermission, type UserAuth } from '../common/auth-context.js';
 
-@Controller('user')
+@Controller('users')
 export class UserController {
-  constructor(private readonly userService: UserService) {}
+  constructor(private readonly users: UserService) {}
 
-  @Post()
-  create(@Body() createUserDto: CreateUserDto) {
-    return this.userService.create(createUserDto);
-  }
-
+  @RequirePermission('users', 'VIEW')
   @Get()
-  findAll() {
-    return this.userService.findAll();
+  list(@Auth() auth: UserAuth, @Query('trash') trash?: string) {
+    return this.users.list(auth, trash === '1' || trash === 'true');
   }
 
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.userService.findOne(id);
+  @RequirePermission('users', 'EDIT')
+  @Post()
+  create(@Auth() auth: UserAuth, @Body() body: unknown) {
+    return this.users.create(auth, body);
   }
 
+  @RequirePermission('users', 'EDIT')
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateUserDto: UpdateUserDto) {
-    return this.userService.update(id, updateUserDto);
+  update(@Auth() auth: UserAuth, @Param('id') id: string, @Body() body: unknown) {
+    return this.users.update(auth, id, body);
   }
 
+  @RequirePermission('users', 'EDIT')
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.userService.remove(id);
+  remove(@Auth() auth: UserAuth, @Param('id') id: string) {
+    return this.users.remove(auth, id);
+  }
+
+  @RequirePermission('users', 'EDIT')
+  @Post(':id/restore')
+  restore(@Auth() auth: UserAuth, @Param('id') id: string) {
+    return this.users.restore(auth, id);
   }
 }
