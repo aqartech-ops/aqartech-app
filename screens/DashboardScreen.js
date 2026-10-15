@@ -36,7 +36,7 @@ function Grid({ columns, children }) {
 
 function Kpi({ icon, label, value, hint, tone = COLORS.primary }) {
   return (
-    <Card style={{ gap: SPACING.sm, height: '100%' }}>
+    <Card style={{ gap: SPACING.sm, flexGrow: 1 }}>
       <Row>
         <View style={[styles.kpiIcon, { backgroundColor: COLORS.primarySoft }]}>
           <MaterialCommunityIcons name={icon} size={20} color={tone} />
