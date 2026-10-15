@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
-import { Pressable, StyleSheet, View, useWindowDimensions } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { Modal, Pressable, StyleSheet, View, useWindowDimensions } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { COLORS, FONT, RADIUS, SPACING } from '../theme';
 import { BREAKPOINTS } from '../services/config';
@@ -18,6 +18,7 @@ export default function AppShell({ items, active, onNavigate, children }) {
   const { width } = useWindowDimensions();
   const { t, isRTL } = useI18n();
   const [menuOpen, setMenuOpen] = useState(false);
+  const insets = useSafeAreaInsets();
   const wide = width >= BREAKPOINTS.desktop;
 
   const go = (key) => {
@@ -30,12 +31,16 @@ export default function AppShell({ items, active, onNavigate, children }) {
   return (
     <SafeAreaView style={styles.root} edges={['top', 'bottom']}>
       <View style={[styles.body, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
-        {wide ? <Sidebar items={items} active={active} onSelect={go} /> : null}
+        {wide ? (
+          <View style={{ width: 260 }}>
+            <Sidebar items={items} active={active} onSelect={go} />
+          </View>
+        ) : null}
 
         <View style={{ flex: 1 }}>
           {!wide ? (
             <Row style={styles.topBar}>
-              <IconButton icon="menu" label={t('common.menu')} onPress={() => setMenuOpen(true)} />
+              <IconButton icon="menu" size={26} label={t('common.menu')} onPress={() => setMenuOpen(true)} style={{ padding: 10 }} />
               <Txt size="medium" weight="weightBold" style={{ flex: 1 }}>{title}</Txt>
               <Brand compact />
             </Row>
@@ -44,14 +49,21 @@ export default function AppShell({ items, active, onNavigate, children }) {
         </View>
       </View>
 
-      {!wide && menuOpen ? (
-        <View style={styles.drawerLayer}>
-          <Pressable style={styles.backdrop} onPress={() => setMenuOpen(false)} accessibilityLabel={t('common.close')} />
-          <View style={[styles.drawer, isRTL ? { right: 0 } : { left: 0 }]}>
+      {/* Phone/tablet menu: a Modal always renders above everything and receives touches on every platform. */}
+      <Modal
+        visible={!wide && menuOpen}
+        transparent
+        animationType="fade"
+        statusBarTranslucent
+        onRequestClose={() => setMenuOpen(false)}
+      >
+        <View style={[styles.drawerLayer, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
+          <View style={[styles.drawer, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
             <Sidebar items={items} active={active} onSelect={go} />
           </View>
+          <Pressable style={styles.backdrop} onPress={() => setMenuOpen(false)} accessibilityLabel={t('common.close')} />
         </View>
-      ) : null}
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -138,7 +150,8 @@ const styles = StyleSheet.create({
     borderBottomColor: COLORS.border,
   },
   sidebar: {
-    width: 260,
+    width: '100%',
+    minWidth: 240,
     height: '100%',
     backgroundColor: COLORS.surface,
     borderColor: COLORS.border,
@@ -162,7 +175,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  drawerLayer: { ...StyleSheet.absoluteFillObject, zIndex: 50 },
-  backdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: COLORS.overlay },
-  drawer: { position: 'absolute', top: 0, bottom: 0 },
+  drawerLayer: { flex: 1 },
+  backdrop: { flex: 1, backgroundColor: COLORS.overlay },
+  drawer: { width: 280, maxWidth: '85%', backgroundColor: COLORS.surface },
 });
