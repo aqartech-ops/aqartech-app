@@ -65,6 +65,10 @@ export class AuthGuard implements CanActivate {
       isCompanyAdmin: user.isCompanyAdmin,
       userKind: user.kind,
       access,
+      propertyIds:
+        user.isCompanyAdmin || !user.role || user.role.deletedAt || user.role.propertyIds.length === 0
+          ? null
+          : user.role.propertyIds,
     } satisfies AuthContext;
 
     const required = this.meta<{ section: SectionKey; level: AccessLevel }>(REQUIRED_PERMISSION, ctx);

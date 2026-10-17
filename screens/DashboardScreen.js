@@ -5,12 +5,13 @@ import { COLORS, RADIUS, SPACING } from '../theme';
 import { BREAKPOINTS } from '../services/config';
 import { useI18n } from '../i18n';
 import { useSession } from '../services/session';
-import { adminApi, plansApi } from '../services/api';
-import { Badge, Card, ErrorBox, Row, STATUS_TONE, Screen, Txt } from '../components/ui';
+import { adminApi, dashboardApi } from '../services/api';
+import { Badge, Button, Card, ErrorBox, Loading, Row, STATUS_TONE, Screen, Txt } from '../components/ui';
+import { SectionIcon } from '../components/Rial';
 
 export default function DashboardScreen({ onNavigate }) {
   const { isAdmin } = useSession();
-  return isAdmin ? <AdminDashboard onNavigate={onNavigate} /> : <CompanyDashboard />;
+  return isAdmin ? <AdminDashboard onNavigate={onNavigate} /> : <CompanyDashboard onNavigate={onNavigate} />;
 }
 
 function useColumns() {
@@ -39,7 +40,7 @@ function Kpi({ icon, label, value, hint, tone = COLORS.primary }) {
     <Card style={{ gap: SPACING.sm, flexGrow: 1 }}>
       <Row>
         <View style={[styles.kpiIcon, { backgroundColor: COLORS.primarySoft }]}>
-          <MaterialCommunityIcons name={icon} size={20} color={tone} />
+          <SectionIcon name={icon} size={20} color={tone} />
         </View>
         <Txt muted style={{ flex: 1 }}>{label}</Txt>
       </Row>
@@ -49,11 +50,15 @@ function Kpi({ icon, label, value, hint, tone = COLORS.primary }) {
   );
 }
 
-function CompanyDashboard() {
+/**
+ * Every user gets the dashboard; each widget only appears when the server sent it,
+ * i.e. when the user's role and plan allow that section.
+ */
+function CompanyDashboard({ onNavigate }) {
   const { t, lang, row } = useI18n();
   const { me, refresh } = useSession();
   const columns = useColumns();
-  const [usage, setUsage] = useState(null);
+  const [data, setData] = useState(null);
   const [error, setError] = useState(null);
   const subscription = me.subscription;
 
@@ -61,7 +66,7 @@ function CompanyDashboard() {
     setError(null);
     try {
       await refresh();
-      setUsage(await plansApi.usage());
+      setData(await dashboardApi.get());
     } catch (e) {
       setError(e);
     }
@@ -72,6 +77,10 @@ function CompanyDashboard() {
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const planName = subscription ? (lang === 'ar' ? subscription.plan.nameAr : subscription.plan.nameEn) : '—';
+  const w = data?.widgets ?? {};
+  const portfolio = w.portfolio;
+  const quick = data?.quickActions ?? [];
+  const pct = (r) => (r === null || r === undefined ? '—' : `${Math.round(r * 100)}%`);
 
   return (
     <Screen title={t('dashboard.hello', { name: me.user.name })} subtitle={t('dashboard.overview')}>
@@ -93,28 +102,63 @@ function CompanyDashboard() {
         </View>
       ) : null}
 
-      <Grid columns={columns}>
-        <Kpi icon="home-percent-outline" label={t('dashboard.occupancy')} value="—" hint={t('dashboard.kpiEmpty')} />
-        <Kpi icon="cash-check" label={t('dashboard.collection')} value="—" hint={t('dashboard.kpiEmpty')} />
-        <Kpi icon="chart-line" label={t('dashboard.noi')} value="—" hint={t('dashboard.kpiEmpty')} />
-        <Kpi icon="alert-octagon-outline" label={t('dashboard.arrears')} value="—" hint={t('dashboard.kpiEmpty')} />
-      </Grid>
+      {data === null && !error ? <Loading /> : null}
 
-      <View style={{ height: SPACING.md }} />
-
-      <Card style={{ gap: SPACING.lg }}>
-        <Row style={{ justifyContent: 'space-between', flexWrap: 'wrap' }}>
-          <View style={{ gap: 2 }}>
-            <Txt muted size="small">{t('plan.yourPlan')}</Txt>
-            <Txt size="medium" weight="weightBold">{planName}</Txt>
-          </View>
-          {subscription ? <Badge label={t(`plan.status.${subscription.status}`)} tone={STATUS_TONE[subscription.status]} /> : null}
+      {quick.length ? (
+        <Row style={{ flexWrap: 'wrap', marginBottom: SPACING.md }}>
+          {quick.includes('tenants') ? (
+            <Button icon="account-plus-outline" title={t('dashboard.newTenant')} onPress={() => onNavigate?.('tenants')} style={{ flexGrow: 1 }} />
+          ) : null}
+          {quick.includes('properties') ? (
+            <Button
+              variant="secondary"
+              icon="home-plus-outline"
+              title={t('properties.add')}
+              onPress={() => onNavigate?.('properties', { create: true })}
+              style={{ flexGrow: 1 }}
+            />
+          ) : null}
         </Row>
-        <Txt weight="weightMedium">{t('plan.usage')}</Txt>
-        {['properties', 'units', 'users', 'owners'].map((key) => (
-          <UsageBar key={key} label={t(`plan.limits.${key}`)} used={usage?.used?.[key] ?? 0} limit={usage?.limits?.[key]} />
-        ))}
-      </Card>
+      ) : null}
+
+      {portfolio ? (
+        <Grid columns={columns}>
+          <Kpi icon="office-building-outline" label={t('dashboard.properties')} value={portfolio.properties} />
+          <Kpi icon="door" label={t('dashboard.units')} value={portfolio.total} />
+          <Kpi icon="door-open" label={t('dashboard.vacant')} value={portfolio.vacant} tone={COLORS.warning} />
+          <Kpi icon="home-percent-outline" label={t('dashboard.occupancy')} value={pct(portfolio.occupancyRate)} tone={COLORS.success} />
+        </Grid>
+      ) : null}
+
+      {w.financials ? (
+        <>
+          <View style={{ height: SPACING.sm }} />
+          <Grid columns={columns}>
+            <Kpi icon="rial" label={t('dashboard.collection')} value="—" hint={t('dashboard.kpiPhase4')} />
+            <Kpi icon="chart-line" label={t('dashboard.noi')} value="—" hint={t('dashboard.kpiPhase4')} />
+            <Kpi icon="alert-octagon-outline" label={t('dashboard.arrears')} value="—" hint={t('dashboard.kpiPhase4')} />
+          </Grid>
+        </>
+      ) : null}
+
+      {w.planUsage ? (
+        <>
+          <View style={{ height: SPACING.md }} />
+          <Card style={{ gap: SPACING.lg }}>
+            <Row style={{ justifyContent: 'space-between', flexWrap: 'wrap' }}>
+              <View style={{ gap: 2 }}>
+                <Txt muted size="small">{t('plan.yourPlan')}</Txt>
+                <Txt size="medium" weight="weightBold">{planName}</Txt>
+              </View>
+              {subscription ? <Badge label={t(`plan.status.${subscription.status}`)} tone={STATUS_TONE[subscription.status]} /> : null}
+            </Row>
+            <Txt weight="weightMedium">{t('plan.usage')}</Txt>
+            {['properties', 'units', 'users', 'owners'].map((key) => (
+              <UsageBar key={key} label={t(`plan.limits.${key}`)} used={w.planUsage.used?.[key] ?? 0} limit={w.planUsage.limits?.[key]} />
+            ))}
+          </Card>
+        </>
+      ) : null}
     </Screen>
   );
 }

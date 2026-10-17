@@ -9,9 +9,11 @@ import { CompanyModule } from './company/company.module.js';
 import { UserModule } from './user/user.module.js';
 import { AdminModule } from './admin/admin.module.js';
 import { SearchModule } from './search/search.controller.js';
+import { PropertiesModule } from './properties/properties.controller.js';
+import { DashboardModule } from './dashboard/dashboard.controller.js';
 
 @Module({
-  imports: [PrismaModule, CommonModule, AuthModule, PlansModule, CompanyModule, UserModule, AdminModule, SearchModule],
+  imports: [PrismaModule, CommonModule, AuthModule, PlansModule, CompanyModule, UserModule, AdminModule, SearchModule, PropertiesModule, DashboardModule],
   controllers: [AppController],
   providers: [AppService],
 })

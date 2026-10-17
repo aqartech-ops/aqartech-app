@@ -115,6 +115,8 @@ model Company {
   users        User[]
   roles        Role[]
   activity     ActivityLog[]
+  properties   Property[]
+  units        Unit[]
 }
 
 // ==========================================
@@ -205,4 +207,92 @@ model ActivityLog {
   createdAt DateTime  @default(now())
 
   @@index([companyId, createdAt])
+}
+
+// ==========================================
+// 6. PROPERTIES & UNITS (العقارات والوحدات) — phase 3
+// ==========================================
+
+enum PropertyOwnership {
+  OWNED // owned by the subscriber itself
+  MANAGED // managed on behalf of an owner (management agreement — next batch)
+}
+
+enum PropertyCategory {
+  BUILDING
+  VILLA_COMPOUND
+  VILLA
+  COMMERCIAL_COMPLEX
+  LAND
+  OTHER
+}
+
+model Property {
+  id             String            @id @default(uuid())
+  companyId      String
+  company        Company           @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  name           String
+  ownership      PropertyOwnership @default(OWNED)
+  category       PropertyCategory  @default(BUILDING)
+  governorate    String?
+  wilayat        String?
+  address        String?
+  plotNumber     String? // رقم القطعة / الملكية
+  floors         Int?
+  image          String?
+  propertyValue  BigInt? // baisa — for Cap Rate (BigInt: values can exceed 2.1M OMR)
+  investmentCost BigInt? // baisa — for ROI
+  notes          String?
+  createdById    String?
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+  deletedAt      DateTime?
+
+  units Unit[]
+
+  @@index([companyId])
+}
+
+enum UnitType {
+  APARTMENT
+  STUDIO
+  VILLA
+  ROOM
+  SHOP
+  OFFICE
+  WAREHOUSE
+  OTHER
+}
+
+enum UnitStatus {
+  VACANT
+  OCCUPIED
+  MAINTENANCE
+  RESERVED
+}
+
+model Unit {
+  id               String     @id @default(uuid())
+  companyId        String
+  company          Company    @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  propertyId       String
+  property         Property   @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  number           String
+  floor            String?
+  type             UnitType   @default(APARTMENT)
+  area             Float? // m² (not money)
+  bedrooms         Int?
+  bathrooms        Int?
+  askingRent       Int        @default(0) // baisa per month
+  status           UnitStatus @default(VACANT)
+  vacantSince      DateTime?
+  electricityMeter String?
+  waterMeter       String?
+  notes            String?
+  createdAt        DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
+  deletedAt        DateTime?
+
+  @@index([companyId])
+  @@index([propertyId])
 }

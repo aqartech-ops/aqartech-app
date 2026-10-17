@@ -104,6 +104,47 @@ async function main() {
       });
       console.log(`✔ demo company created — login: ${demoEmail} / Demo@12345`);
     }
+
+    // Demo portfolio (only if the demo company has no properties yet)
+    const demoUser = await prisma.user.findUnique({ where: { email: demoEmail } });
+    if (demoUser && (await prisma.property.count({ where: { companyId: demoUser.companyId } })) === 0) {
+      const companyId = demoUser.companyId;
+      const garden = await prisma.property.create({
+        data: { companyId, name: 'بناية الحدائق', category: 'BUILDING', ownership: 'MANAGED', governorate: 'مسقط', wilayat: 'بوشر', floors: 3, propertyValue: 1800000000, investmentCost: 1500000000 },
+      });
+      const units = [];
+      for (const floor of [1, 2, 3]) {
+        for (const n of [1, 2, 3]) {
+          const number = `${floor}0${n}`;
+          units.push({
+            companyId,
+            propertyId: garden.id,
+            number,
+            floor: String(floor),
+            type: number === '103' ? 'SHOP' : 'APARTMENT',
+            askingRent: number === '103' ? 450000 : 280000 + floor * 10000,
+            bedrooms: number === '103' ? null : 2,
+            status: ['202', '303'].includes(number) ? 'VACANT' : 'OCCUPIED',
+          });
+        }
+      }
+      await prisma.unit.createMany({ data: units });
+      const villas = await prisma.property.create({
+        data: { companyId, name: 'مجمع فلل السيب', category: 'VILLA_COMPOUND', ownership: 'OWNED', governorate: 'مسقط', wilayat: 'السيب' },
+      });
+      await prisma.unit.createMany({
+        data: ['V1', 'V2', 'V3', 'V4'].map((number, i) => ({
+          companyId,
+          propertyId: villas.id,
+          number,
+          type: 'VILLA',
+          askingRent: 650000,
+          bedrooms: 4,
+          status: i === 3 ? 'MAINTENANCE' : 'OCCUPIED',
+        })),
+      });
+      console.log('✔ demo properties created (2 properties, 13 units)');
+    }
   }
 }
 

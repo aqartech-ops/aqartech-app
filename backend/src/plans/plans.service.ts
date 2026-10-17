@@ -52,21 +52,22 @@ export class PlansService {
       include: { plan: true },
     });
     const limits = subscription ? readLimits(subscription.plan) : {};
-    const [users, owners] = await Promise.all([
+    const [users, owners, properties, units] = await Promise.all([
       this.prisma.user.count({ where: { companyId, kind: 'STAFF', deletedAt: null } }),
       this.prisma.user.count({ where: { companyId, kind: 'OWNER', deletedAt: null } }),
+      this.prisma.property.count({ where: { companyId, deletedAt: null } }),
+      this.prisma.unit.count({ where: { companyId, deletedAt: null, property: { deletedAt: null } } }),
     ]);
-    // properties and units are counted once those modules exist (phase 3)
-    const used: Record<LimitKey, number> = { users, owners, properties: 0, units: 0 };
+    const used: Record<LimitKey, number> = { users, owners, properties, units };
     return { status: subscription?.status ?? null, limits, used };
   }
 
-  /** Throws if adding one more `key` would exceed the plan, or if the subscription is not active. */
-  async assertCanAdd(companyId: string, key: LimitKey): Promise<void> {
+  /** Throws if adding `count` more `key` would exceed the plan, or if the subscription is not active. */
+  async assertCanAdd(companyId: string, key: LimitKey, count = 1): Promise<void> {
     const { status, limits, used } = await this.usage(companyId);
     if (status !== 'ACTIVE') throw new ForbiddenException('subscription.inactive');
     const limit = limits[key];
-    if (limit !== null && limit !== undefined && used[key] >= limit) {
+    if (limit !== null && limit !== undefined && used[key] + count > limit) {
       throw new ForbiddenException({ message: 'plan.limitReached', limit: key, max: limit });
     }
   }

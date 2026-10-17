@@ -1,5 +1,5 @@
 import React from 'react';
-import { Image, Text, View } from 'react-native';
+import { Image, Text, TextInput, View } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { COLORS, FONT } from '../theme';
 import { useI18n } from '../i18n';
@@ -53,4 +53,43 @@ export function SectionIcon({ name, size = 22, color = COLORS.textDark }) {
     );
   }
   return <MaterialCommunityIcons name={name} size={size} color={color} />;
+}
+
+/**
+ * Money input: the user types OMR ("1250.5"), the form keeps the text; convert with parseOMR()
+ * to integer baisa when saving. The rial symbol sits inside the field.
+ */
+export function MoneyField({ label, value, onChangeText, error, hint }) {
+  const { row, align } = useI18n();
+  const small = (extra) => [{ fontSize: FONT.small, textAlign: align, color: COLORS.textDark }, extra];
+  return (
+    <View style={{ gap: 4 }}>
+      {label ? <Text style={small({ fontWeight: FONT.weightMedium })}>{label}</Text> : null}
+      <View
+        style={{
+          flexDirection: row,
+          alignItems: 'center',
+          gap: 8,
+          backgroundColor: COLORS.surface,
+          borderWidth: 1,
+          borderColor: error ? COLORS.danger : COLORS.borderStrong,
+          borderRadius: 12,
+          paddingHorizontal: 12,
+          minHeight: 46,
+        }}
+      >
+        <RialSymbol size={13} color={COLORS.textMuted} />
+        <TextInput
+          value={value}
+          onChangeText={(t) => onChangeText(t.replace(/[٠-٩]/g, (d) => String('٠١٢٣٤٥٦٧٨٩'.indexOf(d))).replace(/[٫]/g, '.').replace(/[^0-9.,]/g, ''))}
+          keyboardType="decimal-pad"
+          inputMode="decimal"
+          placeholder="0.000"
+          placeholderTextColor={COLORS.textMuted}
+          style={{ flex: 1, fontSize: FONT.body, color: COLORS.textDark, paddingVertical: 8, textAlign: align, outlineStyle: 'none' }}
+        />
+      </View>
+      {error ? <Text style={small({ color: COLORS.danger })}>{error}</Text> : hint ? <Text style={small({ color: COLORS.textMuted })}>{hint}</Text> : null}
+    </View>
+  );
 }

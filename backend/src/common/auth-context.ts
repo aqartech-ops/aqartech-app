@@ -12,6 +12,8 @@ export type AuthContext =
       userKind: 'STAFF' | 'OWNER';
       /** Effective access per section = plan features ∩ role permissions. */
       access: Record<SectionKey, AccessLevel>;
+      /** Properties this user may see; null = all of the company's properties. */
+      propertyIds: string[] | null;
     };
 
 export type UserAuth = Extract<AuthContext, { kind: 'user' }>;
