@@ -3,7 +3,7 @@ import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, View
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { COLORS, RADIUS, SPACING } from '../theme';
-import { BREAKPOINTS } from '../services/config';
+import { API_URL, BREAKPOINTS } from '../services/config';
 import { useI18n } from '../i18n';
 import { useSession } from '../services/session';
 import { plansApi } from '../services/api';
@@ -47,6 +47,11 @@ export default function LoginScreen() {
                 {mode === 'admin' ? t('auth.backToUserSignIn') : t('auth.adminSignIn')}
               </Txt>
             </Pressable>
+            {__DEV__ ? (
+              <Txt muted size="small" style={{ textAlign: 'center' }} selectable>
+                {t('settings.server')}: {API_URL}
+              </Txt>
+            ) : null}
           </ScrollView>
         </View>
       </KeyboardAvoidingView>
