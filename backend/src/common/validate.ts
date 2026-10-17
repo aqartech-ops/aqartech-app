@@ -105,3 +105,25 @@ export function nullableString(src: Record<string, unknown>, field: string, max 
   if (src[field] === undefined) return undefined;
   return optionalString(src, field, max) ?? null;
 }
+
+/** Date as "YYYY-MM-DD" (or full ISO). Returns a Date at UTC midnight for plain dates. */
+function parseDate(value: unknown, field: string): Date {
+  if (typeof value !== 'string') throw new BadRequestException({ message: 'validation.date', field });
+  const plain = /^\d{4}-\d{2}-\d{2}$/.test(value);
+  const d = new Date(plain ? `${value}T00:00:00.000Z` : value);
+  if (Number.isNaN(d.getTime())) throw new BadRequestException({ message: 'validation.date', field });
+  return d;
+}
+
+export function requiredDate(src: Record<string, unknown>, field: string): Date {
+  if (src[field] === undefined || src[field] === null || src[field] === '') {
+    throw new BadRequestException({ message: 'validation.required', field });
+  }
+  return parseDate(src[field], field);
+}
+
+export function optionalDate(src: Record<string, unknown>, field: string): Date | null | undefined {
+  if (src[field] === undefined) return undefined;
+  if (src[field] === null || src[field] === '') return null;
+  return parseDate(src[field], field);
+}

@@ -117,6 +117,9 @@ model Company {
   activity     ActivityLog[]
   properties   Property[]
   units        Unit[]
+  owners       Owner[]
+  agreements   ManagementAgreement[]
+  partners     PropertyPartner[]
 }
 
 // ==========================================
@@ -248,7 +251,9 @@ model Property {
   updatedAt      DateTime          @updatedAt
   deletedAt      DateTime?
 
-  units Unit[]
+  units      Unit[]
+  agreements ManagementAgreement[]
+  partners   PropertyPartner[]
 
   @@index([companyId])
 }
@@ -295,4 +300,95 @@ model Unit {
 
   @@index([companyId])
   @@index([propertyId])
+}
+
+// ==========================================
+// 7. OWNERS, MANAGEMENT AGREEMENTS & PARTNERS (الملاك وعقود الإدارة والشركاء) — phase 3
+// ==========================================
+
+enum PartyType {
+  INDIVIDUAL
+  COMPANY
+}
+
+model Owner {
+  id            String    @id @default(uuid())
+  companyId     String
+  company       Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  type          PartyType @default(INDIVIDUAL)
+  name          String
+  civilId       String? // الرقم المدني
+  crNumber      String? // السجل التجاري
+  nationality   String?
+  phone         String?
+  email         String?
+  bankName      String?
+  accountName   String?
+  accountNumber String? // IBAN / account no. — where owner payouts go
+  notes         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  deletedAt     DateTime?
+
+  agreements ManagementAgreement[]
+  partners   PropertyPartner[]
+
+  @@index([companyId])
+}
+
+enum FeeMethod {
+  PERCENT_OF_COLLECTED // % of rent actually collected (default)
+  PERCENT_OF_DUE // % of rent due (billed), collected or not
+  FIXED // fixed amount per statement period
+}
+
+enum StatementPeriod {
+  MONTHLY
+  QUARTERLY
+  YEARLY
+}
+
+enum AgreementStatus {
+  ACTIVE
+  ENDED
+}
+
+/// Agreement between the subscriber (manager) and the owner of a MANAGED property.
+model ManagementAgreement {
+  id              String          @id @default(uuid())
+  companyId       String
+  company         Company         @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  propertyId      String
+  property        Property        @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  ownerId         String
+  owner           Owner           @relation(fields: [ownerId], references: [id])
+  startDate       DateTime
+  endDate         DateTime?
+  feeMethod       FeeMethod       @default(PERCENT_OF_COLLECTED)
+  feeRateBp       Int? // basis points: 500 = 5%
+  feeFixed        Int? // baisa per statement period
+  statementPeriod StatementPeriod @default(MONTHLY)
+  status          AgreementStatus @default(ACTIVE)
+  notes           String?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  @@index([companyId])
+  @@index([propertyId])
+}
+
+/// Who owns what share of a property. Shares are basis points and add up to 10000 (100%).
+model PropertyPartner {
+  id         String   @id @default(uuid())
+  companyId  String
+  company    Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  propertyId String
+  property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  ownerId    String
+  owner      Owner    @relation(fields: [ownerId], references: [id])
+  shareBp    Int
+  createdAt  DateTime @default(now())
+
+  @@unique([propertyId, ownerId])
+  @@index([companyId])
 }

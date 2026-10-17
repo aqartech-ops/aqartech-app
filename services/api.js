@@ -131,6 +131,20 @@ export const propertiesApi = {
   restoreUnit: (unitId) => api.post(`/units/${unitId}/restore`),
 };
 
+export const ownersApi = {
+  list: (trash = false) => api.get('/owners', { trash: trash ? '1' : undefined }),
+  get: (id) => api.get(`/owners/${id}`),
+  create: (data) => api.post('/owners', data),
+  update: (id, data) => api.patch(`/owners/${id}`, data),
+  remove: (id) => api.delete(`/owners/${id}`),
+  restore: (id) => api.post(`/owners/${id}/restore`),
+  agreements: (propertyId) => api.get(`/properties/${propertyId}/agreements`),
+  saveAgreement: (propertyId, data) => request(`/properties/${propertyId}/agreement`, { method: 'PUT', body: data }),
+  endAgreement: (propertyId, data) => api.post(`/properties/${propertyId}/agreement/end`, data),
+  partners: (propertyId) => api.get(`/properties/${propertyId}/partners`),
+  savePartners: (propertyId, partners) => request(`/properties/${propertyId}/partners`, { method: 'PUT', body: { partners } }),
+};
+
 export const searchApi = {
   run: (q) => api.get('/search', { q }),
 };

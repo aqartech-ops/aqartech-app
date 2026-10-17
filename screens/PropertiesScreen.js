@@ -10,6 +10,7 @@ import { confirm, notify } from '../services/dialog';
 import { formatOMR, parseOMR } from '../services/money';
 import { matches } from '../services/text';
 import { Money, MoneyField } from '../components/Rial';
+import PropertyOwnership from '../components/PropertyOwnership';
 import {
   Badge,
   Button,
@@ -383,6 +384,8 @@ function PropertyDetail({ id, onBack }) {
           ) : null}
           {property.notes ? <Txt muted>{property.notes}</Txt> : null}
         </Card>
+
+        <PropertyOwnership property={property} />
 
         <Row style={{ justifyContent: 'space-between', flexWrap: 'wrap' }}>
           <Txt size="medium" weight="weightBold">{t('units.title')}</Txt>
