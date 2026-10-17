@@ -7,8 +7,8 @@ import { API_URL, BREAKPOINTS } from '../services/config';
 import { useI18n } from '../i18n';
 import { useSession } from '../services/session';
 import { plansApi } from '../services/api';
-import { formatOMR } from '../services/money';
 import { Button, Card, ErrorBox, Field, Row, Segmented, Txt, errorText } from '../components/ui';
+import { Money } from '../components/Rial';
 
 // Three modes: customer sign in, customer registration, platform-team sign in.
 export default function LoginScreen() {
@@ -330,7 +330,7 @@ function PlanOption({ plan, lang, yearly, selected, onPress }) {
         <Txt muted size="small">{limitText}</Txt>
       </View>
       <View style={{ alignItems: isRTL ? 'flex-start' : 'flex-end' }}>
-        <Txt weight="weightBold" style={{ color: COLORS.primaryDark }}>{formatOMR(price, lang)}</Txt>
+        <Money baisa={price} weight="weightBold" color={COLORS.primaryDark} size={16} />
         <Txt muted size="small">{yearly ? t('auth.perYear') : t('auth.perMonth')}</Txt>
       </View>
     </Pressable>
