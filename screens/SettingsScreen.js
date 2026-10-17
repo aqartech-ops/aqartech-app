@@ -5,7 +5,7 @@ import { LANGUAGES, useI18n } from '../i18n';
 import { useSession } from '../services/session';
 import { companyApi } from '../services/api';
 import { API_URL } from '../services/config';
-import { formatOMR } from '../services/money';
+import { Money } from '../components/Rial';
 import { Badge, Button, Card, ErrorBox, Field, Row, STATUS_TONE, Screen, Segmented, Txt, errorText } from '../components/ui';
 
 export default function SettingsScreen() {
@@ -116,9 +116,10 @@ function SubscriptionCard({ subscription }) {
         <Badge label={t(`plan.status.${subscription.status}`)} tone={STATUS_TONE[subscription.status]} />
       </Row>
       <Txt size="medium" weight="weightMedium">{lang === 'ar' ? plan.nameAr : plan.nameEn}</Txt>
-      <Txt muted>
-        {formatOMR(yearly ? plan.priceYearly : plan.priceMonthly, lang)} {yearly ? t('auth.perYear') : t('auth.perMonth')}
-      </Txt>
+      <Row gap={6}>
+        <Money baisa={yearly ? plan.priceYearly : plan.priceMonthly} color={COLORS.textMuted} />
+        <Txt muted>{yearly ? t('auth.perYear') : t('auth.perMonth')}</Txt>
+      </Row>
     </Card>
   );
 }

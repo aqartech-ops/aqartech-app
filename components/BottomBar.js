@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Keyboard, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { SectionIcon } from './Rial';
 import { COLORS, FONT, RADIUS, SHADOWS, SPACING } from '../theme';
 import { useI18n } from '../i18n';
 
@@ -36,7 +37,7 @@ export default function BottomBar({ items, active, onSelect, onMore, bottomInset
         style={styles.tab}
         hitSlop={4}
       >
-        <MaterialCommunityIcons name={item.icon} size={24} color={color} />
+        <SectionIcon name={item.icon} size={24} color={color} />
         <Text numberOfLines={1} style={[styles.tabLabel, { color }, selected && { fontWeight: FONT.weightBold }]}>
           {t(`tabs.${item.key}`)}
         </Text>

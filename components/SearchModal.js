@@ -7,6 +7,7 @@ import { useI18n } from '../i18n';
 import { searchApi } from '../services/api';
 import { matches, normalizeSearch } from '../services/text';
 import { ErrorBox, IconButton, Row, Txt } from './ui';
+import { SectionIcon } from './Rial';
 
 /**
  * Global search (محرك البحث): every letter typed searches sections on the device and
@@ -141,7 +142,7 @@ function ResultRow({ icon, title, subtitle, onPress }) {
     <Pressable onPress={onPress} style={({ pressed }) => [pressed && { backgroundColor: COLORS.surfaceSoft }]}>
       <Row style={styles.resultRow} gap={SPACING.md}>
         <View style={styles.resultIcon}>
-          <MaterialCommunityIcons name={icon} size={20} color={COLORS.primaryDark} />
+          <SectionIcon name={icon} size={20} color={COLORS.primaryDark} />
         </View>
         <View style={{ flex: 1, gap: 2 }}>
           <Txt weight="weightMedium" numberOfLines={1}>{title}</Txt>

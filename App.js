@@ -26,7 +26,7 @@ const USER_SECTIONS = [
   { key: 'dashboard', icon: 'view-dashboard-outline', Screen: DashboardScreen },
   { key: 'properties', icon: 'office-building-outline', Screen: PropertiesScreen },
   { key: 'tenants', icon: 'account-group-outline', Screen: TenantsScreen },
-  { key: 'financials', icon: 'cash-multiple', Screen: FinancialsScreen },
+  { key: 'financials', icon: 'rial', Screen: FinancialsScreen },
   { key: 'maintenance', icon: 'tools', Screen: MaintenanceProvidersScreen },
   { key: 'documents', icon: 'file-document-multiple-outline', Screen: DocumentsScreen },
   { key: 'owners', icon: 'account-tie-outline', Screen: OwnersScreen },

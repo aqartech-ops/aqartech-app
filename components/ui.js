@@ -3,6 +3,7 @@ import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, Text, Text
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { COLORS, FONT, RADIUS, SHADOWS, SPACING } from '../theme';
 import { useI18n } from '../i18n';
+import { SectionIcon } from './Rial';
 
 // Shared building blocks. All of them respect the current language direction.
 
@@ -191,7 +192,7 @@ export function Screen({ title, subtitle, actions, children, scroll = true }) {
 export function EmptyState({ icon = 'tray', title, body, action }) {
   return (
     <View style={styles.empty}>
-      <MaterialCommunityIcons name={icon} size={40} color={COLORS.primary} />
+      <SectionIcon name={icon} size={40} color={COLORS.primary} />
       {title ? <Txt weight="weightBold" size="medium" style={{ textAlign: 'center' }}>{title}</Txt> : null}
       {body ? <Txt muted style={{ textAlign: 'center', maxWidth: 420 }}>{body}</Txt> : null}
       {action}

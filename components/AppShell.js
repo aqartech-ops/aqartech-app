@@ -8,6 +8,7 @@ import { useI18n } from '../i18n';
 import { useSession } from '../services/session';
 import { IconButton, Row, Txt } from './ui';
 import BottomBar from './BottomBar';
+import { SectionIcon } from './Rial';
 import SearchModal from './SearchModal';
 
 const IS_APP = Platform.OS !== 'web';
@@ -137,7 +138,7 @@ function Sidebar({ items, active, onSelect, onSearch }) {
                 pressed && !selected && { backgroundColor: COLORS.surfaceSoft },
               ]}
             >
-              <MaterialCommunityIcons
+              <SectionIcon
                 name={item.icon}
                 size={20}
                 color={selected ? COLORS.primaryDark : COLORS.textMuted}
