@@ -37,13 +37,13 @@ npm run start:dev                          # http://localhost:3000
 
 ```bash
 # in the project root
-cp .env.example .env          # set EXPO_PUBLIC_API_URL (see the comments in the file)
-npx expo install expo-secure-store react-native-safe-area-context
+cp .env.example .env          # nothing to fill during development (see the comments in the file)
+npx expo install expo-secure-store react-native-safe-area-context expo-constants
 npm install
 npx expo start                # press w for web, or scan the QR code with your phone
 ```
 
-On a real phone, `EXPO_PUBLIC_API_URL` must be your computer's Wi-Fi address (e.g. `http://192.168.1.123:3000`), not `localhost`.
+During development the app finds the API on your computer automatically (the same address Expo puts in the QR code), so switching Wi-Fi networks needs no changes. The address in use is shown under the sign-in form. Phone and computer must be on the same network, and Windows Firewall must allow port 3000.
 
 ### Test accounts (after `db:seed` with `SEED_DEMO=1`)
 
