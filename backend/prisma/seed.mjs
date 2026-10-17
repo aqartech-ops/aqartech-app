@@ -145,6 +145,28 @@ async function main() {
       });
       console.log('✔ demo properties created (2 properties, 13 units)');
     }
+
+    // Demo owners + management agreement + partners (only if none yet)
+    const garden = demoUser
+      ? await prisma.property.findFirst({ where: { companyId: demoUser.companyId, name: 'بناية الحدائق', deletedAt: null } })
+      : null;
+    if (garden && (await prisma.owner.count({ where: { companyId: garden.companyId } })) === 0) {
+      const companyId = garden.companyId;
+      const owner1 = await prisma.owner.create({
+        data: { companyId, name: 'سالم بن خلفان الحارثي', phone: '+96899112233', civilId: '12345678', bankName: 'بنك مسقط', accountNumber: 'OM810270000012345678901' },
+      });
+      const owner2 = await prisma.owner.create({ data: { companyId, name: 'مريم بنت سعيد البلوشية', phone: '+96892334455' } });
+      await prisma.managementAgreement.create({
+        data: { companyId, propertyId: garden.id, ownerId: owner1.id, startDate: new Date('2026-01-01T00:00:00Z'), feeMethod: 'PERCENT_OF_COLLECTED', feeRateBp: 500 },
+      });
+      await prisma.propertyPartner.createMany({
+        data: [
+          { companyId, propertyId: garden.id, ownerId: owner1.id, shareBp: 6000 },
+          { companyId, propertyId: garden.id, ownerId: owner2.id, shareBp: 4000 },
+        ],
+      });
+      console.log('✔ demo owners created (2 owners, 1 management agreement, partners 60/40)');
+    }
   }
 }
 

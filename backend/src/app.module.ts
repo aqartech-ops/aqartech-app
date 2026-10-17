@@ -11,9 +11,10 @@ import { AdminModule } from './admin/admin.module.js';
 import { SearchModule } from './search/search.controller.js';
 import { PropertiesModule } from './properties/properties.controller.js';
 import { DashboardModule } from './dashboard/dashboard.controller.js';
+import { OwnersModule } from './owners/owners.controller.js';
 
 @Module({
-  imports: [PrismaModule, CommonModule, AuthModule, PlansModule, CompanyModule, UserModule, AdminModule, SearchModule, PropertiesModule, DashboardModule],
+  imports: [PrismaModule, CommonModule, AuthModule, PlansModule, CompanyModule, UserModule, AdminModule, SearchModule, PropertiesModule, DashboardModule, OwnersModule],
   controllers: [AppController],
   providers: [AppService],
 })

@@ -3,7 +3,7 @@ import { PrismaService } from '../prisma/prisma.service.js';
 import { Auth, AnyAuthenticated, type AuthContext } from '../common/auth-context.js';
 import { likePattern, normalizeSearch, normalizedColumn } from '../common/text.js';
 
-type ResultItem = { id: string; title: string; subtitle: string | null; propertyId?: string; status?: string };
+type ResultItem = { id: string; title: string; subtitle: string | null; propertyId?: string; ownerId?: string; status?: string };
 type ResultGroup = { type: string; section: string; items: ResultItem[] };
 
 const LIMIT = 20;
@@ -36,6 +36,7 @@ export class SearchService {
       });
     } else {
       if (auth.access.properties !== 'HIDDEN') groups.push(...(await this.propertyGroups(auth, pattern)));
+      if (auth.access.owners !== 'HIDDEN') groups.push(await this.ownerGroup(auth, pattern));
       if (auth.access.users !== 'HIDDEN') groups.push(await this.userGroup(auth, pattern));
     }
 
@@ -72,6 +73,21 @@ export class SearchService {
         items: units.map((u) => ({ id: u.id, title: u.number, subtitle: u.propertyName, propertyId: u.propertyId, status: u.status })),
       },
     ];
+  }
+
+  private async ownerGroup(auth: Extract<AuthContext, { kind: 'user' }>, pattern: string): Promise<ResultGroup> {
+    const owners = await this.prisma.$queryRaw<{ id: string; name: string; phone: string | null; civilId: string | null }[]>`
+      SELECT id, name, phone, "civilId" FROM "Owner"
+      WHERE "companyId" = ${auth.companyId} AND "deletedAt" IS NULL AND (
+        ${normalizedColumn('"name"')} LIKE ${pattern} OR ${normalizedColumn('"phone"')} LIKE ${pattern}
+        OR ${normalizedColumn('"email"')} LIKE ${pattern} OR ${normalizedColumn('"civilId"')} LIKE ${pattern}
+        OR ${normalizedColumn('"crNumber"')} LIKE ${pattern})
+      ORDER BY name LIMIT ${LIMIT}`;
+    return {
+      type: 'owners',
+      section: 'owners',
+      items: owners.map((o) => ({ id: o.id, title: o.name, subtitle: [o.phone, o.civilId].filter(Boolean).join(' · ') || null, ownerId: o.id })),
+    };
   }
 
   private async userGroup(auth: Extract<AuthContext, { kind: 'user' }>, pattern: string): Promise<ResultGroup> {

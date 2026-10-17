@@ -54,7 +54,7 @@ export class PlansService {
     const limits = subscription ? readLimits(subscription.plan) : {};
     const [users, owners, properties, units] = await Promise.all([
       this.prisma.user.count({ where: { companyId, kind: 'STAFF', deletedAt: null } }),
-      this.prisma.user.count({ where: { companyId, kind: 'OWNER', deletedAt: null } }),
+      this.prisma.owner.count({ where: { companyId, deletedAt: null } }),
       this.prisma.property.count({ where: { companyId, deletedAt: null } }),
       this.prisma.unit.count({ where: { companyId, deletedAt: null, property: { deletedAt: null } } }),
     ]);
