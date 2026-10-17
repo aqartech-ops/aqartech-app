@@ -1,10 +1,14 @@
 import { Body, Controller, Get, HttpCode, Post } from '@nestjs/common';
 import { AuthService } from './auth.service.js';
-import { Auth, AnyAuthenticated, Public, type AuthContext } from '../common/auth-context.js';
+import { PasswordService } from './password.service.js';
+import { Auth, AnyAuthenticated, Public, type AuthContext, type UserAuth } from '../common/auth-context.js';
 
 @Controller()
 export class AuthController {
-  constructor(private readonly auth: AuthService) {}
+  constructor(
+    private readonly auth: AuthService,
+    private readonly passwords: PasswordService,
+  ) {}
 
   @Public()
   @Post('auth/register')
@@ -24,6 +28,28 @@ export class AuthController {
   @Post('admin/auth/login')
   adminLogin(@Body() body: unknown) {
     return this.auth.adminLogin(body);
+  }
+
+  /** Step 1 of "forgot password": email a 6-digit code. */
+  @Public()
+  @HttpCode(200)
+  @Post('auth/forgot-password')
+  forgot(@Body() body: unknown) {
+    return this.passwords.forgot(body);
+  }
+
+  /** Step 2: code + new password. */
+  @Public()
+  @HttpCode(200)
+  @Post('auth/reset-password')
+  reset(@Body() body: unknown) {
+    return this.passwords.reset(body);
+  }
+
+  @HttpCode(200)
+  @Post('auth/change-password')
+  change(@Auth() auth: UserAuth, @Body() body: unknown) {
+    return this.passwords.change(auth, body);
   }
 
   @AnyAuthenticated()

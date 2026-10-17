@@ -56,6 +56,12 @@ export function SessionProvider({ children }) {
       adminSignIn: async (email, password) => applyAuth(await authApi.adminLogin(email, password)),
       register: async (payload) => applyAuth(await authApi.register(payload)),
       refresh: async () => setMe(await authApi.me()),
+      /** Change own password; this device keeps its session (others are signed out). */
+      changePassword: async (currentPassword, password) => {
+        const { token } = await authApi.changePassword(currentPassword, password);
+        setAuthToken(token);
+        await storage.set(TOKEN_KEY, token);
+      },
       signOut,
       /** Access level for a section: 'EDIT' | 'VIEW' | 'HIDDEN' */
       levelOf: (section) => (me?.kind === 'user' ? me.access?.[section] ?? 'HIDDEN' : 'HIDDEN'),

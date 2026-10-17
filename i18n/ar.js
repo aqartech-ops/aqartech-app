@@ -100,6 +100,19 @@ export default {
     haveAccount: 'لديك حساب؟',
     noAccount: 'جديد في AqarTech؟',
     passwordHint: '8 أحرف على الأقل',
+    backToSignIn: 'العودة لتسجيل الدخول',
+  },
+
+  reset: {
+    forgotLink: 'نسيت كلمة المرور؟',
+    title: 'استعادة كلمة المرور',
+    step1: 'أدخل بريد حسابك وسنرسل إليك رمزاً من 6 أرقام.',
+    step2: 'إن كان للبريد {{email}} حساب، فقد أُرسل إليه رمز من 6 أرقام. أدخله مع كلمة المرور الجديدة.',
+    code: 'الرمز',
+    sendCode: 'إرسال الرمز',
+    resend: 'إرسال رمز جديد',
+    save: 'حفظ كلمة المرور الجديدة',
+    done: 'تم تغيير كلمة المرور. سجّل الدخول بكلمة المرور الجديدة.',
   },
 
   plan: {
@@ -156,6 +169,8 @@ export default {
     permissions: 'الصلاحيات',
     activate: 'تفعيل',
     deactivate: 'إيقاف',
+    generatePassword: 'توليد كلمة مرور',
+    generatedHint: 'انسخ كلمة المرور وأعطها لعضو الفريق، ويستطيع تغييرها من الإعدادات.',
   },
 
   settings: {
@@ -165,6 +180,10 @@ export default {
     company: 'بيانات الحساب',
     subscription: 'الاشتراك',
     server: 'الخادم',
+    changePassword: 'تغيير كلمة المرور',
+    currentPassword: 'كلمة المرور الحالية',
+    newPassword: 'كلمة المرور الجديدة',
+    changePasswordHint: '8 أحرف على الأقل. سيتم تسجيل خروج أجهزتك الأخرى.',
   },
 
   companies: {
@@ -206,6 +225,8 @@ export default {
     'user.cannotChangeMainAccount': 'لا يمكن تغيير الحساب الرئيسي بهذه الطريقة.',
     'user.cannotDeleteSelf': 'لا يمكنك حذف حسابك.',
     'role.notFound': 'الدور المحدد غير موجود.',
+    'reset.invalidCode': 'الرمز غير صحيح أو منتهي الصلاحية. اطلب رمزاً جديداً.',
+    'auth.wrongCurrentPassword': 'كلمة المرور الحالية غير صحيحة.',
     'common.notFound': 'غير موجود. ربما تم حذفه.',
   },
 };

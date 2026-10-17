@@ -82,6 +82,9 @@ export const authApi = {
   adminLogin: (email, password) => api.post('/admin/auth/login', { email, password }),
   register: (payload) => api.post('/auth/register', payload),
   me: () => api.get('/auth/me'),
+  forgotPassword: (email, locale) => api.post('/auth/forgot-password', { email, locale }),
+  resetPassword: (email, code, password) => api.post('/auth/reset-password', { email, code, password }),
+  changePassword: (currentPassword, password) => api.post('/auth/change-password', { currentPassword, password }),
 };
 
 export const plansApi = {

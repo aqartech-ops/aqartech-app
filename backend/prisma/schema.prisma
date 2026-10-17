@@ -22,6 +22,7 @@ model PlatformAdmin {
   name         String
   email        String    @unique
   passwordHash String
+  passwordChangedAt DateTime? // sessions issued before this are rejected
   isActive     Boolean   @default(true)
   lastLoginAt  DateTime?
   createdAt    DateTime  @default(now())
@@ -134,6 +135,7 @@ model User {
   email          String    @unique
   phone          String?
   passwordHash   String
+  passwordChangedAt DateTime? // sessions issued before this are rejected
   isCompanyAdmin Boolean   @default(false) // the subscriber's main account: full access
   roleId         String?
   role           Role?     @relation(fields: [roleId], references: [id])
@@ -143,7 +145,23 @@ model User {
   updatedAt      DateTime  @updatedAt
   deletedAt      DateTime?
 
+  resetCodes PasswordResetCode[]
+
   @@index([companyId])
+}
+
+/// One-time code for "forgot password" (رمز استعادة كلمة المرور). Only a hash is stored.
+model PasswordResetCode {
+  id        String    @id @default(uuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  codeHash  String
+  expiresAt DateTime
+  attempts  Int       @default(0)
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId, createdAt])
 }
 
 model Role {

@@ -17,6 +17,7 @@ export default function SettingsScreen() {
       <View style={{ gap: SPACING.lg, maxWidth: 720 }}>
         <LanguageCard />
         <ProfileCard me={me} isAdmin={isAdmin} />
+        {!isAdmin ? <ChangePasswordCard /> : null}
         {!isAdmin && me.user.isCompanyAdmin ? <CompanyCard /> : null}
         {!isAdmin && me.subscription ? <SubscriptionCard subscription={me.subscription} /> : null}
         <Card style={{ gap: SPACING.sm }}>
@@ -47,6 +48,63 @@ function ProfileCard({ me, isAdmin }) {
       <Txt weight="weightBold">{t('settings.profile')}</Txt>
       <Txt>{person.name}</Txt>
       <Txt muted>{person.email}</Txt>
+    </Card>
+  );
+}
+
+function ChangePasswordCard() {
+  const { t } = useI18n();
+  const { changePassword } = useSession();
+  const [current, setCurrent] = useState('');
+  const [next, setNext] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState(null);
+  const [saved, setSaved] = useState(false);
+  const fieldError = (name) => (error?.field === name ? errorText(t, error) : undefined);
+
+  const save = async () => {
+    setBusy(true);
+    setError(null);
+    setSaved(false);
+    try {
+      await changePassword(current, next);
+      setCurrent('');
+      setNext('');
+      setSaved(true);
+    } catch (e) {
+      setError(e);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Card style={{ gap: SPACING.md }}>
+      <Txt weight="weightBold">{t('settings.changePassword')}</Txt>
+      {error && !error.field ? <ErrorBox error={error} /> : null}
+      <Field
+        label={t('settings.currentPassword')}
+        value={current}
+        onChangeText={setCurrent}
+        secure
+        autoComplete="current-password"
+        textContentType="password"
+        error={fieldError('currentPassword')}
+      />
+      <Field
+        label={t('settings.newPassword')}
+        hint={t('settings.changePasswordHint')}
+        value={next}
+        onChangeText={setNext}
+        secure
+        autoComplete="new-password"
+        textContentType="newPassword"
+        error={fieldError('password')}
+      />
+      <Row style={{ justifyContent: 'flex-end' }}>
+        {saved ? <Txt style={{ color: COLORS.success }}>{t('common.saved')}</Txt> : null}
+        <Button title={t('common.save')} onPress={save} loading={busy} disabled={!current || next.length < 8} />
+      </Row>
     </Card>
   );
 }

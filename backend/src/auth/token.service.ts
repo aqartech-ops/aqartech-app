@@ -2,6 +2,7 @@ import { Injectable, UnauthorizedException } from '@nestjs/common';
 import jwt from 'jsonwebtoken';
 
 export type TokenPayload = { sub: string; kind: 'user' | 'admin' };
+export type VerifiedToken = TokenPayload & { iat: number };
 
 @Injectable()
 export class TokenService {
@@ -21,13 +22,13 @@ export class TokenService {
     return jwt.sign(payload, this.secret, { expiresIn: this.expiresIn } as jwt.SignOptions);
   }
 
-  verify(token: string): TokenPayload {
+  verify(token: string): VerifiedToken {
     try {
       const decoded = jwt.verify(token, this.secret);
       if (typeof decoded !== 'object' || !decoded.sub || (decoded.kind !== 'user' && decoded.kind !== 'admin')) {
         throw new Error('bad payload');
       }
-      return { sub: String(decoded.sub), kind: decoded.kind };
+      return { sub: String(decoded.sub), kind: decoded.kind, iat: Number(decoded.iat ?? 0) };
     } catch {
       throw new UnauthorizedException('auth.invalidToken');
     }

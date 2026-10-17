@@ -6,7 +6,7 @@ import { COLORS, RADIUS, SPACING } from '../theme';
 import { API_URL, BREAKPOINTS } from '../services/config';
 import { useI18n } from '../i18n';
 import { useSession } from '../services/session';
-import { plansApi } from '../services/api';
+import { authApi, plansApi } from '../services/api';
 import { Button, Card, ErrorBox, Field, Row, Segmented, Txt, errorText } from '../components/ui';
 import { Money } from '../components/Rial';
 
@@ -14,7 +14,9 @@ import { Money } from '../components/Rial';
 export default function LoginScreen() {
   const { t, lang, setLang } = useI18n();
   const { width } = useWindowDimensions();
-  const [mode, setMode] = useState('signIn'); // signIn | register | admin
+  const [mode, setMode] = useState('signIn'); // signIn | register | admin | forgot
+  const [notice, setNotice] = useState(null);
+  const [prefillEmail, setPrefillEmail] = useState('');
   const wide = width >= BREAKPOINTS.desktop;
 
   return (
@@ -37,8 +39,29 @@ export default function LoginScreen() {
             <Card style={styles.card}>
               {mode === 'register' ? (
                 <RegisterForm onSwitch={() => setMode('signIn')} />
+              ) : mode === 'forgot' ? (
+                <ForgotForm
+                  initialEmail={prefillEmail}
+                  onCancel={() => setMode('signIn')}
+                  onDone={(email) => {
+                    setPrefillEmail(email);
+                    setNotice(t('reset.done'));
+                    setMode('signIn');
+                  }}
+                />
               ) : (
-                <SignInForm admin={mode === 'admin'} onSwitch={() => setMode('register')} />
+                <SignInForm
+                  key={mode}
+                  admin={mode === 'admin'}
+                  initialEmail={prefillEmail}
+                  notice={mode === 'signIn' ? notice : null}
+                  onSwitch={() => setMode('register')}
+                  onForgot={(email) => {
+                    setPrefillEmail(email);
+                    setNotice(null);
+                    setMode('forgot');
+                  }}
+                />
               )}
             </Card>
 
@@ -84,10 +107,10 @@ function BrandPanel() {
   );
 }
 
-function SignInForm({ admin, onSwitch }) {
-  const { t } = useI18n();
+function SignInForm({ admin, onSwitch, onForgot, initialEmail = '', notice }) {
+  const { t, start } = useI18n();
   const { signIn, adminSignIn } = useSession();
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState(initialEmail);
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
@@ -109,6 +132,11 @@ function SignInForm({ admin, onSwitch }) {
         <Txt size="title" weight="weightBold">{admin ? t('auth.adminSignInTitle') : t('auth.welcomeBack')}</Txt>
         {!admin ? <Txt muted>{t('auth.signInSubtitle')}</Txt> : null}
       </View>
+      {notice ? (
+        <View style={styles.notice}>
+          <Txt style={{ color: COLORS.success }}>{notice}</Txt>
+        </View>
+      ) : null}
       <ErrorBox error={error} />
       <Field
         label={t('auth.email')}
@@ -127,6 +155,11 @@ function SignInForm({ admin, onSwitch }) {
         autoComplete="current-password"
         onSubmitEditing={submit}
       />
+      {!admin ? (
+        <Pressable onPress={() => onForgot(email.trim())} style={{ alignSelf: start }} hitSlop={6}>
+          <Txt size="small" style={{ color: COLORS.primaryDark }}>{t('reset.forgotLink')}</Txt>
+        </Pressable>
+      ) : null}
       <Button title={t('auth.signIn')} onPress={submit} loading={busy} disabled={!email || !password} />
       {!admin ? (
         <Row style={{ justifyContent: 'center' }}>
@@ -134,6 +167,96 @@ function SignInForm({ admin, onSwitch }) {
           <Button small variant="ghost" title={t('auth.createAccount')} onPress={onSwitch} />
         </Row>
       ) : null}
+    </View>
+  );
+}
+
+/** Forgot password: 1) email → 6-digit code is sent  2) code + new password. */
+function ForgotForm({ initialEmail, onCancel, onDone }) {
+  const { t, lang } = useI18n();
+  const [step, setStep] = useState(1);
+  const [email, setEmail] = useState(initialEmail);
+  const [code, setCode] = useState('');
+  const [password, setPassword] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState(null);
+  const fieldError = (name) => (error?.field === name ? errorText(t, error) : undefined);
+
+  const sendCode = async () => {
+    setError(null);
+    setBusy(true);
+    try {
+      await authApi.forgotPassword(email.trim(), lang);
+      setStep(2);
+    } catch (e) {
+      setError(e);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const resetPassword = async () => {
+    setError(null);
+    setBusy(true);
+    try {
+      await authApi.resetPassword(email.trim(), code, password);
+      onDone(email.trim());
+    } catch (e) {
+      setError(e);
+      setBusy(false);
+    }
+  };
+
+  return (
+    <View style={{ gap: SPACING.lg }}>
+      <View style={{ gap: 4 }}>
+        <Txt size="title" weight="weightBold">{t('reset.title')}</Txt>
+        <Txt muted>{step === 1 ? t('reset.step1') : t('reset.step2', { email: email.trim() })}</Txt>
+      </View>
+      {error && !error.field ? <ErrorBox error={error} /> : null}
+      {step === 1 ? (
+        <>
+          <Field
+            label={t('auth.email')}
+            value={email}
+            onChangeText={setEmail}
+            autoCapitalize="none"
+            autoComplete="email"
+            keyboardType="email-address"
+            inputMode="email"
+            error={fieldError('email')}
+            onSubmitEditing={sendCode}
+          />
+          <Button title={t('reset.sendCode')} onPress={sendCode} loading={busy} disabled={!email.trim()} />
+        </>
+      ) : (
+        <>
+          <Field
+            label={t('reset.code')}
+            value={code}
+            onChangeText={(v) => setCode(v.replace(/[^0-9٠-٩]/g, '').replace(/[٠-٩]/g, (d) => String('٠١٢٣٤٥٦٧٨٩'.indexOf(d))).slice(0, 6))}
+            keyboardType="number-pad"
+            inputMode="numeric"
+            autoComplete="one-time-code"
+            textContentType="oneTimeCode"
+            error={fieldError('code')}
+            inputStyle={{ letterSpacing: 6, fontSize: 20 }}
+          />
+          <Field
+            label={t('settings.newPassword')}
+            hint={t('auth.passwordHint')}
+            value={password}
+            onChangeText={setPassword}
+            secure
+            autoComplete="new-password"
+            textContentType="newPassword"
+            error={fieldError('password')}
+          />
+          <Button title={t('reset.save')} onPress={resetPassword} loading={busy} disabled={code.length !== 6 || password.length < 8} />
+          <Button variant="ghost" small title={t('reset.resend')} onPress={sendCode} disabled={busy} />
+        </>
+      )}
+      <Button variant="secondary" title={t('auth.backToSignIn')} onPress={onCancel} />
     </View>
   );
 }
@@ -368,5 +491,6 @@ const styles = StyleSheet.create({
     borderColor: COLORS.border,
     backgroundColor: COLORS.surface,
   },
+  notice: { backgroundColor: COLORS.successSoft, borderRadius: RADIUS.md, padding: SPACING.md },
   optionSelected: { borderColor: COLORS.primary, backgroundColor: COLORS.primarySoft, borderWidth: 1.5 },
 });
