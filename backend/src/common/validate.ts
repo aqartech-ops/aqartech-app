@@ -67,3 +67,41 @@ export function nonNegativeInt(src: Record<string, unknown>, field: string, fall
   }
   return value;
 }
+
+/** Optional integer (null clears it). Returns undefined when the field is absent. */
+export function optionalInt(src: Record<string, unknown>, field: string, min = 0, max = 1_000_000): number | null | undefined {
+  const value = src[field];
+  if (value === undefined) return undefined;
+  if (value === null || value === '') return null;
+  if (typeof value !== 'number' || !Number.isSafeInteger(value) || value < min || value > max) {
+    throw new BadRequestException({ message: 'validation.invalid', field });
+  }
+  return value;
+}
+
+/** Optional decimal number such as an area in m² (never money). */
+export function optionalNumber(src: Record<string, unknown>, field: string, min = 0, max = 10_000_000): number | null | undefined {
+  const value = src[field];
+  if (value === undefined) return undefined;
+  if (value === null || value === '') return null;
+  if (typeof value !== 'number' || !Number.isFinite(value) || value < min || value > max) {
+    throw new BadRequestException({ message: 'validation.invalid', field });
+  }
+  return value;
+}
+
+/** Optional money in integer baisa (the app converts OMR text to baisa before sending). */
+export function optionalBaisa(src: Record<string, unknown>, field: string): number | null | undefined {
+  return optionalInt(src, field, 0, 9_000_000_000_000);
+}
+
+export function optionalEnum<T extends string>(src: Record<string, unknown>, field: string, allowed: readonly T[]): T | undefined {
+  if (src[field] === undefined) return undefined;
+  return oneOf(src, field, allowed);
+}
+
+/** Optional string that can be cleared with null/'' (returns null), or left untouched (undefined). */
+export function nullableString(src: Record<string, unknown>, field: string, max = 200): string | null | undefined {
+  if (src[field] === undefined) return undefined;
+  return optionalString(src, field, max) ?? null;
+}

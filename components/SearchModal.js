@@ -60,8 +60,8 @@ export default function SearchModal({ visible, onClose, items, onNavigate }) {
     [items, query, t],
   );
 
-  const go = (section) => {
-    onNavigate(section);
+  const go = (section, params) => {
+    onNavigate(section, params);
     onClose();
   };
 
@@ -114,7 +114,7 @@ export default function SearchModal({ visible, onClose, items, onNavigate }) {
                   icon={items.find((i) => i.key === g.section)?.icon ?? 'file-outline'}
                   title={item.title}
                   subtitle={item.subtitle}
-                  onPress={() => go(g.section)}
+                  onPress={() => go(g.section, item.propertyId ? { propertyId: item.propertyId } : null)}
                 />
               ))}
             </Group>

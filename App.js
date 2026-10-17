@@ -44,7 +44,9 @@ const ADMIN_SECTIONS = [
 function Root() {
   const { status, me, isAdmin, levelOf } = useSession();
   const { t } = useI18n();
-  const [active, setActive] = useState('dashboard');
+  const [route, setRoute] = useState({ key: 'dashboard', params: null });
+  const active = route.key;
+  const navigate = (key, params = null) => setRoute({ key, params });
 
   const sections = useMemo(() => {
     if (!me) return [];
@@ -54,7 +56,7 @@ function Root() {
 
   // If the current section disappears (e.g. permissions changed), fall back to the dashboard.
   useEffect(() => {
-    if (sections.length && !sections.some((s) => s.key === active)) setActive('dashboard');
+    if (sections.length && !sections.some((s) => s.key === active)) setRoute({ key: 'dashboard', params: null });
   }, [sections, active]);
 
   if (status === 'loading') {
@@ -71,8 +73,8 @@ function Root() {
   const ActiveScreen = current?.Screen ?? DashboardScreen;
 
   return (
-    <AppShell items={sections} active={current?.key} onNavigate={setActive}>
-      <ActiveScreen key={current?.key} onNavigate={setActive} />
+    <AppShell items={sections} active={current?.key} onNavigate={navigate}>
+      <ActiveScreen key={`${current?.key}:${JSON.stringify(route.params)}`} params={route.params} onNavigate={navigate} />
     </AppShell>
   );
 }

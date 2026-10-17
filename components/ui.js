@@ -320,3 +320,58 @@ const styles = StyleSheet.create({
     ...SHADOWS.floating,
   },
 });
+
+/** Pick one value from a wrapping list of chips (for longer option lists than Segmented). */
+export function ChipSelect({ options, value, onChange }) {
+  const { row } = useI18n();
+  return (
+    <View style={{ flexDirection: row, flexWrap: 'wrap', gap: SPACING.sm }}>
+      {options.map((o) => {
+        const selected = o.value === value;
+        return (
+          <Pressable
+            key={o.value}
+            onPress={() => onChange(o.value)}
+            accessibilityRole="radio"
+            accessibilityState={{ checked: selected }}
+            style={[chipStyles.chip, selected && chipStyles.chipSelected]}
+          >
+            <Text style={[chipStyles.text, selected && { color: COLORS.primaryDark, fontWeight: FONT.weightBold }]}>{o.label}</Text>
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+}
+
+/** Numbers-only input (digits, Arabic digits and one decimal point are accepted). */
+export function toLatinDigits(text) {
+  return String(text ?? '').replace(/[٠-٩]/g, (d) => String('٠١٢٣٤٥٦٧٨٩'.indexOf(d))).replace(/[٫,]/g, '.');
+}
+
+/** Two fields side by side on wide screens, stacked on phones. */
+export function FieldRow({ children }) {
+  const { row } = useI18n();
+  return (
+    <View style={{ flexDirection: row, flexWrap: 'wrap', gap: SPACING.md }}>
+      {React.Children.toArray(children).map((child, i) => (
+        <View key={i} style={{ flexGrow: 1, flexBasis: 160 }}>
+          {child}
+        </View>
+      ))}
+    </View>
+  );
+}
+
+const chipStyles = StyleSheet.create({
+  chip: {
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.sm,
+    borderRadius: RADIUS.pill,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    backgroundColor: COLORS.surface,
+  },
+  chipSelected: { borderColor: COLORS.primary, backgroundColor: COLORS.primarySoft },
+  text: { color: COLORS.textDark, fontSize: FONT.body },
+});

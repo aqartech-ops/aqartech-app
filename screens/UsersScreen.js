@@ -3,7 +3,7 @@ import { StyleSheet, View } from 'react-native';
 import { COLORS, RADIUS, SPACING } from '../theme';
 import { useI18n } from '../i18n';
 import { useSession } from '../services/session';
-import { rolesApi, usersApi } from '../services/api';
+import { propertiesApi, rolesApi, usersApi } from '../services/api';
 import { confirm } from '../services/dialog';
 import {
   Badge,
@@ -402,6 +402,8 @@ function RoleForm({ role, onClose, onSaved }) {
   const isNew = role && !role.id;
   const [name, setName] = useState('');
   const [permissions, setPermissions] = useState({});
+  const [propertyIds, setPropertyIds] = useState([]); // [] = all properties
+  const [properties, setProperties] = useState([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
 
@@ -409,6 +411,8 @@ function RoleForm({ role, onClose, onSaved }) {
     if (role) {
       setName(role.name ?? '');
       setPermissions(Object.fromEntries(ROLE_SECTIONS.map((s) => [s, role.permissions?.[s] ?? (s === 'dashboard' ? 'VIEW' : 'HIDDEN')])));
+      setPropertyIds(role.propertyIds ?? []);
+      propertiesApi.list().then(setProperties).catch(() => setProperties([]));
       setError(null);
       setBusy(false);
     }
@@ -418,8 +422,8 @@ function RoleForm({ role, onClose, onSaved }) {
     setBusy(true);
     setError(null);
     try {
-      if (isNew) await rolesApi.create({ name, permissions });
-      else await rolesApi.update(role.id, { name, permissions });
+      if (isNew) await rolesApi.create({ name, permissions, propertyIds });
+      else await rolesApi.update(role.id, { name, permissions, propertyIds });
       onSaved();
     } catch (e) {
       setError(e);
@@ -453,6 +457,32 @@ function RoleForm({ role, onClose, onSaved }) {
           />
         </View>
       ))}
+      {properties.length ? (
+        <View style={{ gap: SPACING.sm }}>
+          <Txt weight="weightMedium" size="small">{t('users.propertyScope')}</Txt>
+          <Txt muted size="small">{t('users.propertyScopeHint')}</Txt>
+          <View style={{ flexDirection: row, flexWrap: 'wrap', gap: SPACING.sm }}>
+            <Button
+              small
+              variant={propertyIds.length === 0 ? 'primary' : 'secondary'}
+              title={t('users.allProperties')}
+              onPress={() => setPropertyIds([])}
+            />
+            {properties.map((p) => {
+              const on = propertyIds.includes(p.id);
+              return (
+                <Button
+                  key={p.id}
+                  small
+                  variant={on ? 'primary' : 'secondary'}
+                  title={p.name}
+                  onPress={() => setPropertyIds((ids) => (on ? ids.filter((x) => x !== p.id) : [...ids, p.id]))}
+                />
+              );
+            })}
+          </View>
+        </View>
+      ) : null}
     </Sheet>
   );
 }

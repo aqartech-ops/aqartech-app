@@ -12,6 +12,9 @@ New decisions go into `docs/PROJECT.md` before they go into code.
 
 ## Non-negotiable rules
 - **Money is stored as integer baisa** (1 OMR = 1000 baisa). Never use Float/Decimal-as-float for money. Format only at display time.
+  Use `Int` for everyday amounts (rents, payments) and `BigInt` for amounts that can exceed 2.1M OMR (property values, investment cost, large totals). BigInt is sent to the app as a JSON number (see backend/src/main.ts).
+- **Dashboard:** open to every user; each widget is returned by the server only if the user may see that section (`GET /dashboard`).
+- **Property scope:** roles may be limited to some properties (`Role.propertyIds`, empty = all); every property/unit query goes through `propertyScope(auth)`.
 - **Financial records are never hard-deleted or silently changed.** Edit/delete of a posted financial entry creates a reversing entry and an activity-log row.
 - **Reports are computed from transactions**, never typed in by hand.
 - **No hard-coded UI text.** Every string goes through i18n (`en` default, `ar` full, RTL supported). Add keys to both languages.

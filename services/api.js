@@ -112,6 +112,25 @@ export const rolesApi = {
   remove: (id) => api.delete(`/roles/${id}`),
 };
 
+export const dashboardApi = {
+  get: () => api.get('/dashboard'),
+};
+
+export const propertiesApi = {
+  list: (trash = false) => api.get('/properties', { trash: trash ? '1' : undefined }),
+  get: (id) => api.get(`/properties/${id}`),
+  create: (data) => api.post('/properties', data),
+  update: (id, data) => api.patch(`/properties/${id}`, data),
+  remove: (id) => api.delete(`/properties/${id}`),
+  restore: (id) => api.post(`/properties/${id}/restore`),
+  units: (id, trash = false) => api.get(`/properties/${id}/units`, { trash: trash ? '1' : undefined }),
+  createUnit: (id, data) => api.post(`/properties/${id}/units`, data),
+  createUnitsBulk: (id, data) => api.post(`/properties/${id}/units/bulk`, data),
+  updateUnit: (unitId, data) => api.patch(`/units/${unitId}`, data),
+  removeUnit: (unitId) => api.delete(`/units/${unitId}`),
+  restoreUnit: (unitId) => api.post(`/units/${unitId}/restore`),
+};
+
 export const searchApi = {
   run: (q) => api.get('/search', { q }),
 };

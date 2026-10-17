@@ -3,7 +3,7 @@ import { PrismaService } from '../prisma/prisma.service.js';
 import { Auth, AnyAuthenticated, type AuthContext } from '../common/auth-context.js';
 import { likePattern, normalizeSearch, normalizedColumn } from '../common/text.js';
 
-type ResultItem = { id: string; title: string; subtitle: string | null };
+type ResultItem = { id: string; title: string; subtitle: string | null; propertyId?: string; status?: string };
 type ResultGroup = { type: string; section: string; items: ResultItem[] };
 
 const LIMIT = 20;
@@ -34,21 +34,58 @@ export class SearchService {
         section: 'companies',
         items: companies.map((c) => ({ id: c.id, title: c.name, subtitle: [c.email, c.phone].filter(Boolean).join(' · ') || null })),
       });
-    } else if (auth.access.users !== 'HIDDEN') {
-      const users = await this.prisma.$queryRaw<{ id: string; name: string; email: string; phone: string | null }[]>`
-        SELECT id, name, email, phone FROM "User"
-        WHERE "companyId" = ${auth.companyId} AND "deletedAt" IS NULL AND kind = 'STAFF' AND (
-          ${normalizedColumn('"name"')} LIKE ${pattern} OR ${normalizedColumn('"email"')} LIKE ${pattern}
-          OR ${normalizedColumn('"phone"')} LIKE ${pattern})
-        ORDER BY name LIMIT ${LIMIT}`;
-      groups.push({
-        type: 'users',
-        section: 'users',
-        items: users.map((u) => ({ id: u.id, title: u.name, subtitle: [u.email, u.phone].filter(Boolean).join(' · ') })),
-      });
+    } else {
+      if (auth.access.properties !== 'HIDDEN') groups.push(...(await this.propertyGroups(auth, pattern)));
+      if (auth.access.users !== 'HIDDEN') groups.push(await this.userGroup(auth, pattern));
     }
 
     return { query, groups: groups.filter((g) => g.items.length > 0) };
+  }
+
+  private async propertyGroups(auth: Extract<AuthContext, { kind: 'user' }>, pattern: string): Promise<ResultGroup[]> {
+    const all = auth.propertyIds === null;
+    const ids = auth.propertyIds ?? [];
+    const properties = await this.prisma.$queryRaw<{ id: string; name: string; wilayat: string | null; address: string | null }[]>`
+      SELECT id, name, wilayat, address FROM "Property"
+      WHERE "companyId" = ${auth.companyId} AND "deletedAt" IS NULL AND (${all} OR id = ANY(${ids}::text[]))
+        AND (${normalizedColumn('"name"')} LIKE ${pattern} OR ${normalizedColumn('"wilayat"')} LIKE ${pattern}
+          OR ${normalizedColumn('"governorate"')} LIKE ${pattern} OR ${normalizedColumn('"address"')} LIKE ${pattern}
+          OR ${normalizedColumn('"plotNumber"')} LIKE ${pattern})
+      ORDER BY name LIMIT ${LIMIT}`;
+    const units = await this.prisma.$queryRaw<{ id: string; number: string; propertyId: string; propertyName: string; status: string }[]>`
+      SELECT u.id, u.number, u."propertyId", p.name AS "propertyName", u.status::text AS status
+      FROM "Unit" u JOIN "Property" p ON p.id = u."propertyId"
+      WHERE u."companyId" = ${auth.companyId} AND u."deletedAt" IS NULL AND p."deletedAt" IS NULL
+        AND (${all} OR p.id = ANY(${ids}::text[]))
+        AND (${normalizedColumn('u."number"')} LIKE ${pattern} OR ${normalizedColumn('u."electricityMeter"')} LIKE ${pattern}
+          OR ${normalizedColumn('u."waterMeter"')} LIKE ${pattern})
+      ORDER BY p.name, u.number LIMIT ${LIMIT}`;
+    return [
+      {
+        type: 'properties',
+        section: 'properties',
+        items: properties.map((p) => ({ id: p.id, title: p.name, subtitle: [p.wilayat, p.address].filter(Boolean).join(' · ') || null, propertyId: p.id })),
+      },
+      {
+        type: 'units',
+        section: 'properties',
+        items: units.map((u) => ({ id: u.id, title: u.number, subtitle: u.propertyName, propertyId: u.propertyId, status: u.status })),
+      },
+    ];
+  }
+
+  private async userGroup(auth: Extract<AuthContext, { kind: 'user' }>, pattern: string): Promise<ResultGroup> {
+    const users = await this.prisma.$queryRaw<{ id: string; name: string; email: string; phone: string | null }[]>`
+      SELECT id, name, email, phone FROM "User"
+      WHERE "companyId" = ${auth.companyId} AND "deletedAt" IS NULL AND kind = 'STAFF' AND (
+        ${normalizedColumn('"name"')} LIKE ${pattern} OR ${normalizedColumn('"email"')} LIKE ${pattern}
+        OR ${normalizedColumn('"phone"')} LIKE ${pattern})
+      ORDER BY name LIMIT ${LIMIT}`;
+    return {
+      type: 'users',
+      section: 'users',
+      items: users.map((u) => ({ id: u.id, title: u.name, subtitle: [u.email, u.phone].filter(Boolean).join(' · ') })),
+    };
   }
 }
 
