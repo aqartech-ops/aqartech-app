@@ -54,6 +54,14 @@ During development the app finds the API on your computer automatically (the sam
 
 New sign-ups start as **awaiting activation**; activate them from the platform-team account → *Subscribers*.
 
+## Passwords
+
+- **Forgot password** (sign-in screen): a 6-digit code is emailed. With `SMTP_HOST` empty (development) the email is
+  **printed in the API terminal** instead — copy the code from there. A Gmail account with an App password works as SMTP before you own a domain (see `backend/.env.example`).
+- **Team members:** the company's main account sets/generates a new password from *Users & roles → edit*.
+- **Platform admin:** `cd backend && npm run admin:reset-password -- admin@aqartech.om "New-Strong-Password"`
+- Any password change signs the account out on its other devices.
+
 ## Checks
 
 ```bash

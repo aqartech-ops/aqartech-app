@@ -26,6 +26,13 @@ import {
 const ROLE_SECTIONS = ['dashboard', 'properties', 'tenants', 'financials', 'maintenance', 'documents', 'owners', 'users', 'settings'];
 const LEVELS = ['EDIT', 'VIEW', 'HIDDEN'];
 
+/** Easy-to-read temporary password (no 0/O, 1/l/I) to give to a new team member. */
+function generatePassword() {
+  const letters = 'abcdefghjkmnpqrstuvwxyz';
+  const pick = (chars, n) => Array.from({ length: n }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+  return `Aq-${pick('23456789', 4)}-${pick(letters, 4)}`;
+}
+
 export default function UsersScreen() {
   const { t } = useI18n();
   const { canEdit } = useSession();
@@ -188,7 +195,8 @@ function UsersTab({ editable }) {
 }
 
 function UserForm({ user, roles, onClose, onSaved }) {
-  const { t, row } = useI18n();
+  const { t, row, start } = useI18n();
+  const [generated, setGenerated] = useState(false);
   const isNew = user && !user.id;
   const [form, setForm] = useState({});
   const [busy, setBusy] = useState(false);
@@ -197,6 +205,7 @@ function UserForm({ user, roles, onClose, onSaved }) {
   useEffect(() => {
     if (user) {
       setForm({ name: user.name ?? '', email: user.email ?? '', phone: user.phone ?? '', password: '', roleId: user.roleId ?? '' });
+      setGenerated(false);
       setError(null);
       setBusy(false);
     }
@@ -245,14 +254,35 @@ function UserForm({ user, roles, onClose, onSaved }) {
         error={fieldError('email')}
       />
       <Field label={`${t('auth.phone')} (${t('common.optional')})`} value={form.phone} onChangeText={set('phone')} inputMode="tel" />
+      {/* This is another person's password: no keychain suggestion / autofill on the admin's phone */}
       <Field
+        key={generated ? 'plain' : 'secure'}
         label={isNew ? t('auth.password') : t('users.newPassword')}
-        hint={isNew ? t('auth.passwordHint') : t('users.newPasswordHint')}
+        hint={generated ? t('users.generatedHint') : isNew ? t('auth.passwordHint') : t('users.newPasswordHint')}
         value={form.password}
-        onChangeText={set('password')}
-        secure
-        autoComplete="new-password"
+        onChangeText={(value) => {
+          setGenerated(false);
+          set('password')(value);
+        }}
+        secure={!generated}
+        autoComplete="off"
+        textContentType="none"
+        autoCorrect={false}
+        autoCapitalize="none"
+        importantForAutofill="no"
+        selectTextOnFocus={generated}
         error={fieldError('password')}
+      />
+      <Button
+        small
+        variant="secondary"
+        icon="dice-multiple-outline"
+        title={t('users.generatePassword')}
+        style={{ alignSelf: start }}
+        onPress={() => {
+          setGenerated(true);
+          set('password')(generatePassword());
+        }}
       />
       {user && !user.isCompanyAdmin ? (
         <View style={{ gap: SPACING.sm }}>

@@ -78,6 +78,7 @@ export class UserService {
         isActive: v.optionalBoolean(src, 'isActive'),
         roleId: src.roleId !== undefined ? ((await this.checkRole(auth, v.optionalString(src, 'roleId', 60))) ?? null) : undefined,
         passwordHash: src.password !== undefined ? await hashPassword(v.password(src)) : undefined,
+        passwordChangedAt: src.password !== undefined ? new Date() : undefined,
       },
       select: PUBLIC_FIELDS,
     });

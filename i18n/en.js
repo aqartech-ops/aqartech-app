@@ -100,6 +100,19 @@ export default {
     haveAccount: 'Already have an account?',
     noAccount: 'New to AqarTech?',
     passwordHint: 'At least 8 characters',
+    backToSignIn: 'Back to sign in',
+  },
+
+  reset: {
+    forgotLink: 'Forgot your password?',
+    title: 'Reset your password',
+    step1: 'Enter your account email and we will send you a 6-digit code.',
+    step2: 'If {{email}} has an account, a 6-digit code was sent to it. Enter it with your new password.',
+    code: 'Code',
+    sendCode: 'Send code',
+    resend: 'Send a new code',
+    save: 'Save new password',
+    done: 'Your password was changed. Sign in with the new password.',
   },
 
   plan: {
@@ -156,6 +169,8 @@ export default {
     permissions: 'Permissions',
     activate: 'Activate',
     deactivate: 'Deactivate',
+    generatePassword: 'Generate a password',
+    generatedHint: 'Copy this password and give it to the team member. They can change it from Settings.',
   },
 
   settings: {
@@ -165,6 +180,10 @@ export default {
     company: 'Account details',
     subscription: 'Subscription',
     server: 'Server',
+    changePassword: 'Change password',
+    currentPassword: 'Current password',
+    newPassword: 'New password',
+    changePasswordHint: 'At least 8 characters. Your other devices will be signed out.',
   },
 
   companies: {
@@ -206,6 +225,8 @@ export default {
     'user.cannotChangeMainAccount': 'The main account cannot be changed this way.',
     'user.cannotDeleteSelf': 'You cannot delete your own account.',
     'role.notFound': 'The selected role does not exist.',
+    'reset.invalidCode': 'The code is wrong or expired. Request a new one.',
+    'auth.wrongCurrentPassword': 'Your current password is not correct.',
     'common.notFound': 'Not found. It may have been deleted.',
   },
 };

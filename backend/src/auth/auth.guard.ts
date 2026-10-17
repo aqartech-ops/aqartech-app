@@ -40,7 +40,9 @@ export class AuthGuard implements CanActivate {
     if (payload.kind === 'admin') {
       if (!adminOnly && !anyAuth) throw new ForbiddenException('auth.forbidden');
       const admin = await this.prisma.platformAdmin.findUnique({ where: { id: payload.sub } });
-      if (!admin || !admin.isActive) throw new UnauthorizedException('auth.invalidToken');
+      if (!admin || !admin.isActive || issuedBeforePasswordChange(payload.iat, admin.passwordChangedAt)) {
+        throw new UnauthorizedException('auth.invalidToken');
+      }
       req.auth = { kind: 'admin', adminId: admin.id } satisfies AuthContext;
       return true;
     }
@@ -51,7 +53,7 @@ export class AuthGuard implements CanActivate {
       where: { id: payload.sub },
       include: { role: true, company: { include: { subscription: { include: { plan: true } } } } },
     });
-    if (!user || !user.isActive || user.deletedAt || user.company.deletedAt) {
+    if (!user || !user.isActive || user.deletedAt || user.company.deletedAt || issuedBeforePasswordChange(payload.iat, user.passwordChangedAt)) {
       throw new UnauthorizedException('auth.invalidToken');
     }
 
@@ -71,4 +73,9 @@ export class AuthGuard implements CanActivate {
     }
     return true;
   }
+}
+
+/** A password change/reset signs out every session that was opened before it. */
+function issuedBeforePasswordChange(iat: number, changedAt: Date | null): boolean {
+  return !!changedAt && iat < Math.floor(changedAt.getTime() / 1000);
 }

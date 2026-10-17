@@ -5,6 +5,7 @@ import { AuthService } from './auth.service.js';
 import { TokenService } from './token.service.js';
 import { AccessService } from './access.service.js';
 import { AuthGuard } from './auth.guard.js';
+import { PasswordService } from './password.service.js';
 
 @Global()
 @Module({
@@ -13,6 +14,7 @@ import { AuthGuard } from './auth.guard.js';
     AuthService,
     TokenService,
     AccessService,
+    PasswordService,
     { provide: APP_GUARD, useClass: AuthGuard },
   ],
   exports: [AuthService, AccessService],
