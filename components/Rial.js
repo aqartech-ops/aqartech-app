@@ -5,10 +5,10 @@ import { COLORS, FONT } from '../theme';
 import { useI18n } from '../i18n';
 import { formatOMR } from '../services/money';
 
-// Official Omani rial symbol (Central Bank of Oman, Nov 2025), traced to a single-colour mask
+// Official Omani rial symbol (Central Bank of Oman, Nov 2025), converted from the official artwork to a single-colour mask
 // so it can be tinted to any colour. Source files: assets/rial-symbol.png / assets/rial-symbol.svg
 const SYMBOL = require('../assets/rial-symbol.png');
-const RATIO = 303 / 160; // width / height of the artwork
+const RATIO = 960 / 500; // width / height of the official artwork
 
 /** The rial symbol at a given height. */
 export function RialSymbol({ size = 16, color = COLORS.textDark, style }) {
