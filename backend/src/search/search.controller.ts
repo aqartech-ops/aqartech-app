@@ -3,7 +3,7 @@ import { PrismaService } from '../prisma/prisma.service.js';
 import { Auth, AnyAuthenticated, type AuthContext } from '../common/auth-context.js';
 import { likePattern, normalizeSearch, normalizedColumn } from '../common/text.js';
 
-type ResultItem = { id: string; title: string; subtitle: string | null; propertyId?: string; ownerId?: string; status?: string };
+type ResultItem = { id: string; title: string; subtitle: string | null; propertyId?: string; ownerId?: string; tenantId?: string; status?: string };
 type ResultGroup = { type: string; section: string; items: ResultItem[] };
 
 const LIMIT = 20;
@@ -36,6 +36,7 @@ export class SearchService {
       });
     } else {
       if (auth.access.properties !== 'HIDDEN') groups.push(...(await this.propertyGroups(auth, pattern)));
+      if (auth.access.tenants !== 'HIDDEN') groups.push(await this.tenantGroup(auth, pattern));
       if (auth.access.owners !== 'HIDDEN') groups.push(await this.ownerGroup(auth, pattern));
       if (auth.access.users !== 'HIDDEN') groups.push(await this.userGroup(auth, pattern));
     }
@@ -73,6 +74,22 @@ export class SearchService {
         items: units.map((u) => ({ id: u.id, title: u.number, subtitle: u.propertyName, propertyId: u.propertyId, status: u.status })),
       },
     ];
+  }
+
+  private async tenantGroup(auth: Extract<AuthContext, { kind: 'user' }>, pattern: string): Promise<ResultGroup> {
+    const tenants = await this.prisma.$queryRaw<{ id: string; name: string; phone: string | null; civilId: string | null }[]>`
+      SELECT id, name, phone, "civilId" FROM "Tenant"
+      WHERE "companyId" = ${auth.companyId} AND "deletedAt" IS NULL AND (
+        ${normalizedColumn('"name"')} LIKE ${pattern} OR ${normalizedColumn('"phone"')} LIKE ${pattern}
+        OR ${normalizedColumn('"phone2"')} LIKE ${pattern} OR ${normalizedColumn('"email"')} LIKE ${pattern}
+        OR ${normalizedColumn('"civilId"')} LIKE ${pattern} OR ${normalizedColumn('"crNumber"')} LIKE ${pattern}
+        OR ${normalizedColumn('"employer"')} LIKE ${pattern} OR ${normalizedColumn('"guarantorName"')} LIKE ${pattern})
+      ORDER BY name LIMIT ${LIMIT}`;
+    return {
+      type: 'tenants',
+      section: 'tenants',
+      items: tenants.map((x) => ({ id: x.id, title: x.name, subtitle: [x.phone, x.civilId].filter(Boolean).join(' · ') || null, tenantId: x.id })),
+    };
   }
 
   private async ownerGroup(auth: Extract<AuthContext, { kind: 'user' }>, pattern: string): Promise<ResultGroup> {

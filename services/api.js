@@ -145,6 +145,15 @@ export const ownersApi = {
   savePartners: (propertyId, partners) => request(`/properties/${propertyId}/partners`, { method: 'PUT', body: { partners } }),
 };
 
+export const tenantsApi = {
+  list: (trash = false) => api.get('/tenants', { trash: trash ? '1' : undefined }),
+  get: (id) => api.get(`/tenants/${id}`),
+  create: (data) => api.post('/tenants', data),
+  update: (id, data) => api.patch(`/tenants/${id}`, data),
+  remove: (id) => api.delete(`/tenants/${id}`),
+  restore: (id) => api.post(`/tenants/${id}/restore`),
+};
+
 export const searchApi = {
   run: (q) => api.get('/search', { q }),
 };

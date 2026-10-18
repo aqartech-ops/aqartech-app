@@ -107,7 +107,7 @@ function CompanyDashboard({ onNavigate }) {
       {quick.length ? (
         <Row style={{ flexWrap: 'wrap', marginBottom: SPACING.md }}>
           {quick.includes('tenants') ? (
-            <Button icon="account-plus-outline" title={t('dashboard.newTenant')} onPress={() => onNavigate?.('tenants')} style={{ flexGrow: 1 }} />
+            <Button icon="account-plus-outline" title={t('dashboard.newTenant')} onPress={() => onNavigate?.('tenants', { create: true })} style={{ flexGrow: 1 }} />
           ) : null}
           {quick.includes('properties') ? (
             <Button
@@ -127,6 +127,12 @@ function CompanyDashboard({ onNavigate }) {
           <Kpi icon="door" label={t('dashboard.units')} value={portfolio.total} />
           <Kpi icon="door-open" label={t('dashboard.vacant')} value={portfolio.vacant} tone={COLORS.warning} />
           <Kpi icon="home-percent-outline" label={t('dashboard.occupancy')} value={pct(portfolio.occupancyRate)} tone={COLORS.success} />
+        </Grid>
+      ) : null}
+
+      {w.tenants ? (
+        <Grid columns={columns}>
+          <Kpi icon="account-group-outline" label={t('tenants.count')} value={w.tenants.count} />
         </Grid>
       ) : null}
 
