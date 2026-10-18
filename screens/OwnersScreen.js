@@ -4,7 +4,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { COLORS, RADIUS, SPACING } from '../theme';
 import { useI18n } from '../i18n';
 import { useSession } from '../services/session';
-import { ownersApi } from '../services/api';
+import { ownersApi, propertiesApi } from '../services/api';
 import { confirm } from '../services/dialog';
 import { matches } from '../services/text';
 import { formatDate, pctLabel } from '../components/Fields';
@@ -131,8 +131,10 @@ function OwnerList({ onOpen }) {
 
 function OwnerDetail({ id, onBack, onNavigate }) {
   const { t, lang, isRTL, start } = useI18n();
-  const { canEdit } = useSession();
+  const { canEdit, levelOf } = useSession();
   const editable = canEdit('owners');
+  const canLink = editable && levelOf('properties') !== 'HIDDEN';
+  const [linkOpen, setLinkOpen] = useState(false);
   const [owner, setOwner] = useState(null);
   const [error, setError] = useState(null);
   const [editing, setEditing] = useState(null);
@@ -243,7 +245,10 @@ function OwnerDetail({ id, onBack, onNavigate }) {
           {owner.notes ? <Txt muted>{owner.notes}</Txt> : null}
         </Card>
 
-        <Txt size="medium" weight="weightBold">{t('owners.properties')}</Txt>
+        <Row style={{ justifyContent: 'space-between', flexWrap: 'wrap' }}>
+          <Txt size="medium" weight="weightBold">{t('owners.properties')}</Txt>
+          {canLink ? <Button small icon="link-variant-plus" title={t('owners.linkProperty')} onPress={() => setLinkOpen(true)} /> : null}
+        </Row>
         {rows.length === 0 ? (
           <Card>
             <EmptyState icon="office-building-outline" body={t('owners.noProperties')} />
@@ -276,7 +281,70 @@ function OwnerDetail({ id, onBack, onNavigate }) {
           load();
         }}
       />
+      <LinkPropertySheet
+        visible={linkOpen}
+        canCreate={canEdit('properties')}
+        excludeIds={[]}
+        onClose={() => setLinkOpen(false)}
+        onPick={(propertyId) => {
+          setLinkOpen(false);
+          onNavigate?.('properties', { propertyId, linkOwnerId: owner.id });
+        }}
+        onCreate={() => {
+          setLinkOpen(false);
+          onNavigate?.('properties', { create: true, linkOwnerId: owner.id });
+        }}
+      />
     </Screen>
+  );
+}
+
+/**
+ * Link an owner to a property: pick an existing property (then the agreement or partners editor
+ * opens there with this owner), or create a new managed property for them.
+ */
+function LinkPropertySheet({ visible, canCreate, excludeIds, onClose, onPick, onCreate }) {
+  const { t, forwardIcon } = useI18n();
+  const [properties, setProperties] = useState(null);
+  const [filter, setFilter] = useState('');
+
+  useEffect(() => {
+    if (!visible) return;
+    setFilter('');
+    propertiesApi.list().then(setProperties).catch(() => setProperties([]));
+  }, [visible]);
+
+  const list = (properties ?? []).filter(
+    (p) => !excludeIds.includes(p.id) && (!filter.trim() || matches([p.name, p.wilayat].filter(Boolean).join(' '), filter)),
+  );
+
+  return (
+    <Sheet visible={visible} title={t('owners.linkProperty')} onClose={onClose}>
+      <Txt muted>{t('owners.linkHint')}</Txt>
+      {canCreate ? <Button icon="home-plus-outline" title={t('owners.newPropertyForOwner')} onPress={onCreate} /> : null}
+      <Field value={filter} onChangeText={setFilter} placeholder={t('properties.filterPlaceholder')} />
+      {properties === null ? (
+        <Loading />
+      ) : list.length === 0 ? (
+        <EmptyState icon="office-building-outline" body={t('properties.empty')} />
+      ) : (
+        <View style={styles.pickList}>
+          {list.map((p, i) => (
+            <Pressable key={p.id} onPress={() => onPick(p.id)} style={({ pressed }) => [pressed && { backgroundColor: COLORS.surfaceSoft }]}>
+              <Row style={[styles.row, i > 0 && styles.divider]}>
+                <View style={{ flex: 1, gap: 2 }}>
+                  <Txt weight="weightMedium">{p.name}</Txt>
+                  <Txt muted size="small">
+                    {[t(`properties.ownershipValues.${p.ownership}`), p.wilayat].filter(Boolean).join(' · ')}
+                  </Txt>
+                </View>
+                <MaterialCommunityIcons name={forwardIcon} size={18} color={COLORS.textMuted} />
+              </Row>
+            </Pressable>
+          ))}
+        </View>
+      )}
+    </Sheet>
   );
 }
 
@@ -362,6 +430,7 @@ export function OwnerForm({ owner, onClose, onSaved }) {
 }
 
 const styles = StyleSheet.create({
+  pickList: { borderWidth: 1, borderColor: COLORS.border, borderRadius: RADIUS.md, overflow: 'hidden' },
   row: { paddingHorizontal: SPACING.lg, paddingVertical: SPACING.md, alignItems: 'center' },
   divider: { borderTopWidth: 1, borderTopColor: COLORS.border },
   avatar: {
