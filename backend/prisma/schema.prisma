@@ -120,6 +120,7 @@ model Company {
   owners       Owner[]
   agreements   ManagementAgreement[]
   partners     PropertyPartner[]
+  tenants      Tenant[]
 }
 
 // ==========================================
@@ -390,5 +391,34 @@ model PropertyPartner {
   createdAt  DateTime @default(now())
 
   @@unique([propertyId, ownerId])
+  @@index([companyId])
+}
+
+// ==========================================
+// 8. TENANTS (المستأجرون) — phase 3. A record only: tenants do not sign in.
+// ==========================================
+
+model Tenant {
+  id               String    @id @default(uuid())
+  companyId        String
+  company          Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  type             PartyType @default(INDIVIDUAL)
+  name             String
+  civilId          String? // الرقم المدني / رقم الإقامة
+  idExpiry         DateTime? // expiry of the civil/resident card
+  crNumber         String? // السجل التجاري (company tenants)
+  nationality      String?
+  phone            String? // WhatsApp
+  phone2           String?
+  email            String?
+  employer         String? // جهة العمل
+  guarantorName    String? // الكفيل / الضامن
+  guarantorPhone   String?
+  guarantorCivilId String?
+  notes            String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  deletedAt        DateTime?
+
   @@index([companyId])
 }

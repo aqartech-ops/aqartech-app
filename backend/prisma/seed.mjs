@@ -167,6 +167,20 @@ async function main() {
       });
       console.log('✔ demo owners created (2 owners, 1 management agreement, partners 60/40)');
     }
+
+    // Demo tenants (only if none yet)
+    if (demoUser && (await prisma.tenant.count({ where: { companyId: demoUser.companyId } })) === 0) {
+      const companyId = demoUser.companyId;
+      await prisma.tenant.createMany({
+        data: [
+          { companyId, name: 'أحمد بن علي الكندي', civilId: '9876543', phone: '+96891234567', nationality: 'عُماني', employer: 'وزارة الصحة', idExpiry: new Date('2027-03-31T00:00:00Z') },
+          { companyId, name: 'Rahul Menon', civilId: '87654321', phone: '+96895556677', nationality: 'Indian', employer: 'Oman LNG', idExpiry: new Date('2026-11-15T00:00:00Z') },
+          { companyId, name: 'فاطمة بنت ناصر الهنائية', civilId: '7654321', phone: '+96899887766', nationality: 'عُمانية' },
+          { companyId, type: 'COMPANY', name: 'مؤسسة النجمة للتجارة', crNumber: '1234567', phone: '+96824112233', guarantorName: 'خالد بن سيف الريامي' },
+        ],
+      });
+      console.log('✔ demo tenants created (4)');
+    }
   }
 }
 

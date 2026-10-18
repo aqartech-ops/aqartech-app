@@ -2,6 +2,7 @@ import { Controller, Get, Injectable, Module } from '@nestjs/common';
 import { PlansService } from '../plans/plans.service.js';
 import { PropertiesModule } from '../properties/properties.controller.js';
 import { PropertiesService } from '../properties/properties.service.js';
+import { TenantsModule, TenantsService } from '../tenants/tenants.controller.js';
 import { Auth, type UserAuth } from '../common/auth-context.js';
 
 /**
@@ -13,6 +14,7 @@ export class DashboardService {
   constructor(
     private readonly properties: PropertiesService,
     private readonly plans: PlansService,
+    private readonly tenants: TenantsService,
   ) {}
 
   async get(auth: UserAuth) {
@@ -20,6 +22,7 @@ export class DashboardService {
     const widgets: Record<string, unknown> = {};
 
     if (can('properties')) widgets.portfolio = await this.properties.portfolioStats(auth);
+    if (can('tenants')) widgets.tenants = { count: await this.tenants.count(auth) };
     // Financial KPIs (occupancy income, collection, NOI, arrears) arrive with phase 4.
     if (can('financials')) widgets.financials = { available: false };
     // Plan usage is for whoever manages the account / the team.
@@ -41,7 +44,7 @@ export class DashboardController {
 }
 
 @Module({
-  imports: [PropertiesModule],
+  imports: [PropertiesModule, TenantsModule],
   controllers: [DashboardController],
   providers: [DashboardService],
 })
