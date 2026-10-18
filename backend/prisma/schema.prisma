@@ -121,6 +121,7 @@ model Company {
   agreements   ManagementAgreement[]
   partners     PropertyPartner[]
   tenants      Tenant[]
+  leases       Lease[]
 }
 
 // ==========================================
@@ -255,6 +256,7 @@ model Property {
   units      Unit[]
   agreements ManagementAgreement[]
   partners   PropertyPartner[]
+  leases     Lease[]
 
   @@index([companyId])
 }
@@ -298,6 +300,8 @@ model Unit {
   createdAt        DateTime   @default(now())
   updatedAt        DateTime   @updatedAt
   deletedAt        DateTime?
+
+  leases Lease[]
 
   @@index([companyId])
   @@index([propertyId])
@@ -420,5 +424,71 @@ model Tenant {
   updatedAt        DateTime  @updatedAt
   deletedAt        DateTime?
 
+  leases Lease[]
+
   @@index([companyId])
+}
+
+// ==========================================
+// 9. LEASES (العقود) — phase 3
+// The rent schedule is derived from the lease (see leases/schedule.ts); phase 4 posts it to the ledger.
+// ==========================================
+
+enum PaymentFrequency {
+  MONTHLY
+  QUARTERLY
+  SEMI_ANNUAL
+  ANNUAL
+}
+
+enum LeaseStatus {
+  DRAFT
+  ACTIVE
+  ENDED // reached its end date
+  TERMINATED // ended early
+  RENEWED // replaced by a renewal lease
+}
+
+enum RenewalStatus {
+  PENDING
+  RENEW
+  NOT_RENEW
+  NEGOTIATING
+}
+
+model Lease {
+  id                String           @id @default(uuid())
+  companyId         String
+  company           Company          @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  number            String // L-2026-0001
+  propertyId        String
+  property          Property         @relation(fields: [propertyId], references: [id])
+  unitId            String
+  unit              Unit             @relation(fields: [unitId], references: [id])
+  tenantId          String
+  tenant            Tenant           @relation(fields: [tenantId], references: [id])
+  startDate         DateTime
+  endDate           DateTime
+  monthlyRent       Int // baisa
+  discount          Int              @default(0) // baisa per month (تنازل/خصم)
+  paymentFrequency  PaymentFrequency @default(MONTHLY)
+  dueDay            Int              @default(1) // day of month the installment is due (1-28)
+  deposit           Int              @default(0) // baisa — a liability, never income
+  municipalityNo    String?
+  municipalityFee   Int? // baisa
+  status            LeaseStatus      @default(DRAFT)
+  renewalStatus     RenewalStatus    @default(PENDING)
+  renewedFromId     String?
+  terminatedAt      DateTime?
+  terminationReason String?
+  notes             String?
+  createdById       String?
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+  deletedAt         DateTime?
+
+  @@unique([companyId, number])
+  @@index([companyId, status])
+  @@index([unitId])
+  @@index([tenantId])
 }

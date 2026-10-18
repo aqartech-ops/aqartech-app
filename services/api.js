@@ -154,6 +154,18 @@ export const tenantsApi = {
   restore: (id) => api.post(`/tenants/${id}/restore`),
 };
 
+export const leasesApi = {
+  list: (query) => api.get('/leases', query),
+  get: (id) => api.get(`/leases/${id}`),
+  preview: (data) => api.post('/leases/preview', data),
+  create: (data) => api.post('/leases', data),
+  update: (id, data) => api.patch(`/leases/${id}`, data),
+  activate: (id) => api.post(`/leases/${id}/activate`),
+  terminate: (id, data) => api.post(`/leases/${id}/terminate`, data),
+  renew: (id, data) => api.post(`/leases/${id}/renew`, data),
+  remove: (id) => api.delete(`/leases/${id}`),
+};
+
 export const searchApi = {
   run: (q) => api.get('/search', { q }),
 };

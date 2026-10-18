@@ -3,7 +3,7 @@ import { PrismaService } from '../prisma/prisma.service.js';
 import { Auth, AnyAuthenticated, type AuthContext } from '../common/auth-context.js';
 import { likePattern, normalizeSearch, normalizedColumn } from '../common/text.js';
 
-type ResultItem = { id: string; title: string; subtitle: string | null; propertyId?: string; ownerId?: string; tenantId?: string; status?: string };
+type ResultItem = { id: string; title: string; subtitle: string | null; propertyId?: string; ownerId?: string; tenantId?: string; leaseId?: string; status?: string };
 type ResultGroup = { type: string; section: string; items: ResultItem[] };
 
 const LIMIT = 20;
@@ -36,7 +36,7 @@ export class SearchService {
       });
     } else {
       if (auth.access.properties !== 'HIDDEN') groups.push(...(await this.propertyGroups(auth, pattern)));
-      if (auth.access.tenants !== 'HIDDEN') groups.push(await this.tenantGroup(auth, pattern));
+      if (auth.access.tenants !== 'HIDDEN') groups.push(await this.tenantGroup(auth, pattern), await this.leaseGroup(auth, pattern));
       if (auth.access.owners !== 'HIDDEN') groups.push(await this.ownerGroup(auth, pattern));
       if (auth.access.users !== 'HIDDEN') groups.push(await this.userGroup(auth, pattern));
     }
@@ -74,6 +74,23 @@ export class SearchService {
         items: units.map((u) => ({ id: u.id, title: u.number, subtitle: u.propertyName, propertyId: u.propertyId, status: u.status })),
       },
     ];
+  }
+
+  private async leaseGroup(auth: Extract<AuthContext, { kind: 'user' }>, pattern: string): Promise<ResultGroup> {
+    const all = auth.propertyIds === null;
+    const ids = auth.propertyIds ?? [];
+    const leases = await this.prisma.$queryRaw<{ id: string; number: string; tenant: string; unit: string; property: string; status: string }[]>`
+      SELECT l.id, l.number, t.name AS tenant, u.number AS unit, p.name AS property, l.status::text AS status
+      FROM "Lease" l JOIN "Tenant" t ON t.id = l."tenantId" JOIN "Unit" u ON u.id = l."unitId" JOIN "Property" p ON p.id = l."propertyId"
+      WHERE l."companyId" = ${auth.companyId} AND l."deletedAt" IS NULL AND (${all} OR l."propertyId" = ANY(${ids}::text[]))
+        AND (${normalizedColumn('l."number"')} LIKE ${pattern} OR ${normalizedColumn('l."municipalityNo"')} LIKE ${pattern}
+          OR ${normalizedColumn('t."name"')} LIKE ${pattern} OR ${normalizedColumn('u."number"')} LIKE ${pattern})
+      ORDER BY l."startDate" DESC LIMIT ${LIMIT}`;
+    return {
+      type: 'leases',
+      section: 'tenants',
+      items: leases.map((l) => ({ id: l.id, title: `${l.number} · ${l.tenant}`, subtitle: `${l.property} · ${l.unit}`, leaseId: l.id, status: l.status })),
+    };
   }
 
   private async tenantGroup(auth: Extract<AuthContext, { kind: 'user' }>, pattern: string): Promise<ResultGroup> {

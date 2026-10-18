@@ -8,6 +8,7 @@ import { tenantsApi } from '../services/api';
 import { confirm } from '../services/dialog';
 import { matches } from '../services/text';
 import { DateField, dateText, formatDate, isDateText } from '../components/Fields';
+import { LeaseDetail, LeaseForm, LeasesTab, TenantLeases } from './LeasesView';
 import {
   Badge,
   Button,
@@ -37,14 +38,72 @@ function idState(idExpiry) {
   return null;
 }
 
-/** Tenants (المستأجرون) — records only; their leases are added in the next batch. */
+/** Tenants (المستأجرون) — records only — and their leases (العقود), in two tabs. */
 export default function TenantsScreen({ params }) {
-  const [selectedId, setSelectedId] = useState(params?.tenantId ?? null);
-  if (selectedId) return <TenantDetail id={selectedId} onBack={() => setSelectedId(null)} />;
-  return <TenantList onOpen={setSelectedId} openCreate={!!params?.create} />;
+  const [tab, setTab] = useState(params?.leaseId || params?.tab === 'leases' ? 'leases' : 'tenants');
+  const [tenantId, setTenantId] = useState(params?.tenantId ?? null);
+  const [leaseId, setLeaseId] = useState(params?.leaseId ?? null);
+
+  if (leaseId) {
+    return (
+      <LeaseDetail
+        key={leaseId}
+        id={leaseId}
+        onBack={() => setLeaseId(null)}
+        onOpen={setLeaseId}
+        onOpenTenant={(id) => {
+          setLeaseId(null);
+          setTenantId(id);
+        }}
+      />
+    );
+  }
+  if (tenantId) return <TenantDetail id={tenantId} onBack={() => setTenantId(null)} onOpenLease={setLeaseId} />;
+  const tabs = <TabSwitch value={tab} onChange={setTab} />;
+  if (tab === 'leases') return <LeasesList tabs={tabs} onOpen={setLeaseId} />;
+  return <TenantList tabs={tabs} onOpen={setTenantId} openCreate={!!params?.create} />;
 }
 
-function TenantList({ onOpen, openCreate }) {
+function TabSwitch({ value, onChange }) {
+  const { t } = useI18n();
+  return (
+    <Segmented
+      value={value}
+      onChange={onChange}
+      options={[
+        { value: 'tenants', label: t('leases.tabTenants') },
+        { value: 'leases', label: t('leases.tabLeases') },
+      ]}
+    />
+  );
+}
+
+function LeasesList({ tabs, onOpen }) {
+  const { t } = useI18n();
+  const { canEdit } = useSession();
+  const editable = canEdit('tenants');
+  const [creating, setCreating] = useState(null);
+  const [version, setVersion] = useState(0);
+  return (
+    <Screen title={t('leases.title')}>
+      <View style={{ gap: SPACING.md }}>
+        {tabs}
+        <LeasesTab key={version} editable={editable} onOpen={onOpen} onNew={() => setCreating({})} />
+      </View>
+      <LeaseForm
+        lease={creating}
+        onClose={() => setCreating(null)}
+        onSaved={(saved) => {
+          setCreating(null);
+          setVersion((v) => v + 1);
+          if (saved?.id) onOpen(saved.id);
+        }}
+      />
+    </Screen>
+  );
+}
+
+function TenantList({ tabs, onOpen, openCreate }) {
   const { t, forwardIcon } = useI18n();
   const { canEdit } = useSession();
   const editable = canEdit('tenants');
@@ -89,6 +148,7 @@ function TenantList({ onOpen, openCreate }) {
   return (
     <Screen title={t('tenants.title')} actions={editable && !trash ? <Button icon="account-plus-outline" title={t('tenants.add')} onPress={() => setEditing({})} /> : null}>
       <View style={{ gap: SPACING.md }}>
+        {tabs}
         <Row style={{ flexWrap: 'wrap' }}>
           <View style={{ flex: 1, minWidth: 200 }}>
             <Field value={filter} onChangeText={setFilter} placeholder={t('tenants.filterPlaceholder')} />
@@ -148,13 +208,15 @@ function TenantList({ onOpen, openCreate }) {
   );
 }
 
-function TenantDetail({ id, onBack }) {
+function TenantDetail({ id, onBack, onOpenLease }) {
   const { t, lang, isRTL, start } = useI18n();
   const { canEdit } = useSession();
   const editable = canEdit('tenants');
   const [tenant, setTenant] = useState(null);
   const [error, setError] = useState(null);
   const [editing, setEditing] = useState(null);
+  const [newLease, setNewLease] = useState(null);
+  const [leasesVersion, setLeasesVersion] = useState(0);
 
   const load = useCallback(async () => {
     setError(null);
@@ -254,11 +316,17 @@ function TenantDetail({ id, onBack }) {
           ) : null}
           {tenant.notes ? <Txt muted>{tenant.notes}</Txt> : null}
         </Card>
-        <Txt size="medium" weight="weightBold">{t('tenants.leases')}</Txt>
-        <Card>
-          <EmptyState icon="file-sign" body={t('tenants.leasesSoon')} />
-        </Card>
+        <TenantLeases key={leasesVersion} tenantId={id} editable={editable} onOpen={onOpenLease} onNew={() => setNewLease({ tenantId: id, tenant })} />
       </View>
+      <LeaseForm
+        lease={newLease}
+        onClose={() => setNewLease(null)}
+        onSaved={(saved) => {
+          setNewLease(null);
+          setLeasesVersion((v) => v + 1);
+          if (saved?.id) onOpenLease(saved.id);
+        }}
+      />
       <TenantForm
         tenant={editing}
         onClose={() => setEditing(null)}

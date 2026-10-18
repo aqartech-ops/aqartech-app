@@ -458,6 +458,12 @@ function PropertyDetail({ id, onBack, linkOwnerId, onLinkHandled }) {
                         unit.status === 'VACANT' && unit.vacantSince
                           ? t('units.vacantSince', { date: new Date(unit.vacantSince).toLocaleDateString(lang === 'ar' ? 'ar-OM' : 'en-GB') })
                           : null,
+                        unit.leases?.[0]
+                          ? t('leases.unitLease', {
+                              tenant: unit.leases[0].tenant.name,
+                              date: new Date(unit.leases[0].endDate).toLocaleDateString(lang === 'ar' ? 'ar-OM' : 'en-GB'),
+                            })
+                          : null,
                       ]
                         .filter(Boolean)
                         .join(' · ')}
