@@ -19,7 +19,7 @@ export class TenantsService {
 
   list(auth: UserAuth, trash = false) {
     return this.prisma.tenant.findMany({
-      where: { companyId: auth.companyId, deletedAt: trash ? { not: null } : null },
+      where: { companyId: auth.companyId, deletedAt: trash ? { not: null } : null, ...this.scope(auth) },
       orderBy: { name: 'asc' },
     });
   }
@@ -65,8 +65,14 @@ export class TenantsService {
     return this.prisma.tenant.count({ where: { companyId: auth.companyId, deletedAt: null } });
   }
 
+  /** Users limited to some properties see tenants with a lease there, or not yet leased anywhere. */
+  private scope(auth: UserAuth): Prisma.TenantWhereInput {
+    if (!auth.propertyIds) return {};
+    return { OR: [{ leases: { some: { propertyId: { in: auth.propertyIds }, deletedAt: null } } }, { leases: { none: {} } }] };
+  }
+
   private async find(auth: UserAuth, id: string) {
-    const tenant = await this.prisma.tenant.findFirst({ where: { id, companyId: auth.companyId, deletedAt: null } });
+    const tenant = await this.prisma.tenant.findFirst({ where: { id, companyId: auth.companyId, deletedAt: null, ...this.scope(auth) } });
     if (!tenant) throw new NotFoundException('common.notFound');
     return tenant;
   }

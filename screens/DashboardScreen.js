@@ -133,6 +133,9 @@ function CompanyDashboard({ onNavigate }) {
       {w.tenants ? (
         <Grid columns={columns}>
           <Kpi icon="account-group-outline" label={t('tenants.count')} value={w.tenants.count} />
+          {w.tenants.leases ? <Kpi icon="file-sign" label={t('leases.activeCount')} value={w.tenants.leases.active} tone={COLORS.success} /> : null}
+          {w.tenants.leases ? <Kpi icon="calendar-alert" label={t('leases.expiring30')} value={w.tenants.leases.expiring30} tone={COLORS.danger} /> : null}
+          {w.tenants.leases ? <Kpi icon="calendar-clock" label={t('leases.expiring90')} value={w.tenants.leases.expiring90} tone={COLORS.warning} /> : null}
         </Grid>
       ) : null}
 

@@ -13,9 +13,10 @@ import { PropertiesModule } from './properties/properties.controller.js';
 import { DashboardModule } from './dashboard/dashboard.controller.js';
 import { OwnersModule } from './owners/owners.controller.js';
 import { TenantsModule } from './tenants/tenants.controller.js';
+import { LeasesModule } from './leases/leases.controller.js';
 
 @Module({
-  imports: [PrismaModule, CommonModule, AuthModule, PlansModule, CompanyModule, UserModule, AdminModule, SearchModule, PropertiesModule, DashboardModule, OwnersModule, TenantsModule],
+  imports: [PrismaModule, CommonModule, AuthModule, PlansModule, CompanyModule, UserModule, AdminModule, SearchModule, PropertiesModule, DashboardModule, OwnersModule, TenantsModule, LeasesModule],
   controllers: [AppController],
   providers: [AppService],
 })

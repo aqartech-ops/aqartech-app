@@ -181,6 +181,41 @@ async function main() {
       });
       console.log('✔ demo tenants created (4)');
     }
+
+    // Demo leases (only if none yet): 4 tenants in the garden building, one expiring soon
+    if (garden && (await prisma.lease.count({ where: { companyId: garden.companyId } })) === 0) {
+      const companyId = garden.companyId;
+      const tenants = await prisma.tenant.findMany({ where: { companyId, deletedAt: null }, orderBy: { createdAt: 'asc' }, take: 4 });
+      const units = await prisma.unit.findMany({ where: { propertyId: garden.id, number: { in: ['101', '102', '103', '201'] } }, orderBy: { number: 'asc' } });
+      const today = new Date();
+      const iso = (d) => new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
+      const plusDays = (n) => iso(new Date(today.getTime() + n * 86400000));
+      const plans = [
+        { start: plusDays(-200), end: plusDays(165), freq: 'MONTHLY' },
+        { start: plusDays(-340), end: plusDays(25), freq: 'MONTHLY' }, // expires within 30 days
+        { start: plusDays(-90), end: plusDays(275), freq: 'QUARTERLY' },
+        { start: plusDays(-30), end: plusDays(335), freq: 'MONTHLY' },
+      ];
+      for (let i = 0; i < Math.min(tenants.length, units.length); i += 1) {
+        await prisma.lease.create({
+          data: {
+            companyId,
+            number: `L-${plans[i].start.getUTCFullYear()}-${String(i + 1).padStart(4, '0')}`,
+            propertyId: garden.id,
+            unitId: units[i].id,
+            tenantId: tenants[i].id,
+            startDate: plans[i].start,
+            endDate: plans[i].end,
+            monthlyRent: units[i].askingRent || 300000,
+            paymentFrequency: plans[i].freq,
+            deposit: units[i].askingRent || 300000,
+            status: 'ACTIVE',
+          },
+        });
+        await prisma.unit.update({ where: { id: units[i].id }, data: { status: 'OCCUPIED', vacantSince: null } });
+      }
+      console.log('✔ demo leases created (4 active, 1 expiring within 30 days)');
+    }
   }
 }
 

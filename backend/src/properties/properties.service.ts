@@ -56,7 +56,20 @@ export class PropertiesService {
   async get(auth: UserAuth, id: string) {
     const property = await this.prisma.property.findFirst({
       where: { ...propertyScope(auth), id },
-      include: { units: { where: { deletedAt: null }, orderBy: [{ floor: 'asc' }, { number: 'asc' }] } },
+      include: {
+        units: {
+          where: { deletedAt: null },
+          orderBy: [{ floor: 'asc' }, { number: 'asc' }],
+          include: {
+            leases: {
+              where: { deletedAt: null, status: 'ACTIVE' },
+              orderBy: { startDate: 'asc' },
+              take: 1,
+              select: { id: true, number: true, endDate: true, monthlyRent: true, tenant: { select: { id: true, name: true } } },
+            },
+          },
+        },
+      },
     });
     if (!property) throw new NotFoundException('common.notFound');
     return { ...property, stats: stats(property.units) };
