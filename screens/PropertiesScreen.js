@@ -60,18 +60,36 @@ const moneyText = (baisa) => (baisa === null || baisa === undefined ? '' : forma
 
 export default function PropertiesScreen({ params, onNavigate }) {
   const [selectedId, setSelectedId] = useState(params?.propertyId ?? null);
+  // Coming from an owner's page: open the agreement / partners editor with that owner
+  const [linkOwnerId, setLinkOwnerId] = useState(params?.linkOwnerId ?? null);
 
   useEffect(() => {
     if (params?.propertyId) setSelectedId(params.propertyId);
   }, [params]);
 
-  if (selectedId) return <PropertyDetail id={selectedId} onBack={() => setSelectedId(null)} />;
-  return <PropertyList openCreate={!!params?.create} onOpen={setSelectedId} onNavigate={onNavigate} />;
+  if (selectedId) {
+    return (
+      <PropertyDetail
+        id={selectedId}
+        linkOwnerId={linkOwnerId}
+        onLinkHandled={() => setLinkOwnerId(null)}
+        onBack={() => setSelectedId(null)}
+      />
+    );
+  }
+  return (
+    <PropertyList
+      openCreate={!!params?.create}
+      createAsManaged={!!linkOwnerId}
+      onOpen={setSelectedId}
+      onNavigate={onNavigate}
+    />
+  );
 }
 
 // =================================================================== list
 
-function PropertyList({ onOpen, openCreate }) {
+function PropertyList({ onOpen, openCreate, createAsManaged }) {
   const { t } = useI18n();
   const { canEdit } = useSession();
   const editable = canEdit('properties');
@@ -81,7 +99,7 @@ function PropertyList({ onOpen, openCreate }) {
   const [items, setItems] = useState(null);
   const [error, setError] = useState(null);
   const [filter, setFilter] = useState('');
-  const [editing, setEditing] = useState(openCreate && editable ? {} : null);
+  const [editing, setEditing] = useState(openCreate && editable ? (createAsManaged ? { ownership: 'MANAGED' } : {}) : null);
 
   const load = useCallback(async () => {
     setError(null);
@@ -236,7 +254,7 @@ function OccupancyBar({ stats: s }) {
 
 // =================================================================== detail
 
-function PropertyDetail({ id, onBack }) {
+function PropertyDetail({ id, onBack, linkOwnerId, onLinkHandled }) {
   const { t, lang, isRTL, start } = useI18n();
   const { canEdit } = useSession();
   const editable = canEdit('properties');
@@ -385,7 +403,7 @@ function PropertyDetail({ id, onBack }) {
           {property.notes ? <Txt muted>{property.notes}</Txt> : null}
         </Card>
 
-        <PropertyOwnership property={property} />
+        <PropertyOwnership property={property} linkOwnerId={linkOwnerId} onLinkHandled={onLinkHandled} />
 
         <Row style={{ justifyContent: 'space-between', flexWrap: 'wrap' }}>
           <Txt size="medium" weight="weightBold">{t('units.title')}</Txt>

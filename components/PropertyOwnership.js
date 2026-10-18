@@ -26,14 +26,31 @@ const FEE_METHODS = ['PERCENT_OF_COLLECTED', 'PERCENT_OF_DUE', 'FIXED'];
 const PERIODS = ['MONTHLY', 'QUARTERLY', 'YEARLY'];
 
 /** Owner & management agreement + partners, shown inside a property (needs the "owners" section). */
-export default function PropertyOwnership({ property }) {
+export default function PropertyOwnership({ property, linkOwnerId, onLinkHandled }) {
   const { levelOf, canEdit } = useSession();
+  const [agreementState, setAgreementState] = useState(null); // { hasActive } once loaded
   if (levelOf('owners') === 'HIDDEN') return null;
   const editable = canEdit('owners');
+  // Linking from an owner's page: a managed property without an active agreement → agreement
+  // editor; otherwise → partners editor. Wait until we know whether an agreement exists.
+  const managed = property.ownership === 'MANAGED';
+  const ready = !linkOwnerId || !managed || agreementState !== null;
+  const linkTarget = editable && linkOwnerId && ready ? (managed && !agreementState?.hasActive ? 'agreement' : 'partners') : null;
   return (
     <>
-      <AgreementCard property={property} editable={editable} />
-      <PartnersCard property={property} editable={editable} />
+      <AgreementCard
+        property={property}
+        editable={editable}
+        onLoaded={setAgreementState}
+        linkOwnerId={linkTarget === 'agreement' ? linkOwnerId : null}
+        onLinkHandled={onLinkHandled}
+      />
+      <PartnersCard
+        property={property}
+        editable={editable}
+        linkOwnerId={linkTarget === 'partners' ? linkOwnerId : null}
+        onLinkHandled={onLinkHandled}
+      />
     </>
   );
 }
@@ -48,7 +65,7 @@ function useOwners(enabled) {
 
 // ------------------------------------------------------------------ agreement
 
-function AgreementCard({ property, editable }) {
+function AgreementCard({ property, editable, onLoaded, linkOwnerId, onLinkHandled }) {
   const { t, lang } = useI18n();
   const [agreements, setAgreements] = useState(null);
   const [error, setError] = useState(null);
@@ -58,15 +75,24 @@ function AgreementCard({ property, editable }) {
   const load = useCallback(async () => {
     if (!managed) return;
     try {
-      setAgreements(await ownersApi.agreements(property.id));
+      const list = await ownersApi.agreements(property.id);
+      setAgreements(list);
+      onLoaded?.({ hasActive: list.some((a) => a.status === 'ACTIVE') });
     } catch (e) {
       setError(e);
     }
-  }, [property.id, managed]);
+  }, [property.id, managed]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     load();
   }, [load]);
+
+  useEffect(() => {
+    if (linkOwnerId) {
+      setEditing({ ownerId: linkOwnerId });
+      onLinkHandled?.();
+    }
+  }, [linkOwnerId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const active = agreements?.find((a) => a.status === 'ACTIVE');
   const history = agreements?.filter((a) => a.status !== 'ACTIVE') ?? [];
@@ -153,6 +179,14 @@ function AgreementForm({ propertyId, agreement, onClose, onSaved }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
   const fieldError = (name) => (error?.field === name ? errorText(t, error) : undefined);
+
+  // Fill in the owner's name when the form was opened with only an owner id
+  useEffect(() => {
+    if (owners && form.ownerId && !form.ownerName) {
+      const o = owners.find((x) => x.id === form.ownerId);
+      if (o) setForm((f) => ({ ...f, ownerName: o.name }));
+    }
+  }, [owners, form.ownerId, form.ownerName]);
 
   useEffect(() => {
     if (!agreement) return;
@@ -256,11 +290,20 @@ function AgreementForm({ propertyId, agreement, onClose, onSaved }) {
 
 // ------------------------------------------------------------------ partners
 
-function PartnersCard({ property, editable }) {
+function PartnersCard({ property, editable, linkOwnerId, onLinkHandled }) {
   const { t } = useI18n();
   const [partners, setPartners] = useState(null);
   const [error, setError] = useState(null);
   const [editing, setEditing] = useState(false);
+  const [preselect, setPreselect] = useState(null);
+
+  useEffect(() => {
+    if (linkOwnerId && partners) {
+      setPreselect(linkOwnerId);
+      setEditing(true);
+      onLinkHandled?.();
+    }
+  }, [linkOwnerId, partners]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const load = useCallback(async () => {
     try {
@@ -302,17 +345,22 @@ function PartnersCard({ property, editable }) {
         visible={editing}
         propertyId={property.id}
         current={partners ?? []}
-        onClose={() => setEditing(false)}
+        preselectOwnerId={preselect}
+        onClose={() => {
+          setEditing(false);
+          setPreselect(null);
+        }}
         onSaved={(list) => {
           setPartners(list);
           setEditing(false);
+          setPreselect(null);
         }}
       />
     </Card>
   );
 }
 
-function PartnersForm({ visible, propertyId, current, onClose, onSaved }) {
+function PartnersForm({ visible, propertyId, current, preselectOwnerId, onClose, onSaved }) {
   const { t } = useI18n();
   const owners = useOwners(visible);
   const [rows, setRows] = useState([]);
@@ -327,6 +375,16 @@ function PartnersForm({ visible, propertyId, current, onClose, onSaved }) {
       setBusy(false);
     }
   }, [visible]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Opened from an owner's page: add that owner as a new partner row
+  useEffect(() => {
+    if (!visible || !preselectOwnerId || !owners) return;
+    setRows((list) => {
+      if (list.some((r) => r.ownerId === preselectOwnerId)) return list;
+      const o = owners.find((x) => x.id === preselectOwnerId);
+      return o ? [...list, { ownerId: o.id, name: o.name, share: list.length ? '' : '100' }] : list;
+    });
+  }, [visible, preselectOwnerId, owners]);
 
   const totalBp = rows.reduce((sum, r) => sum + (bpFromText(r.share) || 0), 0);
   const ok = rows.length === 0 || totalBp === 10000;

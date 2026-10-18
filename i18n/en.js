@@ -254,6 +254,9 @@ export default {
     manager: 'Management agreement',
     pick: 'Choose an owner',
     pickEmpty: 'No owners yet — add them from the Owners section first.',
+    linkProperty: 'Link a property',
+    linkHint: 'Choose a property: for a managed property without an agreement, the management agreement opens with this owner; otherwise they are added as a partner.',
+    newPropertyForOwner: 'New property for this owner',
   },
 
   agreement: {
