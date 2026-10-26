@@ -12,6 +12,7 @@ import { Money, MoneyField } from '../components/Rial';
 import { DateField, PickerButton, dateText, formatDate, isDateText, today } from '../components/Fields';
 import {
   Badge,
+  BackButton,
   Button,
   Card,
   ChipSelect,
@@ -169,7 +170,7 @@ export function TenantLeases({ tenantId, onOpen, onNew, editable }) {
 
 // =================================================================== detail
 
-export function LeaseDetail({ id, onBack, onOpen, onOpenTenant }) {
+export function LeaseDetail({ id, onBack, onOpen, onOpenTenant, backLabel }) {
   const { t, lang, isRTL, start } = useI18n();
   const { canEdit } = useSession();
   const editable = canEdit('tenants');
@@ -221,11 +222,10 @@ export function LeaseDetail({ id, onBack, onOpen, onOpenTenant }) {
     load();
   });
 
-  const back = <Button small variant="ghost" icon={isRTL ? 'chevron-right' : 'chevron-left'} title={t('common.back')} onPress={onBack} />;
+  const back = <BackButton onPress={onBack} label={backLabel} />;
   if (!lease) {
     return (
-      <Screen>
-        {back}
+      <Screen back={back}>
         <ErrorBox error={error} onRetry={load} />
         {!error ? <Loading /> : null}
       </Screen>
@@ -243,9 +243,8 @@ export function LeaseDetail({ id, onBack, onOpen, onOpenTenant }) {
   ].filter(([, v]) => v);
 
   return (
-    <Screen title={lease.number} subtitle={lease.tenant.name}>
+    <Screen back={back} title={lease.number} subtitle={lease.tenant.name}>
       <View style={{ gap: SPACING.lg }}>
-        <View style={{ alignSelf: start }}>{back}</View>
         <ErrorBox error={error} />
 
         <Row style={{ flexWrap: 'wrap' }}>

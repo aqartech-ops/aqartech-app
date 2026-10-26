@@ -13,6 +13,7 @@ import { Money, MoneyField } from '../components/Rial';
 import PropertyOwnership from '../components/PropertyOwnership';
 import {
   Badge,
+  BackButton,
   Button,
   Card,
   ChipSelect,
@@ -331,14 +332,11 @@ function PropertyDetail({ id, onBack, linkOwnerId, onLinkHandled }) {
     }
   };
 
-  const backButton = (
-    <Button small variant="ghost" icon={isRTL ? 'chevron-right' : 'chevron-left'} title={t('common.back')} onPress={onBack} />
-  );
+  const backButton = <BackButton onPress={onBack} label={t('properties.title')} />;
 
   if (!property) {
     return (
-      <Screen>
-        {backButton}
+      <Screen back={backButton}>
         <ErrorBox error={error} onRetry={load} />
         {!error ? <Loading /> : null}
       </Screen>
@@ -357,7 +355,7 @@ function PropertyDetail({ id, onBack, linkOwnerId, onLinkHandled }) {
   ].filter(([, value]) => value !== null && value !== undefined && value !== '');
 
   return (
-    <Screen
+    <Screen back={backButton}
       title={property.name}
       subtitle={[property.wilayat, property.governorate].filter(Boolean).join(' · ') || null}
       actions={
@@ -370,7 +368,6 @@ function PropertyDetail({ id, onBack, linkOwnerId, onLinkHandled }) {
       }
     >
       <View style={{ gap: SPACING.lg }}>
-        <View style={{ alignSelf: start }}>{backButton}</View>
         <ErrorBox error={error} onRetry={load} />
 
         <Row style={{ flexWrap: 'wrap' }} gap={SPACING.md}>

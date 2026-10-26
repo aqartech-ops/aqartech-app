@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
+import { Pressable, StyleSheet, View, useWindowDimensions } from 'react-native';
+import { KeyboardScrollView } from '../components/keyboard';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { COLORS, RADIUS, SPACING } from '../theme';
@@ -21,10 +22,10 @@ export default function LoginScreen() {
 
   return (
     <SafeAreaView style={styles.root}>
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <View style={{ flex: 1 }}>
         <View style={[styles.split, wide && { flexDirection: 'row' }]}>
           {wide ? <BrandPanel /> : null}
-          <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
+          <KeyboardScrollView contentContainerStyle={styles.scroll}>
             <Row style={{ justifyContent: 'space-between', width: '100%', maxWidth: 520 }}>
               {!wide ? <BrandMark /> : <View />}
               <Button
@@ -75,9 +76,9 @@ export default function LoginScreen() {
                 {t('settings.server')}: {API_URL}
               </Txt>
             ) : null}
-          </ScrollView>
+          </KeyboardScrollView>
         </View>
-      </KeyboardAvoidingView>
+      </View>
     </SafeAreaView>
   );
 }

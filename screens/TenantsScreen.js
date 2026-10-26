@@ -11,6 +11,7 @@ import { DateField, dateText, formatDate, isDateText } from '../components/Field
 import { LeaseDetail, LeaseForm, LeasesTab, TenantLeases } from './LeasesView';
 import {
   Badge,
+  BackButton,
   Button,
   Card,
   EmptyState,
@@ -40,6 +41,7 @@ function idState(idExpiry) {
 
 /** Tenants (المستأجرون) — records only — and their leases (العقود), in two tabs. */
 export default function TenantsScreen({ params }) {
+  const { t } = useI18n();
   const [tab, setTab] = useState(params?.leaseId || params?.tab === 'leases' ? 'leases' : 'tenants');
   const [tenantId, setTenantId] = useState(params?.tenantId ?? null);
   const [leaseId, setLeaseId] = useState(params?.leaseId ?? null);
@@ -50,6 +52,7 @@ export default function TenantsScreen({ params }) {
         key={leaseId}
         id={leaseId}
         onBack={() => setLeaseId(null)}
+        backLabel={tenantId ? t('leases.tenant') : t('leases.title')}
         onOpen={setLeaseId}
         onOpenTenant={(id) => {
           setLeaseId(null);
@@ -248,11 +251,10 @@ function TenantDetail({ id, onBack, onOpenLease }) {
     }
   };
 
-  const back = <Button small variant="ghost" icon={isRTL ? 'chevron-right' : 'chevron-left'} title={t('common.back')} onPress={onBack} />;
+  const back = <BackButton onPress={onBack} label={t('tenants.title')} />;
   if (!tenant) {
     return (
-      <Screen>
-        {back}
+      <Screen back={back}>
         <ErrorBox error={error} onRetry={load} />
         {!error ? <Loading /> : null}
       </Screen>
@@ -273,7 +275,7 @@ function TenantDetail({ id, onBack, onOpenLease }) {
   const guarantor = [tenant.guarantorName, tenant.guarantorPhone, tenant.guarantorCivilId].filter(Boolean);
 
   return (
-    <Screen
+    <Screen back={back}
       title={tenant.name}
       subtitle={tenant.phone}
       actions={
@@ -286,7 +288,6 @@ function TenantDetail({ id, onBack, onOpenLease }) {
       }
     >
       <View style={{ gap: SPACING.lg }}>
-        <View style={{ alignSelf: start }}>{back}</View>
         <ErrorBox error={error} onRetry={load} />
         {ids ? (
           <View style={[styles.alert, { backgroundColor: ids === 'expired' ? COLORS.dangerSoft : COLORS.warningSoft }]}>
