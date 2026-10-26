@@ -4,6 +4,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { COLORS, FONT } from '../theme';
 import { useI18n } from '../i18n';
 import { formatOMR } from '../services/money';
+import { useRevealOnFocus } from './keyboard';
 
 // Official Omani rial symbol (Central Bank of Oman, Nov 2025), converted from the official artwork to a single-colour mask
 // so it can be tinted to any colour. Source files: assets/rial-symbol.png / assets/rial-symbol.svg
@@ -61,6 +62,7 @@ export function SectionIcon({ name, size = 22, color = COLORS.textDark }) {
  */
 export function MoneyField({ label, value, onChangeText, error, hint }) {
   const { row, align } = useI18n();
+  const reveal = useRevealOnFocus();
   const small = (extra) => [{ fontSize: FONT.small, textAlign: align, color: COLORS.textDark }, extra];
   return (
     <View style={{ gap: 4 }}>
@@ -80,6 +82,8 @@ export function MoneyField({ label, value, onChangeText, error, hint }) {
       >
         <RialSymbol size={13} color={COLORS.textMuted} />
         <TextInput
+          ref={reveal.ref}
+          onFocus={reveal.onFocus}
           value={value}
           onChangeText={(t) => onChangeText(t.replace(/[٠-٩]/g, (d) => String('٠١٢٣٤٥٦٧٨٩'.indexOf(d))).replace(/[٫]/g, '.').replace(/[^0-9.,]/g, ''))}
           keyboardType="decimal-pad"

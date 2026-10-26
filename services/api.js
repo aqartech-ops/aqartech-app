@@ -174,4 +174,8 @@ export const adminApi = {
   companies: () => api.get('/admin/companies'),
   updateSubscription: (companyId, data) => api.patch(`/admin/companies/${companyId}/subscription`, data),
   plans: () => api.get('/admin/plans'),
+  planOptions: () => api.get('/admin/plan-options'),
+  createPlan: (data) => api.post('/admin/plans', data),
+  updatePlan: (id, data) => api.patch(`/admin/plans/${id}`, data),
+  removePlan: (id) => api.delete(`/admin/plans/${id}`),
 };

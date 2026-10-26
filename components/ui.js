@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Modal, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { COLORS, FONT, RADIUS, SHADOWS, SPACING } from '../theme';
 import { useI18n } from '../i18n';
 import { SectionIcon } from './Rial';
+import { KeyboardScrollView, useKeyboard, useRevealOnFocus } from './keyboard';
 
 // Shared building blocks. All of them respect the current language direction.
 
@@ -89,9 +90,10 @@ export function IconButton({ icon, onPress, color = COLORS.textDark, size = 22, 
   );
 }
 
-export function Field({ label, hint, error, secure, style, inputStyle, ...inputProps }) {
+export function Field({ label, hint, error, secure, style, inputStyle, onFocus, ...inputProps }) {
   const { t, align, row } = useI18n();
   const [hidden, setHidden] = useState(true);
+  const reveal = useRevealOnFocus(onFocus);
   return (
     <View style={[{ gap: SPACING.xs }, style]}>
       {label ? <Txt weight="weightMedium" size="small">{label}</Txt> : null}
@@ -101,6 +103,8 @@ export function Field({ label, hint, error, secure, style, inputStyle, ...inputP
           secureTextEntry={secure && hidden}
           style={[styles.input, { textAlign: align }, inputStyle]}
           {...inputProps}
+          ref={reveal.ref}
+          onFocus={reveal.onFocus}
         />
         {secure ? (
           <IconButton
@@ -165,10 +169,31 @@ export function Badge({ label, tone = 'neutral' }) {
 
 export const STATUS_TONE = { ACTIVE: 'success', PENDING: 'warning', SUSPENDED: 'danger', EXPIRED: 'danger', CANCELLED: 'neutral' };
 
-/** Standard page: title row with optional actions, then scrollable content. */
-export function Screen({ title, subtitle, actions, children, scroll = true }) {
+/**
+ * Clear "back" control for detail pages: a large, labelled button ("Back to Properties").
+ * Arrow follows the reading direction.
+ */
+export function BackButton({ onPress, label }) {
+  const { t, isRTL, row, start } = useI18n();
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={label ? t('common.backTo', { name: label }) : t('common.back')}
+      onPress={onPress}
+      hitSlop={8}
+      style={({ pressed }) => [styles.back, { flexDirection: row, alignSelf: start }, pressed && { backgroundColor: COLORS.primarySoft }]}
+    >
+      <MaterialCommunityIcons name={isRTL ? 'arrow-right' : 'arrow-left'} size={22} color={COLORS.primaryDark} />
+      <Text style={styles.backText}>{label ? t('common.backTo', { name: label }) : t('common.back')}</Text>
+    </Pressable>
+  );
+}
+
+/** Standard page: optional back button, title row with optional actions, then scrollable content. */
+export function Screen({ title, subtitle, actions, children, scroll = true, back }) {
   const content = (
     <View style={styles.screenInner}>
+      {back ? <View style={{ marginBottom: SPACING.md }}>{back}</View> : null}
       {title ? (
         <Row style={{ justifyContent: 'space-between', flexWrap: 'wrap', marginBottom: SPACING.lg }}>
           <View style={{ flexShrink: 1, gap: 2 }}>
@@ -183,9 +208,9 @@ export function Screen({ title, subtitle, actions, children, scroll = true }) {
   );
   if (!scroll) return <View style={styles.screen}>{content}</View>;
   return (
-    <ScrollView style={styles.screen} contentContainerStyle={{ flexGrow: 1 }} keyboardShouldPersistTaps="handled">
+    <KeyboardScrollView style={styles.screen} contentContainerStyle={{ flexGrow: 1 }}>
       {content}
-    </ScrollView>
+    </KeyboardScrollView>
   );
 }
 
@@ -228,18 +253,20 @@ export function errorText(t, error) {
 
 /** A simple modal-like panel that works on phone, tablet and web. */
 export function Sheet({ visible, title, onClose, children, footer }) {
+  // The panel sits above the keyboard: the space it covers is taken out of the backdrop.
+  const keyboard = useKeyboard();
   return (
     <Modal visible={!!visible} transparent animationType="fade" onRequestClose={onClose}>
-      <View style={styles.sheetBackdrop}>
+      <View style={[styles.sheetBackdrop, keyboard.height ? { paddingBottom: keyboard.height + SPACING.sm, paddingTop: SPACING.xl } : null]}>
         <Pressable style={StyleSheet.absoluteFill} onPress={onClose} accessibilityLabel="close" />
-        <View style={styles.sheet}>
+        <View style={[styles.sheet, keyboard.height && keyboard.top ? { maxHeight: keyboard.top - SPACING.xl - SPACING.sm } : null]}>
           <Row style={{ justifyContent: 'space-between', marginBottom: SPACING.md }}>
             <Txt size="medium" weight="weightBold" style={{ flexShrink: 1 }}>{title}</Txt>
             <IconButton icon="close" onPress={onClose} />
           </Row>
-          <ScrollView style={{ flexGrow: 0 }} contentContainerStyle={{ gap: SPACING.md }} keyboardShouldPersistTaps="handled">
+          <KeyboardScrollView style={{ flexGrow: 0 }} contentContainerStyle={{ gap: SPACING.md }} keyboardPadding={false}>
             {children}
-          </ScrollView>
+          </KeyboardScrollView>
           {footer ? <Row style={{ justifyContent: 'flex-end', marginTop: SPACING.lg }}>{footer}</Row> : null}
         </View>
       </View>
@@ -268,6 +295,17 @@ const styles = StyleSheet.create({
   buttonSmall: { minHeight: 34, paddingHorizontal: SPACING.md, borderRadius: RADIUS.sm },
   buttonText: { fontSize: FONT.body, fontWeight: FONT.weightMedium },
   iconButton: { padding: 6, borderRadius: RADIUS.pill },
+  back: {
+    alignItems: 'center',
+    gap: SPACING.sm,
+    minHeight: 44,
+    paddingHorizontal: SPACING.lg,
+    borderRadius: RADIUS.pill,
+    borderWidth: 1,
+    borderColor: COLORS.primary,
+    backgroundColor: COLORS.surface,
+  },
+  backText: { fontSize: FONT.body, fontWeight: FONT.weightBold, color: COLORS.primaryDark },
   inputWrap: {
     alignItems: 'center',
     backgroundColor: COLORS.surface,

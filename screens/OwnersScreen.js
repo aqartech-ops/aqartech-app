@@ -10,6 +10,7 @@ import { matches } from '../services/text';
 import { formatDate, pctLabel } from '../components/Fields';
 import {
   Badge,
+  BackButton,
   Button,
   Card,
   EmptyState,
@@ -169,11 +170,10 @@ function OwnerDetail({ id, onBack, onNavigate }) {
     }
   };
 
-  const back = <Button small variant="ghost" icon={isRTL ? 'chevron-right' : 'chevron-left'} title={t('common.back')} onPress={onBack} />;
+  const back = <BackButton onPress={onBack} label={t('owners.title')} />;
   if (!owner) {
     return (
-      <Screen>
-        {back}
+      <Screen back={back}>
         <ErrorBox error={error} onRetry={load} />
         {!error ? <Loading /> : null}
       </Screen>
@@ -199,7 +199,7 @@ function OwnerDetail({ id, onBack, onNavigate }) {
   ].filter(([, v]) => v);
 
   return (
-    <Screen
+    <Screen back={back}
       title={owner.name}
       subtitle={owner.phone}
       actions={
@@ -212,7 +212,6 @@ function OwnerDetail({ id, onBack, onNavigate }) {
       }
     >
       <View style={{ gap: SPACING.lg }}>
-        <View style={{ alignSelf: start }}>{back}</View>
         <ErrorBox error={error} onRetry={load} />
 
         {owner.phone ? (

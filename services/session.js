@@ -1,3 +1,4 @@
+import { AppState } from 'react-native';
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import storage from './storage';
 import { authApi, setAuthToken, setUnauthorizedHandler } from './api';
@@ -46,6 +47,16 @@ export function SessionProvider({ children }) {
       }
     })();
   }, [signOut]);
+
+  // Plan or permission changes made by the platform team / the company owner apply when the app
+  // comes back to the foreground — no need to sign out and in again.
+  useEffect(() => {
+    if (status !== 'signedIn') return undefined;
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state === 'active') authApi.me().then(setMe).catch(() => {});
+    });
+    return () => sub.remove();
+  }, [status]);
 
   const value = useMemo(
     () => ({

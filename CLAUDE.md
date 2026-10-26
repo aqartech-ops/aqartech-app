@@ -23,6 +23,7 @@ New decisions go into `docs/PROJECT.md` before they go into code.
 - **Permissions:** per section and per property — `EDIT` / `VIEW` / `HIDDEN`. Owners (property owners linked to a company) are read-only.
 - **Secrets** live in `.env` (never committed). Keep `.env.example` up to date.
 - Prefer soft delete (trash, restorable) for normal records.
+- **Keyboard must never cover a field:** build screens and forms with `Screen`, `Sheet`, `Field`, `MoneyField`; any other scrolling form uses `KeyboardScrollView` from `components/keyboard.js`, and any raw `TextInput` uses `useRevealOnFocus`.
 
 ## Workflow
 - Work on a branch, open a PR per step, describe the change in Arabic for the owner.

@@ -11,6 +11,7 @@ import AppShell from './components/AppShell';
 import LoginScreen from './screens/LoginScreen';
 import DashboardScreen from './screens/DashboardScreen';
 import CompaniesScreen from './screens/CompaniesScreen';
+import PlansScreen from './screens/PlansScreen';
 import UsersScreen from './screens/UsersScreen';
 import PropertiesScreen from './screens/PropertiesScreen';
 import TenantsScreen from './screens/TenantsScreen';
@@ -38,6 +39,7 @@ const USER_SECTIONS = [
 const ADMIN_SECTIONS = [
   { key: 'dashboard', icon: 'view-dashboard-outline', Screen: DashboardScreen },
   { key: 'companies', icon: 'domain', Screen: CompaniesScreen },
+  { key: 'plans', icon: 'package-variant-closed', Screen: PlansScreen },
   { key: 'settings', icon: 'cog-outline', Screen: SettingsScreen },
 ];
 

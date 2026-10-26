@@ -3,7 +3,7 @@ import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { ActivityService } from '../common/activity.service.js';
 import { AdminOnly, Auth, type AdminAuth } from '../common/auth-context.js';
-import { isSectionKey } from '../common/sections.js';
+import { ALWAYS_ON, SECTIONS, isSectionKey } from '../common/sections.js';
 import { LIMIT_KEYS, publicPlan } from '../plans/plans.service.js';
 import * as v from '../common/validate.js';
 
@@ -20,6 +20,12 @@ export class AdminController {
   ) {}
 
   // ---------- Plans (الباقات) — everything editable, nothing hard-coded ----------
+
+  /** What a plan can contain: sections (always-on ones cannot be removed) and limit keys. */
+  @Get('plan-options')
+  planOptions() {
+    return { sections: SECTIONS, alwaysOn: ALWAYS_ON, limitKeys: LIMIT_KEYS };
+  }
 
   @Get('plans')
   async plans() {
@@ -73,9 +79,18 @@ export class AdminController {
       orderBy: { createdAt: 'desc' },
       include: {
         subscription: { include: { plan: { select: { id: true, code: true, nameEn: true, nameAr: true } } } },
-        _count: { select: { users: { where: { deletedAt: null } } } },
+        _count: {
+          select: {
+            users: { where: { deletedAt: null } },
+            properties: { where: { deletedAt: null } },
+            units: { where: { deletedAt: null, property: { deletedAt: null } } },
+            owners: { where: { deletedAt: null } },
+          },
+        },
       },
     });
+    const staff = await this.prisma.user.groupBy({ by: ['companyId'], where: { kind: 'STAFF', deletedAt: null }, _count: { _all: true } });
+    const staffOf = new Map(staff.map((g) => [g.companyId, g._count._all]));
     return companies.map((c) => ({
       id: c.id,
       type: c.type,
@@ -85,6 +100,8 @@ export class AdminController {
       phone: c.phone,
       createdAt: c.createdAt,
       users: c._count.users,
+      // current usage, compared with the plan limits when the admin changes the plan
+      used: { users: staffOf.get(c.id) ?? 0, properties: c._count.properties, units: c._count.units, owners: c._count.owners },
       subscription: c.subscription,
     }));
   }
@@ -173,7 +190,7 @@ export class AdminController {
       const features = Array.isArray(src.features) ? src.features.filter((f): f is string => typeof f === 'string') : [];
       const unknown = features.filter((f) => !isSectionKey(f));
       if (unknown.length) throw new BadRequestException({ message: 'plan.unknownFeature', field: 'features', unknown });
-      data.features = [...new Set(features)];
+      data.features = [...new Set([...ALWAYS_ON, ...features])];
     }
     return data;
   }
