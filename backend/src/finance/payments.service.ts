@@ -28,8 +28,8 @@ export class PaymentsService {
     private readonly charges: ChargesService,
   ) {}
 
-  async list(auth: UserAuth, query: { tenantId?: string; leaseId?: string; method?: string; from?: string; to?: string; page?: string }) {
-    const take = 50;
+  async list(auth: UserAuth, query: { tenantId?: string; leaseId?: string; method?: string; from?: string; to?: string; page?: string; all?: string }) {
+    const take = query.all === '1' ? 5000 : 50; // all=1: export (تصدير)
     const page = Math.max(1, Number(query.page) || 1);
     const where: Prisma.PaymentWhereInput = { companyId: auth.companyId, ...this.scope(auth) };
     if (query.tenantId) where.tenantId = query.tenantId;

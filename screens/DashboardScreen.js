@@ -174,6 +174,14 @@ function CompanyDashboard({ onNavigate }) {
               tone={COLORS.danger}
               value={<Money baisa={w.financials.overdue} size={FONT.title} weight="weightBold" color={w.financials.overdue ? COLORS.danger : COLORS.textDark} />}
             />
+            {w.financials.municipality ? (
+              <Kpi
+                icon="file-certificate-outline"
+                label={t('municipality.unregisteredKpi')}
+                tone={w.financials.municipality.unregistered ? COLORS.danger : COLORS.primary}
+                value={String(w.financials.municipality.unregistered)}
+              />
+            ) : null}
             {w.financials.chequesToDeposit ? (
               <Kpi
                 icon="checkbook"

@@ -171,7 +171,7 @@ export const financeApi = {
   receivables: (query) => api.get('/finance/receivables', query),
   balances: () => api.get('/finance/balances'),
   statement: (tenantId) => api.get(`/finance/tenants/${tenantId}/statement`),
-  journal: (page = 1) => api.get('/finance/journal', { page }),
+  journal: (page = 1, all = false) => api.get('/finance/journal', all ? { all: '1' } : { page }),
   trialBalance: () => api.get('/finance/trial-balance'),
   tenantLeases: (tenantId) => api.get(`/finance/tenants/${tenantId}/leases`),
   payments: (query) => api.get('/finance/payments', query),
@@ -208,6 +208,11 @@ export const financeApi = {
   voidPayout: (id, reason) => api.post(`/finance/owner-payouts/${id}/void`, { reason }),
   incomeReport: (query) => api.get('/finance/reports/income', query),
   propertiesReport: (year) => api.get('/finance/reports/properties', { year }),
+  closing: () => api.get('/finance/closing'),
+  closeMonth: (month) => api.post('/finance/closing', { month }),
+  reopenMonth: (reason) => api.post('/finance/closing/reopen', { reason }),
+  municipality: (filter) => api.get('/finance/municipality', { filter }),
+  registerMunicipality: (data) => api.post('/finance/municipality', data),
 };
 
 export const maintenanceApi = {

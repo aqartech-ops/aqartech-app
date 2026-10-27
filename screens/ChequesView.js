@@ -10,6 +10,8 @@ import { Money, MoneyField } from '../components/Rial';
 import { DateField, PickerButton, formatDate, isDateText, today } from '../components/Fields';
 import { Badge, Button, Card, ChipSelect, EmptyState, ErrorBox, Field, FieldRow, Loading, Row, Sheet, Txt, errorText } from '../components/ui';
 import { TenantPicker } from './PaymentsView';
+import ExportButton from '../components/ExportButton';
+import { day, omr } from '../services/exportCsv';
 
 // Cheques (الشيكات): post-dated cheques kept until their date, deposited (receipt issued), cleared or bounced.
 
@@ -77,7 +79,18 @@ export function ChequesTab({ editable, version, onChanged, onOpenReceipt, focusI
       ) : null}
 
       <ChipSelect value={filter} onChange={setFilter} options={FILTERS.map((f) => ({ value: f, label: t(`cheques.filters.${f}`) }))} />
-      <Field value={text} onChangeText={setText} placeholder={t('cheques.searchPlaceholder')} />
+      <Row style={{ flexWrap: 'wrap' }}>
+        <View style={{ flex: 1, minWidth: 200 }}>
+          <Field value={text} onChangeText={setText} placeholder={t('cheques.searchPlaceholder')} />
+        </View>
+        <ExportButton
+          filename={`cheques-${filter}`}
+          build={() => [
+            [t('payments.chequeNo'), t('payments.bankName'), t('payments.chequeDate'), t('payments.tenant'), t('payments.lease'), t('expenses.property'), t('expenses.unit'), t('finance.amount'), t('finance.status')],
+            ...visible.map((c) => [c.number, c.bankName, day(c.dueDate), c.tenant.name, c.lease.number, c.lease.property.name, c.lease.unit.number, omr(c.amount), t(`cheques.status.${c.status}`)]),
+          ]}
+        />
+      </Row>
       <ErrorBox error={error} onRetry={load} />
 
       {rows === null ? (

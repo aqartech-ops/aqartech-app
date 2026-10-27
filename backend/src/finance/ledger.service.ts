@@ -1,6 +1,6 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import type { EntryType, Prisma } from '@prisma/client';
-import { assertBalanced, reverseLines, type Line } from './journal.js';
+import { assertBalanced, postingDate, reverseLines, type Line } from './journal.js';
 
 type Tx = Prisma.TransactionClient;
 
@@ -13,7 +13,10 @@ export type PostInput = {
   chargeId?: string | null;
   createdById?: string | null;
   lines: Line[];
+  /** For automatic postings: a date inside a closed month moves to the first open day instead of failing. */
+  autoRoll?: boolean;
 };
+
 
 /**
  * The ledger (دفتر القيود). The ONLY place that writes journal entries.
@@ -25,12 +28,13 @@ export class LedgerService {
   /** Validates (balanced, integer baisa) and writes one entry with its lines. */
   async post(tx: Tx, input: PostInput) {
     assertBalanced(input.lines);
-    const number = await this.nextNumber(tx, input.companyId, 'journal', input.date.getUTCFullYear(), 'J', 6);
+    const date = await this.openDate(tx, input.companyId, input.date, input.autoRoll ?? false);
+    const number = await this.nextNumber(tx, input.companyId, 'journal', date.getUTCFullYear(), 'J', 6);
     return tx.journalEntry.create({
       data: {
         companyId: input.companyId,
         number,
-        date: input.date,
+        date,
         type: input.type,
         memo: input.memo ?? null,
         leaseId: input.leaseId ?? null,
@@ -68,12 +72,14 @@ export class LedgerService {
       ownerId: l.ownerId,
     }));
     assertBalanced(lines);
-    const number = await this.nextNumber(tx, companyId, 'journal', opts.date.getUTCFullYear(), 'J', 6);
+    // a correction of a closed month always lands in the open period (it shows in the current month)
+    const date = await this.openDate(tx, companyId, opts.date, true);
+    const number = await this.nextNumber(tx, companyId, 'journal', date.getUTCFullYear(), 'J', 6);
     return tx.journalEntry.create({
       data: {
         companyId,
         number,
-        date: opts.date,
+        date,
         type: 'REVERSAL',
         memo: opts.memo ?? null,
         leaseId: original.leaseId,
@@ -95,6 +101,20 @@ export class LedgerService {
       },
       include: { lines: true },
     });
+  }
+
+  /** Last locked day (end of the latest closed month that was not reopened), or null. */
+  async lockedUntil(tx: Tx | Pick<Tx, 'periodClose'>, companyId: string): Promise<Date | null> {
+    const close = await tx.periodClose.findFirst({ where: { companyId, reopenedAt: null }, orderBy: { lockedUntil: 'desc' }, select: { lockedUntil: true } });
+    return close?.lockedUntil ?? null;
+  }
+
+  /** A date that may be posted: unchanged when open; in a closed month → error, or the first open day when `roll`. */
+  private async openDate(tx: Tx, companyId: string, date: Date, roll: boolean): Promise<Date> {
+    const locked = await this.lockedUntil(tx, companyId);
+    const result = postingDate(date, locked, roll);
+    if (!result) throw new BadRequestException({ message: 'period.closed', field: 'date', lockedUntil: locked });
+    return result;
   }
 
   /** Gap-free sequential number per company and year, e.g. J-2026-000001. The counter row lock serializes writers. */

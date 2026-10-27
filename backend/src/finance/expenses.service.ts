@@ -14,14 +14,14 @@ export const BEARERS = ['OWNER', 'COMPANY', 'TENANT'] as const;
 export const PAID_FROM = ['CASH', 'BANK'] as const;
 
 /** Starting list of expense items; each company edits its own copy. */
-const DEFAULT_CATEGORIES: { nameAr: string; nameEn: string; isMaintenance?: boolean }[] = [
+const DEFAULT_CATEGORIES: { nameAr: string; nameEn: string; isMaintenance?: boolean; systemKey?: string }[] = [
   { nameAr: 'صيانة وإصلاحات', nameEn: 'Maintenance & repairs', isMaintenance: true },
   { nameAr: 'كهرباء ومياه', nameEn: 'Electricity & water' },
   { nameAr: 'رواتب', nameEn: 'Salaries' },
   { nameAr: 'نظافة', nameEn: 'Cleaning' },
   { nameAr: 'حراسة وأمن', nameEn: 'Security' },
   { nameAr: 'تأمين', nameEn: 'Insurance' },
-  { nameAr: 'رسوم بلدية وحكومية', nameEn: 'Municipality & government fees' },
+  { nameAr: 'رسوم بلدية وحكومية', nameEn: 'Municipality & government fees', systemKey: 'municipality' },
   { nameAr: 'تسويق وعمولات', nameEn: 'Marketing & commissions' },
   { nameAr: 'مصاريف إدارية', nameEn: 'Administrative' },
   { nameAr: 'أخرى', nameEn: 'Other' },
@@ -100,8 +100,8 @@ export class ExpensesService {
 
   // ---------------------------------------------------------------- expenses
 
-  async list(auth: UserAuth, query: { from?: string; to?: string; propertyId?: string; categoryId?: string; bearer?: string; page?: string }) {
-    const take = 50;
+  async list(auth: UserAuth, query: { from?: string; to?: string; propertyId?: string; categoryId?: string; bearer?: string; page?: string; all?: string }) {
+    const take = query.all === '1' ? 5000 : 50; // all=1: export (تصدير)
     const page = Math.max(1, Number(query.page) || 1);
     const where: Prisma.ExpenseWhereInput = { companyId: auth.companyId, ...this.scope(auth) };
     if (query.propertyId) where.propertyId = query.propertyId;
@@ -303,13 +303,25 @@ export class ExpensesService {
     return cat?.id ?? null;
   }
 
+  /** Item used for municipality fees: the system one, else one named like it, else creates it. */
+  async municipalityCategoryId(companyId: string) {
+    await this.ensureCategories(companyId);
+    const found =
+      (await this.prisma.expenseCategory.findFirst({ where: { companyId, systemKey: 'municipality' } })) ??
+      (await this.prisma.expenseCategory.findFirst({ where: { companyId, nameEn: 'Municipality & government fees' } }));
+    if (found) return found.id;
+    const def = DEFAULT_CATEGORIES.find((c) => c.systemKey === 'municipality')!;
+    const created = await this.prisma.expenseCategory.create({ data: { companyId, nameAr: def.nameAr, nameEn: def.nameEn, systemKey: 'municipality', sortOrder: 99 } });
+    return created.id;
+  }
+
   // ---------------------------------------------------------------- helpers
 
   private async ensureCategories(companyId: string) {
     const count = await this.prisma.expenseCategory.count({ where: { companyId } });
     if (count > 0) return;
     await this.prisma.expenseCategory.createMany({
-      data: DEFAULT_CATEGORIES.map((c, i) => ({ companyId, nameAr: c.nameAr, nameEn: c.nameEn, isMaintenance: c.isMaintenance ?? false, sortOrder: i + 1 })),
+      data: DEFAULT_CATEGORIES.map((c, i) => ({ companyId, nameAr: c.nameAr, nameEn: c.nameEn, isMaintenance: c.isMaintenance ?? false, systemKey: c.systemKey ?? null, sortOrder: i + 1 })),
     });
   }
 

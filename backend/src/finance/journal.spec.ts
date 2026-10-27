@@ -11,6 +11,7 @@ import {
   expenseLines,
   defaultBearer,
   netOperatingIncome,
+  postingDate,
   pair,
   reverseLines,
   sumByAccount,
@@ -156,6 +157,14 @@ describe('journal rules', () => {
   it('default cost bearer follows the property', () => {
     expect(defaultBearer('MANAGED')).toBe('OWNER');
     expect(defaultBearer('OWNED')).toBe('COMPANY');
+  });
+
+  it('month close: closed dates are refused, corrections roll into the open period', () => {
+    const locked = d('2026-09-30');
+    expect(postingDate(d('2026-10-01'), locked, false)?.toISOString().slice(0, 10)).toBe('2026-10-01');
+    expect(postingDate(d('2026-09-15'), locked, false)).toBeNull();
+    expect(postingDate(d('2026-09-15'), locked, true)?.toISOString().slice(0, 10)).toBe('2026-10-01');
+    expect(postingDate(d('2026-01-01'), null, false)?.toISOString().slice(0, 10)).toBe('2026-01-01');
   });
 
   it('collection rate', () => {

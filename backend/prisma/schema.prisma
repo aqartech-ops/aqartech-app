@@ -133,6 +133,8 @@ model Company {
   workOrders        WorkOrder[]
   ownerStatements   OwnerStatement[]
   ownerPayouts      OwnerPayout[]
+  periodCloses      PeriodClose[]
+  municipality      MunicipalityRecord[]
   counters     Counter[]
 }
 
@@ -514,6 +516,7 @@ model Lease {
   charges  RentCharge[]
   payments Payment[]
   cheques  Cheque[]
+  municipality MunicipalityRecord[]
 
   @@unique([companyId, number])
   @@index([companyId, status])
@@ -777,6 +780,7 @@ model ExpenseCategory {
   nameAr        String
   nameEn        String
   isMaintenance Boolean  @default(false) // used by default when a work order is closed with a cost
+  systemKey     String? // "municipality" — the item used automatically for municipality fees
   isActive      Boolean  @default(true)
   sortOrder     Int      @default(0)
   createdAt     DateTime @default(now())
@@ -954,4 +958,47 @@ model OwnerPayout {
 
   @@unique([companyId, number])
   @@index([ownerId])
+}
+
+// ==========================================
+// 12. MONTH CLOSE & MUNICIPALITY (إقفال الشهر وعقود البلدية)
+// ==========================================
+
+/// Month close (إقفال الشهر): nothing can be posted on or before the end of a closed month.
+/// Automatic postings that fall in a closed month (e.g. a backdated lease) are dated in the first open day instead.
+model PeriodClose {
+  id          String    @id @default(uuid())
+  companyId   String
+  company     Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  month       String // "2026-09" — everything up to the end of this month is locked
+  lockedUntil DateTime // last day of the month
+  snapshot    Json // trial balance at close, for audit
+  closedById  String?
+  closedAt    DateTime  @default(now())
+  reopenedAt  DateTime?
+  reopenedById String?
+  notes       String?
+
+  @@index([companyId, month])
+}
+
+/// Lease registration with the municipality (تسجيل عقد الإيجار في البلدية) and its renewals.
+/// The fee is recorded as an expense (item: municipality fees) with its bearer.
+model MunicipalityRecord {
+  id             String    @id @default(uuid())
+  companyId      String
+  company        Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  leaseId        String
+  lease          Lease     @relation(fields: [leaseId], references: [id])
+  registrationNo String
+  registeredAt   DateTime
+  expiresAt      DateTime?
+  fee            Int // baisa
+  expenseId      String?
+  notes          String?
+  createdById    String?
+  createdAt      DateTime  @default(now())
+
+  @@index([companyId])
+  @@index([leaseId])
 }

@@ -88,7 +88,8 @@ export class LeasesService {
         status: c.status,
       }));
       const total = rent.filter((c) => c.status !== 'CANCELLED').reduce((sum, c) => sum + c.amount, 0);
-      return { ...lease, schedule, total, depositCharge: charges.find((c) => c.kind === 'DEPOSIT') ?? null };
+      const municipality = await this.prisma.municipalityRecord.findMany({ where: { leaseId: id }, orderBy: { registeredAt: 'desc' } });
+      return { ...lease, schedule, total, depositCharge: charges.find((c) => c.kind === 'DEPOSIT') ?? null, municipality };
     }
     const schedule = buildSchedule({ ...lease, paymentFrequency: lease.paymentFrequency as Frequency });
     return { ...lease, schedule, total: scheduleTotal(schedule) };

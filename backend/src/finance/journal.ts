@@ -181,3 +181,12 @@ export function defaultBearer(ownership: 'OWNED' | 'MANAGED'): 'OWNER' | 'COMPAN
 export function netOperatingIncome(income: number, expenses: number): number {
   return income - expenses;
 }
+
+/**
+ * Month close rule: a date after the lock is kept; a date inside a closed month is refused (null),
+ * or — for corrections and automatic postings (`roll`) — moved to the first open day.
+ */
+export function postingDate(date: Date, lockedUntil: Date | null, roll: boolean): Date | null {
+  if (!lockedUntil || date > lockedUntil) return date;
+  return roll ? new Date(lockedUntil.getTime() + 86_400_000) : null;
+}
