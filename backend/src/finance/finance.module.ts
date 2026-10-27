@@ -7,6 +7,7 @@ import { PaymentsService } from './payments.service.js';
 import { ChequesService } from './cheques.service.js';
 import { ExpensesService } from './expenses.service.js';
 import { OwnersFinanceService } from './owners-finance.service.js';
+import { ReportsService } from './reports.service.js';
 
 /** Ledger + charges: used by leases (activation / termination) and by the finance reports. */
 @Module({
@@ -24,7 +25,22 @@ export class FinanceController {
     private readonly cheques: ChequesService,
     private readonly expenses: ExpensesService,
     private readonly owners: OwnersFinanceService,
+    private readonly reports: ReportsService,
   ) {}
+
+  // ---------- reports (التقارير) ----------
+
+  @RequirePermission('financials', 'VIEW')
+  @Get('reports/income')
+  incomeReport(@Auth() auth: UserAuth, @Query('from') from?: string, @Query('to') to?: string, @Query('propertyId') propertyId?: string) {
+    return this.reports.income(auth, { from, to, propertyId });
+  }
+
+  @RequirePermission('financials', 'VIEW')
+  @Get('reports/properties')
+  propertiesReport(@Auth() auth: UserAuth, @Query('year') year?: string) {
+    return this.reports.properties(auth, { year });
+  }
 
   // ---------- owner statements & payouts (كشوف الملاك والتحويلات) ----------
 
@@ -286,7 +302,7 @@ export class FinanceController {
 @Module({
   imports: [FinanceCoreModule],
   controllers: [FinanceController],
-  providers: [FinanceService, PaymentsService, ChequesService, OwnersFinanceService],
+  providers: [FinanceService, PaymentsService, ChequesService, OwnersFinanceService, ReportsService],
   exports: [FinanceService, ChequesService],
 })
 export class FinanceModule {}
