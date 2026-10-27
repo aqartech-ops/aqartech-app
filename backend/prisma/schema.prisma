@@ -126,6 +126,7 @@ model Company {
   journalLines JournalLine[]
   charges      RentCharge[]
   payments     Payment[]
+  cheques      Cheque[]
   counters     Counter[]
 }
 
@@ -434,6 +435,7 @@ model Tenant {
   leases Lease[]
   charges RentCharge[]
   payments Payment[]
+  cheques  Cheque[]
 
   @@index([companyId])
 }
@@ -496,8 +498,9 @@ model Lease {
   updatedAt         DateTime         @updatedAt
   deletedAt         DateTime?
 
-  charges RentCharge[]
+  charges  RentCharge[]
   payments Payment[]
+  cheques  Cheque[]
 
   @@unique([companyId, number])
   @@index([companyId, status])
@@ -534,6 +537,8 @@ enum EntryType {
   OWNER_PAYOUT // تحويل للمالك
   MANUAL // قيد يدوي
   REVERSAL // قيد عكسي
+  CHEQUE_CLEARED // تحصيل شيك في البنك
+  FEE_CHARGE // رسوم على المستأجر
 }
 
 model JournalEntry {
@@ -582,6 +587,7 @@ model JournalLine {
 enum ChargeKind {
   RENT
   DEPOSIT
+  FEE // e.g. bounced-cheque fee (رسوم شيك مرتجع) — other income
 }
 
 enum ChargeStatus {
@@ -672,8 +678,57 @@ model Payment {
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
 
+  cheque Cheque?
+
   @@unique([companyId, number])
   @@index([companyId, date])
+  @@index([tenantId])
+  @@index([leaseId])
+}
+
+enum ChequeStatus {
+  RECEIVED // مستلم (مؤجل) — kept, the tenant is NOT credited yet
+  UNDER_COLLECTION // تحت التحصيل — accepted/deposited: tenant credited (receipt issued), waiting for the bank
+  CLEARED // محصّل — the money is in the bank
+  BOUNCED // مرتجع — the receipt is voided (reversing entry), optional fee charged
+  CANCELLED // ملغى / أُعيد للمستأجر before deposit
+}
+
+/// Cheques (الشيكات), including post-dated cheques collected when a lease is signed.
+model Cheque {
+  id           String       @id @default(uuid())
+  companyId    String
+  company      Company      @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  tenantId     String
+  tenant       Tenant       @relation(fields: [tenantId], references: [id])
+  leaseId      String
+  lease        Lease        @relation(fields: [leaseId], references: [id])
+  propertyId   String
+  unitId       String
+  chargeId     String? // the installment this cheque is meant for (informational)
+  number       String // cheque number
+  bankName     String
+  drawer       String? // account holder (if not the tenant)
+  amount       Int // baisa
+  dueDate      DateTime // date written on the cheque
+  status       ChequeStatus @default(RECEIVED)
+  paymentId    String?      @unique
+  payment      Payment?     @relation(fields: [paymentId], references: [id])
+  depositedAt  DateTime?
+  clearedAt    DateTime?
+  clearEntryId String?
+  bouncedAt    DateTime?
+  bounceReason String?
+  bounceFee    Int? // baisa
+  feeChargeId  String?
+  cancelledAt  DateTime?
+  cancelReason String?
+  notes        String?
+  createdById  String?
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  @@index([companyId, status, dueDate])
   @@index([tenantId])
   @@index([leaseId])
 }

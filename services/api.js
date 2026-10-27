@@ -178,6 +178,16 @@ export const financeApi = {
   payment: (id) => api.get(`/finance/payments/${id}`),
   createPayment: (data) => api.post('/finance/payments', data),
   voidPayment: (id, reason) => api.post(`/finance/payments/${id}/void`, { reason }),
+  cheques: (query) => api.get('/finance/cheques', query),
+  chequeStats: () => api.get('/finance/cheques/stats'),
+  chequePlan: (leaseId) => api.get(`/finance/leases/${leaseId}/cheque-plan`),
+  createCheque: (data) => api.post('/finance/cheques', data),
+  bulkCheques: (data) => api.post('/finance/cheques/bulk', data),
+  updateCheque: (id, data) => api.patch(`/finance/cheques/${id}`, data),
+  depositCheque: (id, date) => api.post(`/finance/cheques/${id}/deposit`, { date }),
+  clearCheque: (id, date) => api.post(`/finance/cheques/${id}/clear`, { date }),
+  bounceCheque: (id, data) => api.post(`/finance/cheques/${id}/bounce`, data),
+  cancelCheque: (id, reason) => api.post(`/finance/cheques/${id}/cancel`, { reason }),
 };
 
 export const searchApi = {

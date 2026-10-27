@@ -33,7 +33,7 @@ export function chargesFromLease(lease: LeaseTerms): PlannedCharge[] {
   return [...deposit, ...rent];
 }
 
-export type ExistingCharge = { id: string; kind: 'RENT' | 'DEPOSIT'; periodStart: Date | null; periodEnd: Date | null; amount: number };
+export type ExistingCharge = { id: string; kind: 'RENT' | 'DEPOSIT' | 'FEE'; periodStart: Date | null; periodEnd: Date | null; amount: number };
 
 export type Cut =
   | { id: string; action: 'cancel' }
