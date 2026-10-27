@@ -1,4 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { toEditable, toPayload, useFieldRules } from '../services/fields';
+import CustomFields, { CustomValues } from '../components/CustomFields';
 import { Linking, Pressable, StyleSheet, View } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { COLORS, RADIUS, SPACING } from '../theme';
@@ -213,6 +215,7 @@ function TenantList({ tabs, onOpen, openCreate }) {
 
 function TenantDetail({ id, onBack, onOpenLease, onNavigate }) {
   const { t, lang, isRTL, start } = useI18n();
+  const extraFields = useFieldRules('tenant');
   const { canEdit, levelOf } = useSession();
   const editable = canEdit('tenants');
   const [tenant, setTenant] = useState(null);
@@ -325,6 +328,7 @@ function TenantDetail({ id, onBack, onOpenLease, onNavigate }) {
             </View>
           ) : null}
           {tenant.notes ? <Txt muted>{tenant.notes}</Txt> : null}
+          <CustomValues defs={extraFields.custom} values={tenant.custom} />
         </Card>
         <TenantLeases key={leasesVersion} tenantId={id} editable={editable} onOpen={onOpenLease} onNew={() => setNewLease({ tenantId: id, tenant })} />
       </View>
@@ -356,6 +360,7 @@ export function TenantForm({ tenant, onClose, onSaved }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
   const fieldError = (name) => (error?.field === name ? errorText(t, error) : undefined);
+  const rules = useFieldRules('tenant', error);
 
   useEffect(() => {
     if (!tenant) return;
@@ -374,6 +379,7 @@ export function TenantForm({ tenant, onClose, onSaved }) {
       guarantorPhone: tenant.guarantorPhone ?? '',
       guarantorCivilId: tenant.guarantorCivilId ?? '',
       notes: tenant.notes ?? '',
+      custom: toEditable(rules.custom, tenant?.custom),
     });
     setError(null);
     setBusy(false);
@@ -387,7 +393,7 @@ export function TenantForm({ tenant, onClose, onSaved }) {
     setBusy(true);
     setError(null);
     try {
-      const payload = { ...form, email: form.email.trim(), idExpiry: form.idExpiry || null };
+      const payload = { ...form, email: form.email.trim(), idExpiry: form.idExpiry || null, custom: toPayload(rules.custom, form.custom) };
       const saved = isNew ? await tenantsApi.create(payload) : await tenantsApi.update(tenant.id, payload);
       onSaved(isNew ? saved : null);
     } catch (e) {
@@ -412,29 +418,30 @@ export function TenantForm({ tenant, onClose, onSaved }) {
       <Segmented value={form.type} onChange={set('type')} options={['INDIVIDUAL', 'COMPANY'].map((v) => ({ value: v, label: t(`tenants.typeValues.${v}`) }))} />
       <Field label={t('tenants.name')} value={form.name} onChangeText={set('name')} error={fieldError('name')} />
       {company ? (
-        <Field label={t('tenants.crNumber')} value={form.crNumber} onChangeText={set('crNumber')} />
+        <Field {...rules.props('crNumber', t('tenants.crNumber'))} value={form.crNumber} onChangeText={set('crNumber')} />
       ) : (
         <FieldRow>
-          <Field label={t('tenants.civilId')} value={form.civilId} onChangeText={set('civilId')} keyboardType="number-pad" error={fieldError('civilId')} />
-          <DateField label={t('tenants.idExpiry')} value={form.idExpiry} onChangeText={set('idExpiry')} error={fieldError('idExpiry')} />
+          <Field {...rules.props('civilId', t('tenants.civilId'))} value={form.civilId} onChangeText={set('civilId')} keyboardType="number-pad" error={fieldError('civilId')} />
+          <DateField {...rules.props('idExpiry', t('tenants.idExpiry'))} value={form.idExpiry} onChangeText={set('idExpiry')} error={fieldError('idExpiry')} />
         </FieldRow>
       )}
       <FieldRow>
-        <Field label={t('tenants.phone')} value={form.phone} onChangeText={set('phone')} keyboardType="phone-pad" inputMode="tel" placeholder="+968" />
-        <Field label={t('tenants.phone2')} value={form.phone2} onChangeText={set('phone2')} keyboardType="phone-pad" inputMode="tel" />
+        <Field {...rules.props('phone', t('tenants.phone'))} value={form.phone} onChangeText={set('phone')} keyboardType="phone-pad" inputMode="tel" placeholder="+968" />
+        <Field {...rules.props('phone2', t('tenants.phone2'))} value={form.phone2} onChangeText={set('phone2')} keyboardType="phone-pad" inputMode="tel" />
       </FieldRow>
       <FieldRow>
-        <Field label={t('tenants.email')} value={form.email} onChangeText={set('email')} autoCapitalize="none" inputMode="email" error={fieldError('email')} />
-        <Field label={t('tenants.nationality')} value={form.nationality} onChangeText={set('nationality')} />
+        <Field {...rules.props('email', t('tenants.email'))} value={form.email} onChangeText={set('email')} autoCapitalize="none" inputMode="email" error={fieldError('email')} />
+        <Field {...rules.props('nationality', t('tenants.nationality'))} value={form.nationality} onChangeText={set('nationality')} />
       </FieldRow>
-      {!company ? <Field label={t('tenants.employer')} value={form.employer} onChangeText={set('employer')} /> : null}
+      {!company ? <Field {...rules.props('employer', t('tenants.employer'))} value={form.employer} onChangeText={set('employer')} /> : null}
       <Txt weight="weightBold" size="small">{t('tenants.guarantor')}</Txt>
       <FieldRow>
-        <Field label={t('tenants.guarantorName')} value={form.guarantorName} onChangeText={set('guarantorName')} />
-        <Field label={t('tenants.guarantorPhone')} value={form.guarantorPhone} onChangeText={set('guarantorPhone')} keyboardType="phone-pad" inputMode="tel" />
+        <Field {...rules.props('guarantorName', t('tenants.guarantorName'))} value={form.guarantorName} onChangeText={set('guarantorName')} />
+        <Field {...rules.props('guarantorPhone', t('tenants.guarantorPhone'))} value={form.guarantorPhone} onChangeText={set('guarantorPhone')} keyboardType="phone-pad" inputMode="tel" />
       </FieldRow>
-      <Field label={t('tenants.guarantorCivilId')} value={form.guarantorCivilId} onChangeText={set('guarantorCivilId')} keyboardType="number-pad" />
-      <Field label={t('tenants.notes')} value={form.notes} onChangeText={set('notes')} multiline inputStyle={{ minHeight: 60 }} />
+      <Field {...rules.props('guarantorCivilId', t('tenants.guarantorCivilId'))} value={form.guarantorCivilId} onChangeText={set('guarantorCivilId')} keyboardType="number-pad" />
+      <Field {...rules.props('notes', t('tenants.notes'))} value={form.notes} onChangeText={set('notes')} multiline inputStyle={{ minHeight: 60 }} />
+      <CustomFields defs={rules.custom} values={form.custom} onChange={set('custom')} error={error} />
     </Sheet>
   );
 }

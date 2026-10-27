@@ -1,4 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { toEditable, toPayload, useFieldRules } from '../services/fields';
+import CustomFields, { CustomValues } from '../components/CustomFields';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { COLORS, RADIUS, SPACING } from '../theme';
@@ -174,6 +176,7 @@ export function TenantLeases({ tenantId, onOpen, onNew, editable }) {
 
 export function LeaseDetail({ id, onBack, onOpen, onOpenTenant, backLabel }) {
   const { t, lang, isRTL, start } = useI18n();
+  const extraFields = useFieldRules('lease');
   const { canEdit } = useSession();
   const editable = canEdit('tenants');
   const [lease, setLease] = useState(null);
@@ -309,6 +312,7 @@ export function LeaseDetail({ id, onBack, onOpen, onOpenTenant, backLabel }) {
             </Txt>
           ) : null}
           {lease.notes ? <Txt muted>{lease.notes}</Txt> : null}
+          <CustomValues defs={extraFields.custom} values={lease.custom} />
         </Card>
 
         {lease.status === 'ACTIVE' && editable ? (
@@ -480,6 +484,7 @@ export function LeaseForm({ lease, onClose, onSaved }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
   const fieldError = (name) => (error?.field === name ? errorText(t, error) : undefined);
+  const rules = useFieldRules('lease', error);
 
   useEffect(() => {
     if (!lease) return;
@@ -499,6 +504,7 @@ export function LeaseForm({ lease, onClose, onSaved }) {
       municipalityNo: lease.municipalityNo ?? '',
       municipalityFee: money(lease.municipalityFee),
       notes: lease.notes ?? '',
+      custom: toEditable(rules.custom, lease?.custom),
     });
     setPreview(null);
     setError(null);
@@ -547,7 +553,7 @@ export function LeaseForm({ lease, onClose, onSaved }) {
       if (!values.monthlyRent) return setError({ code: 'validation.required', field: 'monthlyRent' });
     }
     const payload = locked
-      ? { municipalityNo: form.municipalityNo, municipalityFee: values.municipalityFee, notes: form.notes }
+      ? { municipalityNo: form.municipalityNo, municipalityFee: values.municipalityFee, notes: form.notes, custom: toPayload(rules.custom, form.custom) }
       : {
           unitId: form.unitId,
           tenantId: form.tenantId,
@@ -558,6 +564,7 @@ export function LeaseForm({ lease, onClose, onSaved }) {
           dueDay: Number(form.dueDay) || 1,
           municipalityNo: form.municipalityNo,
           notes: form.notes,
+          custom: toPayload(rules.custom, form.custom),
           activate: isNew ? activate : undefined,
         };
     setBusy(true);
@@ -618,16 +625,17 @@ export function LeaseForm({ lease, onClose, onSaved }) {
               keyboardType="number-pad"
               inputMode="numeric"
             />
-            <MoneyField label={t('leases.deposit')} value={form.deposit} onChangeText={set('deposit')} hint={t('leases.depositHint')} error={fieldError('deposit')} />
+            <MoneyField {...rules.props('deposit', t('leases.deposit'))} value={form.deposit} onChangeText={set('deposit')} hint={t('leases.depositHint')} error={fieldError('deposit')} />
           </FieldRow>
         </>
       ) : null}
       <FieldRow>
-        <Field label={t('leases.municipalityNo')} value={form.municipalityNo} onChangeText={set('municipalityNo')} />
+        <Field {...rules.props('municipalityNo', t('leases.municipalityNo'))} value={form.municipalityNo} onChangeText={set('municipalityNo')} />
         <MoneyField label={t('leases.municipalityFee')} value={form.municipalityFee} onChangeText={set('municipalityFee')} />
       </FieldRow>
-      <Field label={t('leases.notes')} value={form.notes} onChangeText={set('notes')} multiline inputStyle={{ minHeight: 60 }} />
+      <Field {...rules.props('notes', t('leases.notes'))} value={form.notes} onChangeText={set('notes')} multiline inputStyle={{ minHeight: 60 }} />
 
+      <CustomFields defs={rules.custom} values={form.custom} onChange={set('custom')} error={error} />
       {preview ? (
         <View style={styles.preview}>
           <Row>

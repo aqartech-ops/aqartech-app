@@ -8,6 +8,7 @@ import * as v from '../common/validate.js';
 import { today } from '../common/dates.js';
 import { buildSchedule, scheduleTotal, type Frequency } from './schedule.js';
 import { ChargesService } from '../finance/charges.service.js';
+import { FieldsService } from '../fields/fields.module.js';
 
 export const FREQUENCIES = ['MONTHLY', 'QUARTERLY', 'SEMI_ANNUAL', 'ANNUAL'] as const;
 export const RENEWAL_STATUSES = ['PENDING', 'RENEW', 'NOT_RENEW', 'NEGOTIATING'] as const;
@@ -33,6 +34,7 @@ export class LeasesService {
     private readonly prisma: PrismaService,
     private readonly activity: ActivityService,
     private readonly charges: ChargesService,
+    private readonly fields: FieldsService,
   ) {}
 
   /** filter: active | expiring | draft | ended | all */
@@ -120,6 +122,7 @@ export class LeasesService {
     await this.assertUnitFree(unit.id, startDate, endDate);
     const renewedFromId = v.optionalString(src, 'renewedFromId', 60);
     if (renewedFromId) await this.find(auth, renewedFromId);
+    const custom = await this.fields.apply('lease', src, null);
 
     const lease = await this.prisma.lease.create({
       data: {
@@ -133,6 +136,7 @@ export class LeasesService {
         ...(this.money(src, true) as { monthlyRent: number }),
         ...this.terms(src),
         renewedFromId: renewedFromId ?? null,
+        ...(custom !== undefined ? { custom } : {}),
         status: 'DRAFT',
         createdById: auth.userId,
       },
@@ -178,6 +182,8 @@ export class LeasesService {
     } else {
       throw new BadRequestException('lease.closed');
     }
+    const custom = await this.fields.apply('lease', src, lease);
+    if (custom !== undefined) data.custom = custom;
     const updated = await this.prisma.lease.update({ where: { id }, data, include: INCLUDE });
     await this.activity.log(auth, { action: 'lease.update', entity: 'Lease', entityId: id, details: data });
     return updated;
@@ -245,6 +251,10 @@ export class LeasesService {
       dueDay: lease.dueDay,
       deposit: lease.deposit,
       renewedFromId: id,
+      // carry over what the form would need, so fields made required by the platform team do not block a renewal
+      municipalityNo: lease.municipalityNo,
+      notes: lease.notes,
+      custom: lease.custom,
     });
   }
 

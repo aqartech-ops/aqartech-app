@@ -6,6 +6,7 @@ import { PlansService } from '../plans/plans.service.js';
 import { propertyScope } from '../properties/properties.service.js';
 import type { UserAuth } from '../common/auth-context.js';
 import * as v from '../common/validate.js';
+import { FieldsService } from '../fields/fields.module.js';
 
 export const FEE_METHODS = ['PERCENT_OF_COLLECTED', 'PERCENT_OF_DUE', 'FIXED'] as const;
 export const STATEMENT_PERIODS = ['MONTHLY', 'QUARTERLY', 'YEARLY'] as const;
@@ -21,6 +22,7 @@ export class OwnersService {
     private readonly prisma: PrismaService,
     private readonly plans: PlansService,
     private readonly activity: ActivityService,
+    private readonly fields: FieldsService,
   ) {}
 
   // ---------------------------------------------------------------- owners
@@ -60,7 +62,10 @@ export class OwnersService {
   }
 
   async create(auth: UserAuth, input: unknown) {
-    const data = this.ownerData(v.body(input), true) as Prisma.OwnerUncheckedCreateInput;
+    const src = v.body(input);
+    const data = this.ownerData(src, true) as Prisma.OwnerUncheckedCreateInput;
+    const custom = await this.fields.apply('owner', src, null);
+    if (custom !== undefined) data.custom = custom;
     await this.plans.assertCanAdd(auth.companyId, 'owners');
     const owner = await this.prisma.owner.create({ data: { ...data, companyId: auth.companyId } });
     await this.activity.log(auth, { action: 'owner.create', entity: 'Owner', entityId: owner.id, details: { name: owner.name } });
@@ -68,8 +73,11 @@ export class OwnersService {
   }
 
   async update(auth: UserAuth, id: string, input: unknown) {
-    await this.findOwner(auth, id);
-    const data = this.ownerData(v.body(input), false);
+    const saved = await this.findOwner(auth, id);
+    const src = v.body(input);
+    const data = this.ownerData(src, false);
+    const custom = await this.fields.apply('owner', src, saved);
+    if (custom !== undefined) data.custom = custom;
     const owner = await this.prisma.owner.update({ where: { id }, data });
     await this.activity.log(auth, { action: 'owner.update', entity: 'Owner', entityId: id, details: data });
     return owner;

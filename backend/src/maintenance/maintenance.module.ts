@@ -8,6 +8,7 @@ import * as v from '../common/validate.js';
 import { FinanceCoreModule } from '../finance/finance.module.js';
 import { BEARERS, ExpensesService } from '../finance/expenses.service.js';
 import { defaultBearer } from '../finance/journal.js';
+import { FieldsService } from '../fields/fields.module.js';
 
 const PRIORITIES = ['LOW', 'NORMAL', 'HIGH', 'URGENT'] as const;
 const MAX_INT = 2_147_483_647;
@@ -27,6 +28,7 @@ export class VendorsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly activity: ActivityService,
+    private readonly fields: FieldsService,
   ) {}
 
   list(auth: UserAuth) {
@@ -41,8 +43,10 @@ export class VendorsService {
     data.email = v.nullableString(src, 'email', 120);
     data.specialty = v.nullableString(src, 'specialty', 80);
     data.notes = v.nullableString(src, 'notes', 1000);
+    const saved = id ? await this.find(auth, id) : null;
+    const custom = await this.fields.apply('vendor', src, saved);
+    if (custom !== undefined) data.custom = custom;
     if (id) {
-      await this.find(auth, id);
       const vendor = await this.prisma.vendor.update({ where: { id }, data });
       await this.activity.log(auth, { action: 'vendor.update', entity: 'Vendor', entityId: id, details: data });
       return vendor;
@@ -78,6 +82,7 @@ export class WorkOrdersService {
     private readonly prisma: PrismaService,
     private readonly activity: ActivityService,
     private readonly expenses: ExpensesService,
+    private readonly fields: FieldsService,
   ) {}
 
   /** filter: open (open + in progress) | done | cancelled | all */
@@ -115,7 +120,9 @@ export class WorkOrdersService {
   async create(auth: UserAuth, input: unknown) {
     const src = v.body(input);
     const property = await this.findProperty(auth, v.requiredString(src, 'propertyId', 60));
-    const data = await this.fields(auth, src, property.id, true);
+    const data = await this.parseFields(auth, src, property.id, true);
+    const custom = await this.fields.apply('workOrder', src, null);
+    if (custom !== undefined) data.custom = custom;
     const year = today().getUTCFullYear();
     const wo = await this.prisma.$transaction(async (tx) => {
       const counter = await tx.counter.upsert({
@@ -141,7 +148,11 @@ export class WorkOrdersService {
   async update(auth: UserAuth, id: string, input: unknown) {
     const wo = await this.get(auth, id);
     if (wo.status === 'DONE' || wo.status === 'CANCELLED') throw new BadRequestException('workOrder.closed');
-    const data = await this.fields(auth, v.body(input), wo.propertyId, false);
+    const src = v.body(input);
+    const data = await this.parseFields(auth, src, wo.propertyId, false);
+    const saved = await this.prisma.workOrder.findUnique({ where: { id }, select: { custom: true } });
+    const custom = await this.fields.apply('workOrder', src, saved);
+    if (custom !== undefined) data.custom = custom;
     await this.prisma.workOrder.update({ where: { id }, data });
     await this.activity.log(auth, { action: 'workOrder.update', entity: 'WorkOrder', entityId: id, details: data });
     return this.get(auth, id);
@@ -196,7 +207,7 @@ export class WorkOrdersService {
 
   // ---------------------------------------------------------------- helpers
 
-  private async fields(auth: UserAuth, src: Record<string, unknown>, propertyId: string, creating: boolean) {
+  private async parseFields(auth: UserAuth, src: Record<string, unknown>, propertyId: string, creating: boolean) {
     const data: Prisma.WorkOrderUncheckedUpdateInput = {};
     if (creating || src.title !== undefined) data.title = v.requiredString(src, 'title', 160);
     if (src.description !== undefined) data.description = v.optionalString(src, 'description', 2000) ?? null;

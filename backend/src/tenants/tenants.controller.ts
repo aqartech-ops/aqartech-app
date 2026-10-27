@@ -4,6 +4,7 @@ import { PrismaService } from '../prisma/prisma.service.js';
 import { ActivityService } from '../common/activity.service.js';
 import { Auth, RequirePermission, type UserAuth } from '../common/auth-context.js';
 import * as v from '../common/validate.js';
+import { FieldsService } from '../fields/fields.module.js';
 
 /**
  * Tenants (المستأجرون): records kept by the company — tenants never sign in.
@@ -15,6 +16,7 @@ export class TenantsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly activity: ActivityService,
+    private readonly fields: FieldsService,
   ) {}
 
   list(auth: UserAuth, trash = false) {
@@ -29,7 +31,10 @@ export class TenantsService {
   }
 
   async create(auth: UserAuth, input: unknown) {
-    const data = this.data(v.body(input), true) as Prisma.TenantUncheckedCreateInput;
+    const src = v.body(input);
+    const data = this.data(src, true) as Prisma.TenantUncheckedCreateInput;
+    const custom = await this.fields.apply('tenant', src, null);
+    if (custom !== undefined) data.custom = custom;
     await this.assertIdFree(auth, data.civilId ?? null);
     const tenant = await this.prisma.tenant.create({ data: { ...data, companyId: auth.companyId } });
     await this.activity.log(auth, { action: 'tenant.create', entity: 'Tenant', entityId: tenant.id, details: { name: tenant.name } });
@@ -37,8 +42,11 @@ export class TenantsService {
   }
 
   async update(auth: UserAuth, id: string, input: unknown) {
-    await this.find(auth, id);
-    const data = this.data(v.body(input), false);
+    const saved = await this.find(auth, id);
+    const src = v.body(input);
+    const data = this.data(src, false);
+    const custom = await this.fields.apply('tenant', src, saved);
+    if (custom !== undefined) data.custom = custom;
     if (typeof data.civilId === 'string') await this.assertIdFree(auth, data.civilId, id);
     const tenant = await this.prisma.tenant.update({ where: { id }, data });
     await this.activity.log(auth, { action: 'tenant.update', entity: 'Tenant', entityId: id, details: data });

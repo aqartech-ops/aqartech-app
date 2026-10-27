@@ -1,4 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
+import { toEditable, toPayload, useFieldRules } from '../services/fields';
+import CustomFields from '../components/CustomFields';
 import { Pressable, StyleSheet, Switch, View } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { COLORS, FONT, RADIUS, SPACING } from '../theme';
@@ -209,10 +211,11 @@ export function ExpenseForm({ visible, onClose, onSaved }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
   const fieldError = (name) => (error?.field === name ? errorText(t, error) : undefined);
+  const rules = useFieldRules('expense', error);
 
   useEffect(() => {
     if (!visible) return;
-    setForm({ propertyId: null, unitId: null, categoryId: null, amount: '', date: today(), paidFrom: 'CASH', bearer: 'COMPANY', vendorId: null, description: '', invoiceNo: '' });
+    setForm({ propertyId: null, unitId: null, categoryId: null, amount: '', date: today(), paidFrom: 'CASH', bearer: 'COMPANY', vendorId: null, description: '', invoiceNo: '', custom: {} });
     setBusy(false);
     setError(null);
     financeApi.categories().then((list) => {
@@ -237,7 +240,7 @@ export function ExpenseForm({ visible, onClose, onSaved }) {
     setBusy(true);
     setError(null);
     try {
-      onSaved(await financeApi.createExpense({ ...form, amount, propertyId: form.propertyId || undefined, unitId: form.unitId || undefined, vendorId: form.vendorId || undefined }));
+      onSaved(await financeApi.createExpense({ ...form, amount, propertyId: form.propertyId || undefined, unitId: form.unitId || undefined, vendorId: form.vendorId || undefined, custom: toPayload(rules.custom, form.custom) }));
     } catch (e) {
       setError(e);
       setBusy(false);
@@ -286,11 +289,13 @@ export function ExpenseForm({ visible, onClose, onSaved }) {
       <ChipSelect value={form.paidFrom} onChange={set('paidFrom')} options={PAID_FROM.map((p) => ({ value: p, label: t(`finance.accounts.${p}`) }))} />
       {vendors.length ? (
         <>
-          <Txt weight="weightMedium" size="small">{t('expenses.vendor')}</Txt>
+          <Txt weight="weightMedium" size="small">{rules.props('vendorId', t('expenses.vendor')).label}</Txt>
+          {rules.props('vendorId', '').error ? <Txt size="small" style={{ color: COLORS.danger }}>{rules.props('vendorId', '').error}</Txt> : null}
           <ChipSelect value={form.vendorId ?? ''} onChange={(id) => set('vendorId')(id || null)} options={[{ value: '', label: t('common.none') }, ...vendors.map((v) => ({ value: v.id, label: v.name }))]} />
         </>
       ) : null}
-      <Field label={t('expenses.invoiceNo')} value={form.invoiceNo} onChangeText={set('invoiceNo')} />
+      <Field {...rules.props('invoiceNo', t('expenses.invoiceNo'))} value={form.invoiceNo} onChangeText={set('invoiceNo')} />
+      <CustomFields defs={rules.custom} values={form.custom} onChange={set('custom')} error={error} />
     </Sheet>
   );
 }

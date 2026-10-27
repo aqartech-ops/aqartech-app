@@ -263,6 +263,7 @@ model Property {
   investmentCost BigInt? // baisa — for ROI
   notes          String?
   createdById    String?
+  custom           Json      @default("{}") // values of admin-defined fields (الحقول الإضافية)
   createdAt      DateTime          @default(now())
   updatedAt      DateTime          @updatedAt
   deletedAt      DateTime?
@@ -315,6 +316,7 @@ model Unit {
   electricityMeter String?
   waterMeter       String?
   notes            String?
+  custom           Json      @default("{}") // values of admin-defined fields (الحقول الإضافية)
   createdAt        DateTime   @default(now())
   updatedAt        DateTime   @updatedAt
   deletedAt        DateTime?
@@ -352,6 +354,7 @@ model Owner {
   accountName   String?
   accountNumber String? // IBAN / account no. — where owner payouts go
   notes         String?
+  custom           Json      @default("{}") // values of admin-defined fields (الحقول الإضافية)
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
   deletedAt     DateTime?
@@ -443,6 +446,7 @@ model Tenant {
   guarantorPhone   String?
   guarantorCivilId String?
   notes            String?
+  custom           Json      @default("{}") // values of admin-defined fields (الحقول الإضافية)
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
   deletedAt        DateTime?
@@ -509,6 +513,7 @@ model Lease {
   terminationReason String?
   notes             String?
   createdById       String?
+  custom           Json      @default("{}") // values of admin-defined fields (الحقول الإضافية)
   createdAt         DateTime         @default(now())
   updatedAt         DateTime         @updatedAt
   deletedAt         DateTime?
@@ -801,6 +806,7 @@ model Vendor {
   email     String?
   specialty String? // plumbing, electrical, AC…
   notes     String?
+  custom           Json      @default("{}") // values of admin-defined fields (الحقول الإضافية)
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
   deletedAt DateTime?
@@ -839,6 +845,7 @@ model Expense {
   voidedAt         DateTime?
   voidReason       String?
   createdById      String?
+  custom           Json      @default("{}") // values of admin-defined fields (الحقول الإضافية)
   createdAt        DateTime        @default(now())
   updatedAt        DateTime        @updatedAt
 
@@ -886,6 +893,7 @@ model WorkOrder {
   cancelReason  String?
   notes         String?
   createdById   String?
+  custom           Json      @default("{}") // values of admin-defined fields (الحقول الإضافية)
   createdAt     DateTime          @default(now())
   updatedAt     DateTime          @updatedAt
 
@@ -1001,4 +1009,46 @@ model MunicipalityRecord {
 
   @@index([companyId])
   @@index([leaseId])
+}
+
+// ==========================================
+// 13. CONFIGURABLE FIELDS (الحقول — لوحة الأدمن)
+// ==========================================
+// Platform-wide: what the platform team defines applies to every subscriber.
+//  - isCore = false → an extra field; its values live in the record's `custom` JSON.
+//  - isCore = true  → settings for a built-in optional field (required / hidden / renamed).
+
+enum FieldType {
+  TEXT
+  LONGTEXT
+  NUMBER
+  MONEY // integer baisa
+  DATE
+  SELECT
+  MULTISELECT
+  BOOLEAN
+  PHONE
+  EMAIL
+}
+
+model FieldDefinition {
+  id           String     @id @default(uuid())
+  entity       String // property | unit | owner | tenant | lease | expense | workOrder | vendor
+  key          String // stable key, e.g. "parking_no"
+  isCore       Boolean    @default(false)
+  type         FieldType  @default(TEXT)
+  labelAr      String?
+  labelEn      String?
+  helpAr       String?
+  helpEn       String?
+  options      Json       @default("[]") // [{ value, labelAr, labelEn }] for SELECT / MULTISELECT
+  required     Boolean    @default(false)
+  hidden       Boolean    @default(false)
+  ownerVisible Boolean    @default(false) // shown in the owner portal (phase 5)
+  sortOrder    Int        @default(0)
+  isActive     Boolean    @default(true) // false = removed from forms, values kept
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  @@unique([entity, key])
 }

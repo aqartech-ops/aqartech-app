@@ -7,6 +7,7 @@ import { today } from '../common/dates.js';
 import * as v from '../common/validate.js';
 import { LedgerService } from './ledger.service.js';
 import { chargeLines, defaultBearer, expenseLines } from './journal.js';
+import { FieldsService } from '../fields/fields.module.js';
 
 type Tx = Prisma.TransactionClient;
 const MAX_INT = 2_147_483_647;
@@ -47,6 +48,7 @@ export type ExpenseInput = {
   description: string;
   invoiceNo: string | null;
   workOrderId?: string | null;
+  custom?: Prisma.InputJsonValue;
 };
 
 /**
@@ -60,6 +62,7 @@ export class ExpensesService {
     private readonly prisma: PrismaService,
     private readonly activity: ActivityService,
     private readonly ledger: LedgerService,
+    private readonly fields: FieldsService,
   ) {}
 
   // ---------------------------------------------------------------- categories
@@ -186,8 +189,10 @@ export class ExpensesService {
   }
 
   async create(auth: UserAuth, input: unknown) {
-    const data = await this.parse(auth, v.body(input));
+    const src = v.body(input);
+    const data = await this.parse(auth, src);
     if (!data.description) throw new BadRequestException({ message: 'validation.required', field: 'description' });
+    data.custom = await this.fields.apply('expense', src, null);
     const expense = await this.prisma.$transaction((tx) => this.createInTx(tx, auth, data));
     await this.activity.log(auth, { action: 'expense.create', entity: 'Expense', entityId: expense.id, details: { number: expense.number, amount: data.amount } });
     return this.get(auth, expense.id);
@@ -267,6 +272,7 @@ export class ExpensesService {
         entryId: entry.id,
         rechargeChargeId,
         workOrderId: data.workOrderId ?? null,
+        ...(data.custom !== undefined ? { custom: data.custom } : {}),
         createdById: auth.userId,
       },
     });

@@ -9,8 +9,9 @@ import { EmptyState, Field, Loading, Row, Sheet, Txt, toLatinDigits } from './ui
 // ---------------------------------------------------------------- dates
 
 /** "2026-10-17" ↔ Date. Dates are entered as YYYY-MM-DD (a calendar picker comes with the web/form phase). */
-export function DateField({ label, value, onChangeText, error, hint }) {
+export function DateField({ label, value, onChangeText, error, hint, hidden }) {
   const { t } = useI18n();
+  if (hidden) return null;
   return (
     <Field
       label={label}
