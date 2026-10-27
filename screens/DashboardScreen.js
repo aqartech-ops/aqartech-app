@@ -118,6 +118,15 @@ function CompanyDashboard({ onNavigate }) {
               style={{ flexGrow: 1 }}
             />
           ) : null}
+          {quick.includes('maintenance') ? (
+            <Button
+              variant="secondary"
+              icon="wrench-outline"
+              title={t('maintenance.add')}
+              onPress={() => onNavigate?.('maintenance', { create: true })}
+              style={{ flexGrow: 1 }}
+            />
+          ) : null}
         </Row>
       ) : null}
 
@@ -136,6 +145,13 @@ function CompanyDashboard({ onNavigate }) {
           {w.tenants.leases ? <Kpi icon="file-sign" label={t('leases.activeCount')} value={w.tenants.leases.active} tone={COLORS.success} /> : null}
           {w.tenants.leases ? <Kpi icon="calendar-alert" label={t('leases.expiring30')} value={w.tenants.leases.expiring30} tone={COLORS.danger} /> : null}
           {w.tenants.leases ? <Kpi icon="calendar-clock" label={t('leases.expiring90')} value={w.tenants.leases.expiring90} tone={COLORS.warning} /> : null}
+        </Grid>
+      ) : null}
+
+      {w.maintenance ? (
+        <Grid columns={columns}>
+          <Kpi icon="wrench-outline" label={t('maintenance.openCount')} value={String(w.maintenance.open)} />
+          <Kpi icon="alert" label={t('maintenance.urgentCount')} value={String(w.maintenance.urgent)} tone={w.maintenance.urgent ? COLORS.danger : COLORS.primary} />
         </Grid>
       ) : null}
 
@@ -166,7 +182,11 @@ function CompanyDashboard({ onNavigate }) {
                 value={String(w.financials.chequesToDeposit.count)}
               />
             ) : null}
-            <Kpi icon="chart-line" label={t('dashboard.noi')} value="—" hint={t('dashboard.kpiNoiLater')} />
+            <Kpi
+              icon="chart-line"
+              label={t('finance.noiMonth')}
+              value={<Money baisa={w.financials.noiMonth} size={FONT.title} weight="weightBold" color={w.financials.noiMonth < 0 ? COLORS.danger : COLORS.textDark} />}
+            />
           </Grid>
         </>
       ) : null}

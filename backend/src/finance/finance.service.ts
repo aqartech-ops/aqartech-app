@@ -4,7 +4,7 @@ import { PrismaService } from '../prisma/prisma.service.js';
 import type { UserAuth } from '../common/auth-context.js';
 import { addDays, daysBetween, monthStart, today } from '../common/dates.js';
 import { ChargesService } from './charges.service.js';
-import { ACCOUNTS, agingBucket, collectionRate, naturalBalance, openItems, withRunningBalance, type Account } from './journal.js';
+import { ACCOUNTS, agingBucket, collectionRate, naturalBalance, netOperatingIncome, openItems, withRunningBalance, type Account } from './journal.js';
 
 const UPCOMING_DAYS = 30;
 const BUCKETS = ['0_30', '31_60', '61_90', '90_plus'] as const;
@@ -25,7 +25,7 @@ export class FinanceService {
     await this.charges.sync(auth.companyId);
     const now = today();
     const yearStart = new Date(Date.UTC(now.getUTCFullYear(), 0, 1));
-    const [balances, monthIncome, yearIncome, open, upcoming, collectedMonth, collectedYear, billedMonth] = await Promise.all([
+    const [balances, monthIncome, yearIncome, open, upcoming, collectedMonth, collectedYear, billedMonth, otherMonth, otherYear, expMonth, expYear] = await Promise.all([
       this.accountSums(auth),
       this.incomeSince(auth, monthStart(now)),
       this.incomeSince(auth, yearStart),
@@ -38,6 +38,10 @@ export class FinanceService {
       this.receivableMovement(auth, monthStart(now), ['PAYMENT']),
       this.receivableMovement(auth, yearStart, ['PAYMENT']),
       this.receivableMovement(auth, monthStart(now), ['RENT_CHARGE', 'DEPOSIT_CHARGE']),
+      this.accountSince(auth, 'OTHER_INCOME', monthStart(now)),
+      this.accountSince(auth, 'OTHER_INCOME', yearStart),
+      this.accountSince(auth, 'EXPENSES', monthStart(now)),
+      this.accountSince(auth, 'EXPENSES', yearStart),
     ]);
     // payments credit the receivable (negative); charges debit it (positive)
     const collected = { month: -collectedMonth, year: -collectedYear };
@@ -49,6 +53,9 @@ export class FinanceService {
       receivable: naturalBalance('TENANT_RECEIVABLE', balances.TENANT_RECEIVABLE),
       depositsHeld: naturalBalance('SECURITY_DEPOSITS', balances.SECURITY_DEPOSITS),
       rentIncome: { month: monthIncome, year: yearIncome },
+      otherIncome: { month: otherMonth, year: otherYear },
+      expenses: { month: expMonth, year: expYear },
+      noi: { month: netOperatingIncome(monthIncome + otherMonth, expMonth), year: netOperatingIncome(yearIncome + otherYear, expYear) },
       collected,
       billedMonth,
       collectionRate: collectionRate(collected.month, billedMonth),
@@ -251,6 +258,15 @@ export class FinanceService {
       _sum: { amount: true },
     });
     return agg._sum.amount ?? 0;
+  }
+
+  /** Natural balance movement of one account between `from` and today (e.g. expenses this month). */
+  private async accountSince(auth: UserAuth, account: Account, from: Date) {
+    const agg = await this.prisma.journalLine.aggregate({
+      where: { ...this.lineScope(auth), account, entry: { date: { gte: from, lte: today() } } },
+      _sum: { amount: true },
+    });
+    return naturalBalance(account, agg._sum.amount ?? 0);
   }
 
   private async incomeSince(auth: UserAuth, from: Date) {

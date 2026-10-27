@@ -8,6 +8,9 @@ import {
   collectionRate,
   chequeClearedLines,
   nthChequeNumber,
+  expenseLines,
+  defaultBearer,
+  netOperatingIncome,
   pair,
   reverseLines,
   sumByAccount,
@@ -133,6 +136,26 @@ describe('journal rules', () => {
     expect(nthChequeNumber('000123', 2)).toBe('000125');
     expect(nthChequeNumber('CHQ-0099', 1)).toBe('CHQ-0100');
     expect(nthChequeNumber('ABC', 1)).toBe('ABC-2');
+  });
+
+  it('an expense leaves cash or bank; NOI = income − expenses', () => {
+    const lines = [...chargeLines('RENT', 300000, {}), ...paymentLines('CASH', 300000, {}), ...expenseLines('CASH', 45000, { propertyId: 'p' })];
+    const totals = sumByAccount(lines);
+    expect(totals.CASH).toBe(255000);
+    expect(naturalBalance('EXPENSES', totals.EXPENSES)).toBe(45000);
+    expect(netOperatingIncome(naturalBalance('RENT_INCOME', totals.RENT_INCOME), naturalBalance('EXPENSES', totals.EXPENSES))).toBe(255000);
+    expect(Object.values(totals).reduce((a, b) => a + b, 0)).toBe(0);
+  });
+
+  it('a cost charged to the tenant comes back as receivable', () => {
+    const totals = sumByAccount([...expenseLines('BANK', 20000, {}), ...chargeLines('FEE', 20000, { tenantId: 't' })]);
+    expect(totals.TENANT_RECEIVABLE).toBe(20000);
+    expect(totals.BANK).toBe(-20000);
+  });
+
+  it('default cost bearer follows the property', () => {
+    expect(defaultBearer('MANAGED')).toBe('OWNER');
+    expect(defaultBearer('OWNED')).toBe('COMPANY');
   });
 
   it('collection rate', () => {

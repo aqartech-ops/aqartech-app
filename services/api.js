@@ -188,6 +188,29 @@ export const financeApi = {
   clearCheque: (id, date) => api.post(`/finance/cheques/${id}/clear`, { date }),
   bounceCheque: (id, data) => api.post(`/finance/cheques/${id}/bounce`, data),
   cancelCheque: (id, reason) => api.post(`/finance/cheques/${id}/cancel`, { reason }),
+  expenses: (query) => api.get('/finance/expenses', query),
+  expense: (id) => api.get(`/finance/expenses/${id}`),
+  createExpense: (data) => api.post('/finance/expenses', data),
+  voidExpense: (id, reason) => api.post(`/finance/expenses/${id}/void`, { reason }),
+  categories: (all = false) => api.get('/finance/expense-categories', all ? { all: 1 } : undefined),
+  createCategory: (data) => api.post('/finance/expense-categories', data),
+  updateCategory: (id, data) => api.patch(`/finance/expense-categories/${id}`, data),
+  vendors: () => api.get('/finance/vendors'),
+};
+
+export const maintenanceApi = {
+  list: (query) => api.get('/maintenance/work-orders', query),
+  stats: () => api.get('/maintenance/work-orders/stats'),
+  get: (id) => api.get(`/maintenance/work-orders/${id}`),
+  create: (data) => api.post('/maintenance/work-orders', data),
+  update: (id, data) => api.patch(`/maintenance/work-orders/${id}`, data),
+  start: (id) => api.post(`/maintenance/work-orders/${id}/start`),
+  complete: (id, data) => api.post(`/maintenance/work-orders/${id}/complete`, data),
+  cancel: (id, reason) => api.post(`/maintenance/work-orders/${id}/cancel`, { reason }),
+  vendors: () => api.get('/maintenance/vendors'),
+  createVendor: (data) => api.post('/maintenance/vendors', data),
+  updateVendor: (id, data) => api.patch(`/maintenance/vendors/${id}`, data),
+  removeVendor: (id) => api.delete(`/maintenance/vendors/${id}`),
 };
 
 export const searchApi = {

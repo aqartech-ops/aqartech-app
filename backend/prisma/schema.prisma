@@ -127,6 +127,10 @@ model Company {
   charges      RentCharge[]
   payments     Payment[]
   cheques      Cheque[]
+  expenses          Expense[]
+  expenseCategories ExpenseCategory[]
+  vendors           Vendor[]
+  workOrders        WorkOrder[]
   counters     Counter[]
 }
 
@@ -264,6 +268,8 @@ model Property {
   partners   PropertyPartner[]
   leases     Lease[]
   charges    RentCharge[]
+  expenses   Expense[]
+  workOrders WorkOrder[]
 
   @@index([companyId])
 }
@@ -310,6 +316,8 @@ model Unit {
 
   leases Lease[]
   charges RentCharge[]
+  expenses   Expense[]
+  workOrders WorkOrder[]
 
   @@index([companyId])
   @@index([propertyId])
@@ -731,4 +739,148 @@ model Cheque {
   @@index([companyId, status, dueDate])
   @@index([tenantId])
   @@index([leaseId])
+}
+
+// ==========================================
+// 10. EXPENSES & MAINTENANCE (المصروفات والصيانة)
+// ==========================================
+
+/// Who bears a cost: the owner (deducted in the owner statement), the company, or the tenant (charged back to the lease).
+enum CostBearer {
+  OWNER
+  COMPANY
+  TENANT
+}
+
+enum PaidFrom {
+  CASH
+  BANK
+}
+
+enum ExpenseStatus {
+  POSTED
+  VOIDED // cancelled with a reversing entry — never deleted
+}
+
+/// Expense items (بنود المصروفات) — each company edits its own list; defaults are created on first use.
+model ExpenseCategory {
+  id            String   @id @default(uuid())
+  companyId     String
+  company       Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  nameAr        String
+  nameEn        String
+  isMaintenance Boolean  @default(false) // used by default when a work order is closed with a cost
+  isActive      Boolean  @default(true)
+  sortOrder     Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  expenses Expense[]
+
+  @@index([companyId])
+}
+
+/// Contractors and suppliers (المقاولون والموردون).
+model Vendor {
+  id        String    @id @default(uuid())
+  companyId String
+  company   Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  name      String
+  phone     String?
+  email     String?
+  specialty String? // plumbing, electrical, AC…
+  notes     String?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  expenses   Expense[]
+  workOrders WorkOrder[]
+
+  @@index([companyId])
+}
+
+model Expense {
+  id               String          @id @default(uuid())
+  companyId        String
+  company          Company         @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  number           String // EX-2026-000001
+  date             DateTime
+  amount           Int // baisa
+  categoryId       String
+  category         ExpenseCategory @relation(fields: [categoryId], references: [id])
+  propertyId       String? // null = company overhead
+  property         Property?       @relation(fields: [propertyId], references: [id])
+  unitId           String?
+  unit             Unit?           @relation(fields: [unitId], references: [id])
+  leaseId          String? // when the tenant bears it
+  vendorId         String?
+  vendor           Vendor?         @relation(fields: [vendorId], references: [id])
+  bearer           CostBearer
+  paidFrom         PaidFrom
+  description      String
+  invoiceNo        String?
+  status           ExpenseStatus   @default(POSTED)
+  entryId          String?
+  rechargeChargeId String? // the FEE charge billed to the tenant
+  workOrderId      String?         @unique
+  workOrder        WorkOrder?      @relation(fields: [workOrderId], references: [id])
+  voidedAt         DateTime?
+  voidReason       String?
+  createdById      String?
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+
+  @@unique([companyId, number])
+  @@index([companyId, date])
+  @@index([propertyId])
+}
+
+enum WorkOrderStatus {
+  OPEN
+  IN_PROGRESS
+  DONE
+  CANCELLED
+}
+
+enum WorkOrderPriority {
+  LOW
+  NORMAL
+  HIGH
+  URGENT
+}
+
+/// Maintenance work orders (أوامر الصيانة). Closing one with a cost creates the expense automatically.
+model WorkOrder {
+  id            String            @id @default(uuid())
+  companyId     String
+  company       Company           @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  number        String // WO-2026-0001
+  propertyId    String
+  property      Property          @relation(fields: [propertyId], references: [id])
+  unitId        String? // null = common area
+  unit          Unit?             @relation(fields: [unitId], references: [id])
+  title         String
+  description   String?
+  priority      WorkOrderPriority @default(NORMAL)
+  status        WorkOrderStatus   @default(OPEN)
+  vendorId      String?
+  vendor        Vendor?           @relation(fields: [vendorId], references: [id])
+  bearer        CostBearer
+  estimatedCost Int? // baisa
+  reportedBy    String?
+  scheduledDate DateTime?
+  startedAt     DateTime?
+  completedAt   DateTime?
+  cancelReason  String?
+  notes         String?
+  createdById   String?
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+
+  expense Expense?
+
+  @@unique([companyId, number])
+  @@index([companyId, status])
+  @@index([propertyId])
 }
