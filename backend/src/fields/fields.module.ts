@@ -47,12 +47,12 @@ export class FieldsService {
    * On create every required field is checked; on update only the fields present in the body
    * (so quick actions like changing a status are not blocked by a field made required later).
    */
-  async apply(entity: Entity, src: Record<string, unknown>, saved: { custom?: unknown; type?: unknown } | null): Promise<Prisma.InputJsonValue | undefined> {
+  async apply(entity: Entity | `cs:${string}`, src: Record<string, unknown>, saved: { custom?: unknown; type?: unknown } | null): Promise<Prisma.InputJsonValue | undefined> {
     const rows = (await this.all()).filter((r) => r.entity === entity);
     const creating = !saved;
     const recordType = src.type ?? saved?.type;
 
-    for (const core of CORE_FIELDS[entity]) {
+    for (const core of isEntity(entity) ? CORE_FIELDS[entity] : []) {
       const rule = rows.find((r) => r.isCore && r.key === core.key);
       if (!rule?.required || !coreApplies(core, recordType)) continue;
       const present = Object.prototype.hasOwnProperty.call(src, core.key);
@@ -75,8 +75,9 @@ export class FieldsService {
   /** What the app needs to draw forms: per entity, built-in field rules and active extra fields. */
   async config() {
     const rows = await this.all();
+    const sections = await this.prisma.customSection.findMany({ where: { isActive: true }, select: { key: true } });
     return Object.fromEntries(
-      ENTITIES.map((entity) => [
+      [...ENTITIES, ...sections.map((c) => `cs:${c.key}`)].map((entity) => [
         entity,
         {
           core: Object.fromEntries(
@@ -93,14 +94,29 @@ export class FieldsService {
   }
 
   /** How many records of the entity hold a value for this extra field. */
-  async usage(entity: Entity, key: string): Promise<number> {
-    const rows = await this.prisma.$queryRawUnsafe<{ n: bigint }[]>(`SELECT count(*)::bigint AS n FROM "${TABLE[entity]}" WHERE custom ? $1`, key);
+  async usage(entity: string, key: string): Promise<number> {
+    if (entity.startsWith('cs:')) {
+      const rows = await this.prisma.$queryRawUnsafe<{ n: bigint }[]>(
+        `SELECT count(*)::bigint AS n FROM "CustomRecord" r JOIN "CustomSection" s ON s.id = r."sectionId" WHERE s.key = $2 AND r.custom ? $1`,
+        key,
+        entity.slice(3),
+      );
+      return Number(rows[0]?.n ?? 0);
+    }
+    const rows = await this.prisma.$queryRawUnsafe<{ n: bigint }[]>(`SELECT count(*)::bigint AS n FROM "${TABLE[entity as Entity]}" WHERE custom ? $1`, key);
     return Number(rows[0]?.n ?? 0);
   }
 
   /** Remove an extra field's values from every record (permanent). */
-  async purge(entity: Entity, key: string): Promise<number> {
-    return this.prisma.$executeRawUnsafe(`UPDATE "${TABLE[entity]}" SET custom = custom - $1 WHERE custom ? $1`, key);
+  async purge(entity: string, key: string): Promise<number> {
+    if (entity.startsWith('cs:')) {
+      return this.prisma.$executeRawUnsafe(
+        `UPDATE "CustomRecord" r SET custom = r.custom - $1 FROM "CustomSection" s WHERE s.id = r."sectionId" AND s.key = $2 AND r.custom ? $1`,
+        key,
+        entity.slice(3),
+      );
+    }
+    return this.prisma.$executeRawUnsafe(`UPDATE "${TABLE[entity as Entity]}" SET custom = custom - $1 WHERE custom ? $1`, key);
   }
 }
 
@@ -133,9 +149,9 @@ export class AdminFieldsController {
   /** Built-in optional fields (with their rules) + extra fields, for one entity. */
   @Get()
   async list(@Query('entity') entity?: string) {
-    const e = this.entity(entity);
+    const e = await this.entity(entity);
     const rows = await this.prisma.fieldDefinition.findMany({ where: { entity: e }, orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }] });
-    const core = CORE_FIELDS[e].map((c) => {
+    const core = (isEntity(e) ? CORE_FIELDS[e] : []).map((c) => {
       const rule = rows.find((r) => r.isCore && r.key === c.key);
       return { key: c.key, required: rule?.required ?? false, hidden: rule?.hidden ?? false, labelAr: rule?.labelAr ?? null, labelEn: rule?.labelEn ?? null };
     });
@@ -146,8 +162,8 @@ export class AdminFieldsController {
   /** Rules of a built-in field: required, hidden, renamed (empty label = default name). */
   @Patch('core/:entity/:key')
   async core(@Auth() auth: AdminAuth, @Param('entity') entity: string, @Param('key') key: string, @Body() input: unknown) {
-    const e = this.entity(entity);
-    if (!isCoreKey(e, key)) throw new NotFoundException('common.notFound');
+    const e = await this.entity(entity);
+    if (!isEntity(e) || !isCoreKey(e, key)) throw new NotFoundException('common.notFound');
     const src = v.body(input);
     const data: Prisma.FieldDefinitionUpdateInput = {};
     if (src.required !== undefined) data.required = v.optionalBoolean(src, 'required');
@@ -171,10 +187,10 @@ export class AdminFieldsController {
   @Post()
   async create(@Auth() auth: AdminAuth, @Body() input: unknown) {
     const src = v.body(input);
-    const e = this.entity(String(src.entity ?? ''));
+    const e = await this.entity(String(src.entity ?? ''));
     const data = this.data(src, true);
     let key = slugKey(v.optionalString(src, 'key', 40) || (data.labelEn as string));
-    if (isCoreKey(e, key) || ['name', 'number', 'custom', 'id'].includes(key)) key = `x_${key}`;
+    if ((isEntity(e) && isCoreKey(e, key)) || ['name', 'number', 'custom', 'id'].includes(key)) key = `x_${key}`;
     const taken = await this.prisma.fieldDefinition.findUnique({ where: { entity_key: { entity: e, key } } });
     if (taken) throw new ConflictException({ message: 'fields.keyTaken', field: 'labelEn' });
     const count = await this.prisma.fieldDefinition.count({ where: { entity: e, isCore: false } });
@@ -220,7 +236,7 @@ export class AdminFieldsController {
   @Delete(':id')
   async remove(@Auth() auth: AdminAuth, @Param('id') id: string, @Query('purge') purge?: string) {
     const row = await this.find(id);
-    const e = row.entity as Entity;
+    const e = row.entity;
     if (purge === '1') {
       const removed = await this.fields.purge(e, row.key);
       await this.prisma.fieldDefinition.delete({ where: { id } });
@@ -236,9 +252,14 @@ export class AdminFieldsController {
 
   // ---------------------------------------------------------------- helpers
 
-  private entity(value?: string): Entity {
-    if (!value || !isEntity(value)) throw new BadRequestException({ message: 'validation.invalid', field: 'entity' });
-    return value;
+  /** A built-in entity, or "cs:<key>" for a section created by the platform team. */
+  private async entity(value?: string): Promise<Entity | `cs:${string}`> {
+    if (value && isEntity(value)) return value;
+    if (value?.startsWith('cs:')) {
+      const section = await this.prisma.customSection.findUnique({ where: { key: value.slice(3) }, select: { id: true } });
+      if (section) return value as `cs:${string}`;
+    }
+    throw new BadRequestException({ message: 'validation.invalid', field: 'entity' });
   }
 
   private async find(id: string) {

@@ -1,10 +1,10 @@
 import { Controller, Get, Injectable, Module, Query } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { Auth, AnyAuthenticated, type AuthContext } from '../common/auth-context.js';
-import { likePattern, normalizeSearch, normalizedColumn } from '../common/text.js';
+import { likePattern, normalizeSearch, normalizedColumn, normalizedJsonText } from '../common/text.js';
 
-type ResultItem = { id: string; title: string; subtitle: string | null; propertyId?: string; ownerId?: string; tenantId?: string; leaseId?: string; paymentId?: string; chequeId?: string; workOrderId?: string; status?: string };
-type ResultGroup = { type: string; section: string; items: ResultItem[] };
+type ResultItem = { id: string; title: string; subtitle: string | null; propertyId?: string; ownerId?: string; tenantId?: string; leaseId?: string; paymentId?: string; chequeId?: string; workOrderId?: string; recordId?: string; sectionKey?: string; status?: string };
+type ResultGroup = { type: string; section: string; items: ResultItem[]; titleAr?: string; titleEn?: string };
 
 const LIMIT = 20;
 
@@ -40,6 +40,7 @@ export class SearchService {
       if (auth.access.financials !== 'HIDDEN') groups.push(await this.paymentGroup(auth, pattern), await this.chequeGroup(auth, pattern));
       if (auth.access.maintenance !== 'HIDDEN') groups.push(await this.workOrderGroup(auth, pattern));
       if (auth.access.owners !== 'HIDDEN') groups.push(await this.ownerGroup(auth, pattern));
+      groups.push(...(await this.customGroups(auth, pattern)));
       if (auth.access.users !== 'HIDDEN') groups.push(await this.userGroup(auth, pattern));
     }
 
@@ -147,6 +148,32 @@ export class SearchService {
       section: 'maintenance',
       items: rows.map((r) => ({ id: r.id, title: `${r.number} · ${r.title}`, subtitle: r.property, workOrderId: r.id, status: r.status })),
     };
+  }
+
+  /** Records of sections created by the platform team, one group per section the user may see. */
+  private async customGroups(auth: Extract<AuthContext, { kind: 'user' }>, pattern: string): Promise<ResultGroup[]> {
+    const visible = Object.entries(auth.access)
+      .filter(([k, level]) => k.startsWith('cs_') && level !== 'HIDDEN')
+      .map(([k]) => k.slice(3));
+    if (!visible.length) return [];
+    const all = auth.propertyIds === null;
+    const ids = auth.propertyIds ?? [];
+    const rows = await this.prisma.$queryRaw<{ id: string; key: string; nameAr: string; nameEn: string; custom: Record<string, unknown>; root: string }[]>`
+      SELECT r.id, s.key, s."nameAr", s."nameEn", r.custom, coalesce(p.key, s.key) AS root
+      FROM "CustomRecord" r JOIN "CustomSection" s ON s.id = r."sectionId" LEFT JOIN "CustomSection" p ON p.id = s."parentId"
+      WHERE r."companyId" = ${auth.companyId} AND r."deletedAt" IS NULL AND s."isActive"
+        AND coalesce(p.key, s.key) = ANY(${visible}::text[])
+        AND (${all} OR r."propertyId" IS NULL OR r."propertyId" = ANY(${ids}::text[]))
+        AND ${normalizedJsonText('r.custom')} LIKE ${pattern}
+      ORDER BY r."updatedAt" DESC LIMIT ${LIMIT}`;
+    const bySection = new Map<string, ResultGroup>();
+    for (const r of rows) {
+      const g = bySection.get(r.key) ?? { type: `cs:${r.key}`, section: `cs_${r.root}`, items: [], titleAr: r.nameAr, titleEn: r.nameEn };
+      const values = Object.values(r.custom ?? {}).filter((x) => typeof x === 'string' || typeof x === 'number') as (string | number)[];
+      g.items.push({ id: r.id, title: String(values[0] ?? r.id.slice(0, 8)), subtitle: values.slice(1, 3).join(' · ') || null, recordId: r.id, sectionKey: r.key });
+      bySection.set(r.key, g);
+    }
+    return [...bySection.values()];
   }
 
   private async tenantGroup(auth: Extract<AuthContext, { kind: 'user' }>, pattern: string): Promise<ResultGroup> {

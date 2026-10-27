@@ -29,9 +29,18 @@ const SPECIAL = {
 };
 const coreLabelKey = (entity, key) => SPECIAL[`${entity}.${key}`] ?? `${NS[entity]}.${key}`;
 
-export default function FieldsScreen() {
+export default function FieldsScreen({ params }) {
   const { t, lang } = useI18n();
-  const [entity, setEntity] = useState('tenant');
+  const [entity, setEntity] = useState(params?.entity ?? 'tenant');
+  const [sections, setSections] = useState([]);
+  useEffect(() => {
+    adminApi.sections().then(setSections).catch(() => setSections([]));
+  }, []);
+  const entityName = (e) => {
+    if (!e.startsWith('cs:')) return t(`fields.entities.${e}`);
+    const s = sections.find((x) => `cs:${x.key}` === e);
+    return s ? (lang === 'ar' ? s.nameAr : s.nameEn) : e;
+  };
   const [data, setData] = useState(null);
   const [error, setError] = useState(null);
   const [editing, setEditing] = useState(null); // {} new | extra field
@@ -65,7 +74,11 @@ export default function FieldsScreen() {
   return (
     <Screen title={t('fields.title')} subtitle={t('fields.subtitle')}>
       <View style={{ gap: SPACING.lg }}>
-        <ChipSelect value={entity} onChange={setEntity} options={ENTITIES.map((e) => ({ value: e, label: t(`fields.entities.${e}`) }))} />
+        <ChipSelect
+          value={entity}
+          onChange={setEntity}
+          options={[...ENTITIES, ...sections.filter((x) => x.isActive).map((x) => `cs:${x.key}`)].map((e) => ({ value: e, label: entityName(e) }))}
+        />
         <ErrorBox error={error} onRetry={load} />
         {!data ? (
           !error ? <Loading /> : null
@@ -156,6 +169,7 @@ export default function FieldsScreen() {
 
       <ExtraFieldForm
         entity={entity}
+        entityName={entityName(entity)}
         field={editing}
         onClose={() => setEditing(null)}
         onSaved={() => {
@@ -185,7 +199,7 @@ export default function FieldsScreen() {
   );
 }
 
-function ExtraFieldForm({ entity, field, onClose, onSaved }) {
+function ExtraFieldForm({ entity, entityName, field, onClose, onSaved }) {
   const { t } = useI18n();
   const isNew = field && !field.id;
   const [form, setForm] = useState(null);
@@ -243,7 +257,7 @@ function ExtraFieldForm({ entity, field, onClose, onSaved }) {
       }
     >
       {error && !error.field ? <ErrorBox error={error} /> : null}
-      <Txt muted size="small">{t('fields.appliesToAll', { section: t(`fields.entities.${entity}`) })}</Txt>
+      <Txt muted size="small">{t('fields.appliesToAll', { section: entityName })}</Txt>
       <FieldRow>
         <Field label={t('plans.nameAr')} value={form.labelAr} onChangeText={set('labelAr')} error={fieldError('labelAr')} />
         <Field label={t('plans.nameEn')} value={form.labelEn} onChangeText={set('labelEn')} error={fieldError('labelEn')} />

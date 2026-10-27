@@ -43,6 +43,7 @@ export default {
     companies: 'Subscribers',
     plans: 'Plans',
     fields: 'Fields',
+    sections: 'Sections',
   },
 
   // Short labels for the bottom bar
@@ -59,6 +60,7 @@ export default {
     companies: 'Subscribers',
     plans: 'Plans',
     fields: 'Fields',
+    sections: 'Sections',
     more: 'More',
   },
 
@@ -460,6 +462,42 @@ export default {
     hideOption: 'Remove from forms (keep data)',
     hideOptionHint: 'The field disappears from forms and pages; saved values are kept and the field can be restored.',
     purgeHint: 'The field and its values in {{count}} records are erased for every subscriber. This cannot be undone.',
+  },
+
+  // Platform team: custom sections
+  sectionsAdmin: {
+    title: 'Sections',
+    subtitle: 'Create whole new sections with sub-sections. They appear for every subscriber.',
+    add: 'New section',
+    edit: 'Edit section',
+    addSub: 'Add a sub-section',
+    addSubTo: 'New sub-section in {{name}}',
+    subSection: 'Sub-section',
+    subHint: 'A sub-section holds a list of items inside each record of its parent section (e.g. visits inside a contract).',
+    linkedToProperty: 'Linked to a property',
+    recordsCount: '{{count}} records',
+    fields: 'Fields',
+    empty: 'No sections yet. Add one, then design its form from "Fields".',
+    howItWorks: 'Each section gets its own menu entry, list, form, search and trash. Its form fields are managed from the Fields page. Access is controlled per role like any other section.',
+    icon: 'Icon',
+    withProperty: 'Link records to a property',
+    withPropertyHint: 'Adds a property picker and respects roles limited to some properties.',
+    addToPlans: 'Enable in all plans',
+    addToPlansHint: 'You can switch it off per plan later from Plans.',
+    nextFields: 'After saving, press "Fields" next to the section to add its fields.',
+    hide: 'Hide section',
+    hideHint: 'Hidden from every subscriber; records are kept and come back if you restore it.',
+    purgeHint: 'Only possible when the section has no records and no sub-sections.',
+  },
+
+  sectionsUser: {
+    untitled: 'Untitled',
+    add: 'Add',
+    noFields: 'This section has no fields yet. The platform team adds them from Fields.',
+    empty: 'Nothing here yet.',
+    deleteConfirm: 'Move this record to the trash? You can restore it later.',
+    updated: 'Updated {{date}}',
+    total: 'Total {{name}}',
   },
 
   receipt: {
@@ -1006,5 +1044,7 @@ export default {
     'lease.terminateAfterEnd': 'The termination date is after the lease end date.',
     'ledger.alreadyReversed': 'This entry has already been reversed.',
     'common.notFound': 'Not found. It may have been deleted.',
+    'sections.keyTaken': 'A section with this name already exists.',
+    'sections.notEmpty': 'This section still has records or sub-sections.',
   },
 };

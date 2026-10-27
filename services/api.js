@@ -248,4 +248,9 @@ export const adminApi = {
   updateField: (id, data) => api.patch(`/admin/fields/${id}`, data),
   moveField: (id, direction) => api.post(`/admin/fields/${id}/move`, { direction }),
   removeField: (id, purge = false) => api.delete(`/admin/fields/${id}${purge ? '?purge=1' : ''}`),
+  sections: () => api.get('/admin/custom-sections'),
+  createSection: (data) => api.post('/admin/custom-sections', data),
+  updateSection: (id, data) => api.patch(`/admin/custom-sections/${id}`, data),
+  moveSection: (id, direction) => api.post(`/admin/custom-sections/${id}/move`, { direction }),
+  removeSection: (id, purge = false) => api.delete(`/admin/custom-sections/${id}${purge ? '?purge=1' : ''}`),
 };

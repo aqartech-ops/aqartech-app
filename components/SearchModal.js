@@ -14,7 +14,7 @@ import { SectionIcon } from './Rial';
  * records on the server (users now; properties, tenants, leases, cheques… as phases land).
  */
 export default function SearchModal({ visible, onClose, items, onNavigate }) {
-  const { t, align, row } = useI18n();
+  const { t, align, row, lang } = useI18n();
   const insets = useSafeAreaInsets();
   const [query, setQuery] = useState('');
   const [result, setResult] = useState(null);
@@ -107,14 +107,14 @@ export default function SearchModal({ visible, onClose, items, onNavigate }) {
           ) : null}
 
           {groups.map((g) => (
-            <Group key={g.type} title={t(`search.${g.type}`)}>
+            <Group key={g.type} title={g.titleEn ? (lang === 'ar' ? g.titleAr : g.titleEn) : t(`search.${g.type}`)}>
               {g.items.map((item) => (
                 <ResultRow
                   key={item.id}
                   icon={items.find((i) => i.key === g.section)?.icon ?? 'file-outline'}
                   title={item.title}
                   subtitle={item.subtitle}
-                  onPress={() => go(g.section, item.propertyId ? { propertyId: item.propertyId } : item.ownerId ? { ownerId: item.ownerId } : item.tenantId ? { tenantId: item.tenantId } : item.leaseId ? { leaseId: item.leaseId } : item.paymentId ? { paymentId: item.paymentId } : item.chequeId ? { chequeId: item.chequeId } : item.workOrderId ? { workOrderId: item.workOrderId } : null)}
+                  onPress={() => go(g.section, item.propertyId ? { propertyId: item.propertyId } : item.ownerId ? { ownerId: item.ownerId } : item.tenantId ? { tenantId: item.tenantId } : item.leaseId ? { leaseId: item.leaseId } : item.paymentId ? { paymentId: item.paymentId } : item.chequeId ? { chequeId: item.chequeId } : item.workOrderId ? { workOrderId: item.workOrderId } : item.recordId ? { recordId: item.recordId, sectionKey: item.sectionKey } : null)}
                 />
               ))}
             </Group>

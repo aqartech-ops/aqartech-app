@@ -5,6 +5,7 @@ import { useI18n } from '../i18n';
 import { useSession } from '../services/session';
 import { propertiesApi, rolesApi, usersApi } from '../services/api';
 import { confirm } from '../services/dialog';
+import { accessKey, sectionName, useCustomSections } from '../services/customSections';
 import {
   Badge,
   Button,
@@ -25,6 +26,15 @@ import {
 // Sections a role can control (same keys as the server — backend/src/common/sections.ts)
 const ROLE_SECTIONS = ['dashboard', 'properties', 'tenants', 'financials', 'maintenance', 'documents', 'owners', 'users', 'settings'];
 const LEVELS = ['EDIT', 'VIEW', 'HIDDEN'];
+
+/** Built-in sections + the top-level sections added by the platform team (cs_<key>), with their labels. */
+function useRoleSections() {
+  const { t, lang } = useI18n();
+  const custom = useCustomSections().filter((c) => !c.parentId);
+  const keys = [...ROLE_SECTIONS.slice(0, -2), ...custom.map(accessKey), ...ROLE_SECTIONS.slice(-2)];
+  const labels = Object.fromEntries([...ROLE_SECTIONS.map((s) => [s, t(`sections.${s}`)]), ...custom.map((c) => [accessKey(c), sectionName(c, lang)])]);
+  return { keys, label: (k) => labels[k] ?? k };
+}
 
 /** Easy-to-read temporary password (no 0/O, 1/l/I) to give to a new team member. */
 function generatePassword() {
@@ -309,6 +319,7 @@ function UserForm({ user, roles, onClose, onSaved }) {
 
 function RolesTab({ editable }) {
   const { t, row } = useI18n();
+  const roleSections = useRoleSections();
   const [roles, setRoles] = useState(null);
   const [error, setError] = useState(null);
   const [editing, setEditing] = useState(null);
@@ -366,10 +377,10 @@ function RolesTab({ editable }) {
                 <Txt weight="weightMedium">{role.name}</Txt>
                 <Txt muted size="small">{t('users.roleUsers', { count: role._count?.users ?? 0 })}</Txt>
                 <View style={{ flexDirection: row, flexWrap: 'wrap', gap: 4 }}>
-                  {ROLE_SECTIONS.filter((s) => role.permissions?.[s] && role.permissions[s] !== 'HIDDEN').map((s) => (
+                  {roleSections.keys.filter((s) => role.permissions?.[s] && role.permissions[s] !== 'HIDDEN').map((s) => (
                     <Badge
                       key={s}
-                      label={`${t(`sections.${s}`)}: ${t(`access.${role.permissions[s]}`)}`}
+                      label={`${roleSections.label(s)}: ${t(`access.${role.permissions[s]}`)}`}
                       tone={role.permissions[s] === 'EDIT' ? 'success' : 'info'}
                     />
                   ))}
@@ -399,6 +410,7 @@ function RolesTab({ editable }) {
 
 function RoleForm({ role, onClose, onSaved }) {
   const { t, row } = useI18n();
+  const roleSections = useRoleSections();
   const isNew = role && !role.id;
   const [name, setName] = useState('');
   const [permissions, setPermissions] = useState({});
@@ -410,7 +422,7 @@ function RoleForm({ role, onClose, onSaved }) {
   useEffect(() => {
     if (role) {
       setName(role.name ?? '');
-      setPermissions(Object.fromEntries(ROLE_SECTIONS.map((s) => [s, role.permissions?.[s] ?? (s === 'dashboard' ? 'VIEW' : 'HIDDEN')])));
+      setPermissions(Object.fromEntries(roleSections.keys.map((s) => [s, role.permissions?.[s] ?? (s === 'dashboard' ? 'VIEW' : 'HIDDEN')])));
       setPropertyIds(role.propertyIds ?? []);
       propertiesApi.list().then(setProperties).catch(() => setProperties([]));
       setError(null);
@@ -446,12 +458,12 @@ function RoleForm({ role, onClose, onSaved }) {
       <ErrorBox error={error} />
       <Field label={t('users.roleName')} value={name} onChangeText={setName} />
       <Txt weight="weightMedium" size="small">{t('users.permissions')}</Txt>
-      {ROLE_SECTIONS.map((section) => (
+      {roleSections.keys.map((section) => (
         <View key={section} style={[styles.permRow, { flexDirection: row }]}>
-          <Txt style={{ flex: 1, minWidth: 120 }}>{t(`sections.${section}`)}</Txt>
+          <Txt style={{ flex: 1, minWidth: 120 }}>{roleSections.label(section)}</Txt>
           <Segmented
             style={{ flex: 2, minWidth: 220 }}
-            value={permissions[section]}
+            value={permissions[section] ?? 'HIDDEN'}
             onChange={(level) => setPermissions((p) => ({ ...p, [section]: level }))}
             options={LEVELS.map((level) => ({ value: level, label: t(`access.${level}`) }))}
           />

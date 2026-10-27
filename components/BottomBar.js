@@ -39,7 +39,7 @@ export default function BottomBar({ items, active, onSelect, onMore, bottomInset
       >
         <SectionIcon name={item.icon} size={24} color={color} />
         <Text numberOfLines={1} style={[styles.tabLabel, { color }, selected && { fontWeight: FONT.weightBold }]}>
-          {t(`tabs.${item.key}`)}
+          {item.tabLabel ?? t(`tabs.${item.key}`)}
         </Text>
       </Pressable>
     );

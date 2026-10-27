@@ -13,6 +13,9 @@ import DashboardScreen from './screens/DashboardScreen';
 import CompaniesScreen from './screens/CompaniesScreen';
 import PlansScreen from './screens/PlansScreen';
 import FieldsScreen from './screens/FieldsScreen';
+import SectionsScreen from './screens/SectionsScreen';
+import CustomSectionScreen from './screens/CustomSectionScreen';
+import { sectionName, useCustomSections } from './services/customSections';
 import UsersScreen from './screens/UsersScreen';
 import PropertiesScreen from './screens/PropertiesScreen';
 import TenantsScreen from './screens/TenantsScreen';
@@ -42,21 +45,29 @@ const ADMIN_SECTIONS = [
   { key: 'companies', icon: 'domain', Screen: CompaniesScreen },
   { key: 'plans', icon: 'package-variant-closed', Screen: PlansScreen },
   { key: 'fields', icon: 'form-textbox', Screen: FieldsScreen },
+  { key: 'sections', icon: 'view-grid-plus-outline', Screen: SectionsScreen },
   { key: 'settings', icon: 'cog-outline', Screen: SettingsScreen },
 ];
 
 function Root() {
   const { status, me, isAdmin, levelOf } = useSession();
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
+  const custom = useCustomSections(status === 'signedIn' && !isAdmin);
   const [route, setRoute] = useState({ key: 'dashboard', params: null });
   const active = route.key;
   const navigate = (key, params = null) => setRoute({ key, params });
 
   const sections = useMemo(() => {
     if (!me) return [];
-    const list = isAdmin ? ADMIN_SECTIONS : USER_SECTIONS.filter((s) => levelOf(s.key) !== 'HIDDEN');
-    return list.map((s) => ({ ...s, label: t(`sections.${s.key}`) }));
-  }, [me, isAdmin, levelOf, t]);
+    if (isAdmin) return ADMIN_SECTIONS.map((s) => ({ ...s, label: t(`sections.${s.key}`) }));
+    const builtIn = USER_SECTIONS.filter((s) => levelOf(s.key) !== 'HIDDEN').map((s) => ({ ...s, label: t(`sections.${s.key}`) }));
+    // sections created by the platform team, shown before "Users" and "Settings" when the plan and role allow them
+    const extra = custom
+      .filter((c) => !c.parentId && levelOf(`cs_${c.key}`) !== 'HIDDEN')
+      .map((c) => ({ key: `cs_${c.key}`, icon: c.icon, label: sectionName(c, lang), tabLabel: sectionName(c, lang), sectionKey: c.key, Screen: CustomSectionScreen }));
+    const tailFrom = builtIn.findIndex((s) => s.key === 'users' || s.key === 'settings');
+    return tailFrom < 0 ? [...builtIn, ...extra] : [...builtIn.slice(0, tailFrom), ...extra, ...builtIn.slice(tailFrom)];
+  }, [me, isAdmin, levelOf, t, custom, lang]);
 
   // If the current section disappears (e.g. permissions changed), fall back to the dashboard.
   useEffect(() => {
@@ -78,7 +89,7 @@ function Root() {
 
   return (
     <AppShell items={sections} active={current?.key} onNavigate={navigate}>
-      <ActiveScreen key={`${current?.key}:${JSON.stringify(route.params)}`} params={route.params} onNavigate={navigate} />
+      <ActiveScreen key={`${current?.key}:${JSON.stringify(route.params)}`} params={route.params} onNavigate={navigate} sectionKey={current?.sectionKey} />
     </AppShell>
   );
 }

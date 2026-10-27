@@ -3,6 +3,7 @@ import React, { createContext, useCallback, useContext, useEffect, useMemo, useS
 import storage from './storage';
 import { authApi, setAuthToken, setUnauthorizedHandler } from './api';
 import { clearFields } from './fields';
+import { clearCustomSections } from './customSections';
 
 // Who is signed in: a company user (staff / owner) or a platform admin.
 // `me` is the /auth/me payload: { kind: 'user', user, company, subscription, access } | { kind: 'admin', admin }
@@ -17,6 +18,7 @@ export function SessionProvider({ children }) {
   const signOut = useCallback(async () => {
     setAuthToken(null);
     clearFields();
+    clearCustomSections();
     await storage.remove(TOKEN_KEY);
     setMe(null);
     setStatus('signedOut');

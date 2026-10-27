@@ -2,10 +2,11 @@ import { Injectable } from '@nestjs/common';
 import type { Plan, Role, Subscription, User } from '@prisma/client';
 import {
   ALWAYS_ON,
-  SECTIONS,
   LEVEL_RANK,
+  allSectionKeys,
   normalizePermissions,
   type AccessLevel,
+  type AccessMap,
   type SectionKey,
 } from '../common/sections.js';
 
@@ -22,7 +23,7 @@ type UserWithAccessData = User & {
  */
 @Injectable()
 export class AccessService {
-  compute(user: UserWithAccessData): Record<SectionKey, AccessLevel> {
+  compute(user: UserWithAccessData): AccessMap {
     const subscription = user.company.subscription;
     const active = subscription?.status === 'ACTIVE';
     const planSections = new Set<string>(active ? subscription!.plan.features : []);
@@ -31,13 +32,13 @@ export class AccessService {
       ? null
       : normalizePermissions(user.role && !user.role.deletedAt ? user.role.permissions : {});
 
-    const result = {} as Record<SectionKey, AccessLevel>;
-    for (const section of SECTIONS) {
+    const result = {} as AccessMap;
+    for (const section of allSectionKeys()) {
       let level: AccessLevel = 'HIDDEN';
       if (planSections.has(section)) {
         level = roleLevels ? roleLevels[section] : 'EDIT';
       }
-      if (ALWAYS_ON.includes(section) && LEVEL_RANK[level] < LEVEL_RANK.VIEW) {
+      if (ALWAYS_ON.includes(section as SectionKey) && LEVEL_RANK[level] < LEVEL_RANK.VIEW) {
         level = 'VIEW';
       }
       // Linked property owners are read-only everywhere.
