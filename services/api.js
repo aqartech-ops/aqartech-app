@@ -242,4 +242,10 @@ export const adminApi = {
   createPlan: (data) => api.post('/admin/plans', data),
   updatePlan: (id, data) => api.patch(`/admin/plans/${id}`, data),
   removePlan: (id) => api.delete(`/admin/plans/${id}`),
+  fields: (entity) => api.get('/admin/fields', { entity }),
+  setCoreField: (entity, key, data) => api.patch(`/admin/fields/core/${entity}/${key}`, data),
+  createField: (data) => api.post('/admin/fields', data),
+  updateField: (id, data) => api.patch(`/admin/fields/${id}`, data),
+  moveField: (id, direction) => api.post(`/admin/fields/${id}/move`, { direction }),
+  removeField: (id, purge = false) => api.delete(`/admin/fields/${id}${purge ? '?purge=1' : ''}`),
 };

@@ -12,6 +12,7 @@ import LoginScreen from './screens/LoginScreen';
 import DashboardScreen from './screens/DashboardScreen';
 import CompaniesScreen from './screens/CompaniesScreen';
 import PlansScreen from './screens/PlansScreen';
+import FieldsScreen from './screens/FieldsScreen';
 import UsersScreen from './screens/UsersScreen';
 import PropertiesScreen from './screens/PropertiesScreen';
 import TenantsScreen from './screens/TenantsScreen';
@@ -40,6 +41,7 @@ const ADMIN_SECTIONS = [
   { key: 'dashboard', icon: 'view-dashboard-outline', Screen: DashboardScreen },
   { key: 'companies', icon: 'domain', Screen: CompaniesScreen },
   { key: 'plans', icon: 'package-variant-closed', Screen: PlansScreen },
+  { key: 'fields', icon: 'form-textbox', Screen: FieldsScreen },
   { key: 'settings', icon: 'cog-outline', Screen: SettingsScreen },
 ];
 

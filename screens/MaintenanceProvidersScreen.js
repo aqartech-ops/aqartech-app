@@ -1,4 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
+import { toEditable, toPayload, useFieldRules } from '../services/fields';
+import CustomFields from '../components/CustomFields';
 import { Linking, Pressable, StyleSheet, View } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { COLORS, RADIUS, SPACING } from '../theme';
@@ -129,6 +131,7 @@ function WorkOrderForm({ order, onClose, onSaved }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
   const fieldError = (name) => (error?.field === name ? errorText(t, error) : undefined);
+  const rules = useFieldRules('workOrder', error);
 
   useEffect(() => {
     if (!order) return;
@@ -144,6 +147,7 @@ function WorkOrderForm({ order, onClose, onSaved }) {
       reportedBy: order.reportedBy ?? '',
       scheduledDate: order.scheduledDate ? String(order.scheduledDate).slice(0, 10) : '',
       notes: order.notes ?? '',
+      custom: toEditable(rules.custom, order.custom),
     });
     setProperty(order.property ?? null);
     setBusy(false);
@@ -163,6 +167,7 @@ function WorkOrderForm({ order, onClose, onSaved }) {
     if (estimatedCost === null && String(form.estimatedCost).trim()) return setError({ code: 'validation.invalid', field: 'estimatedCost' });
     const payload = {
       ...form,
+      custom: toPayload(rules.custom, form.custom),
       estimatedCost,
       scheduledDate: form.scheduledDate || null,
       bearer: form.bearer ?? undefined,
@@ -215,17 +220,19 @@ function WorkOrderForm({ order, onClose, onSaved }) {
       ) : null}
       {vendors.length ? (
         <>
-          <Txt weight="weightMedium" size="small">{t('expenses.vendor')}</Txt>
+          <Txt weight="weightMedium" size="small">{rules.props('vendorId', t('expenses.vendor')).label}</Txt>
+          {rules.props('vendorId', '').error ? <Txt size="small" style={{ color: COLORS.danger }}>{rules.props('vendorId', '').error}</Txt> : null}
           <ChipSelect value={form.vendorId ?? ''} onChange={(id) => set('vendorId')(id || null)} options={[{ value: '', label: t('common.none') }, ...vendors.map((v) => ({ value: v.id, label: v.name }))]} />
         </>
       ) : null}
-      <Field label={t('maintenance.description')} value={form.description} onChangeText={set('description')} multiline inputStyle={{ minHeight: 60 }} />
+      <Field {...rules.props('description', t('maintenance.description'))} value={form.description} onChangeText={set('description')} multiline inputStyle={{ minHeight: 60 }} />
       <FieldRow>
-        <MoneyField label={t('maintenance.estimatedCost')} value={form.estimatedCost} onChangeText={set('estimatedCost')} error={fieldError('estimatedCost')} />
-        <DateField label={t('maintenance.scheduledDate')} value={form.scheduledDate} onChangeText={set('scheduledDate')} error={fieldError('scheduledDate')} />
+        <MoneyField {...rules.props('estimatedCost', t('maintenance.estimatedCost'))} value={form.estimatedCost} onChangeText={set('estimatedCost')} error={fieldError('estimatedCost')} />
+        <DateField {...rules.props('scheduledDate', t('maintenance.scheduledDate'))} value={form.scheduledDate} onChangeText={set('scheduledDate')} error={fieldError('scheduledDate')} />
       </FieldRow>
-      <Field label={t('maintenance.reportedBy')} value={form.reportedBy} onChangeText={set('reportedBy')} />
+      <Field {...rules.props('reportedBy', t('maintenance.reportedBy'))} value={form.reportedBy} onChangeText={set('reportedBy')} />
       <Field label={t('payments.notes')} value={form.notes} onChangeText={set('notes')} multiline inputStyle={{ minHeight: 50 }} />
+      <CustomFields defs={rules.custom} values={form.custom} onChange={set('custom')} error={error} />
     </Sheet>
   );
 }
@@ -446,10 +453,11 @@ function VendorForm({ vendor, onClose, onSaved }) {
   const [form, setForm] = useState({});
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
+  const rules = useFieldRules('vendor', error);
 
   useEffect(() => {
     if (!vendor) return;
-    setForm({ name: vendor.name ?? '', phone: vendor.phone ?? '', email: vendor.email ?? '', specialty: vendor.specialty ?? '', notes: vendor.notes ?? '' });
+    setForm({ name: vendor.name ?? '', phone: vendor.phone ?? '', email: vendor.email ?? '', specialty: vendor.specialty ?? '', notes: vendor.notes ?? '', custom: toEditable(rules.custom, vendor.custom) });
     setBusy(false);
     setError(null);
   }, [vendor]);
@@ -461,8 +469,9 @@ function VendorForm({ vendor, onClose, onSaved }) {
     setBusy(true);
     setError(null);
     try {
-      if (vendor.id) await maintenanceApi.updateVendor(vendor.id, form);
-      else await maintenanceApi.createVendor(form);
+      const payload = { ...form, custom: toPayload(rules.custom, form.custom) };
+      if (vendor.id) await maintenanceApi.updateVendor(vendor.id, payload);
+      else await maintenanceApi.createVendor(payload);
       onSaved();
     } catch (e) {
       setError(e);
@@ -484,12 +493,13 @@ function VendorForm({ vendor, onClose, onSaved }) {
     >
       {error && !error.field ? <ErrorBox error={error} /> : null}
       <Field label={t('maintenance.vendorName')} value={form.name} onChangeText={set('name')} error={error?.field === 'name' ? errorText(t, error) : undefined} />
-      <Field label={t('maintenance.specialty')} value={form.specialty} onChangeText={set('specialty')} placeholder={t('maintenance.specialtyPlaceholder')} />
+      <Field {...rules.props('specialty', t('maintenance.specialty'))} value={form.specialty} onChangeText={set('specialty')} placeholder={t('maintenance.specialtyPlaceholder')} />
       <FieldRow>
-        <Field label={t('tenants.phone')} value={form.phone} onChangeText={set('phone')} keyboardType="phone-pad" inputMode="tel" placeholder="+968" />
-        <Field label={t('tenants.email')} value={form.email} onChangeText={set('email')} keyboardType="email-address" autoCapitalize="none" />
+        <Field {...rules.props('phone', t('tenants.phone'))} value={form.phone} onChangeText={set('phone')} keyboardType="phone-pad" inputMode="tel" placeholder="+968" />
+        <Field {...rules.props('email', t('tenants.email'))} value={form.email} onChangeText={set('email')} keyboardType="email-address" autoCapitalize="none" />
       </FieldRow>
       <Field label={t('payments.notes')} value={form.notes} onChangeText={set('notes')} multiline inputStyle={{ minHeight: 50 }} />
+      <CustomFields defs={rules.custom} values={form.custom} onChange={set('custom')} error={error} />
     </Sheet>
   );
 }

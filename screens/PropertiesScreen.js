@@ -1,4 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { toEditable, toPayload, useFieldRules } from '../services/fields';
+import CustomFields, { CustomValues } from '../components/CustomFields';
 import { Pressable, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { COLORS, RADIUS, SPACING } from '../theme';
@@ -257,6 +259,7 @@ function OccupancyBar({ stats: s }) {
 
 function PropertyDetail({ id, onBack, linkOwnerId, onLinkHandled }) {
   const { t, lang, isRTL, start } = useI18n();
+  const extraFields = useFieldRules('property');
   const { canEdit } = useSession();
   const editable = canEdit('properties');
   const [property, setProperty] = useState(null);
@@ -398,6 +401,7 @@ function PropertyDetail({ id, onBack, linkOwnerId, onLinkHandled }) {
             </Row>
           ) : null}
           {property.notes ? <Txt muted>{property.notes}</Txt> : null}
+          <CustomValues defs={extraFields.custom} values={property.custom} />
         </Card>
 
         <PropertyOwnership property={property} linkOwnerId={linkOwnerId} onLinkHandled={onLinkHandled} />
@@ -532,6 +536,7 @@ function PropertyForm({ property, onClose, onSaved }) {
   const [form, setForm] = useState({});
   const [busy, setBusy] = useState(false);
   const { error, setError, fieldError } = useFormError();
+  const rules = useFieldRules('property', error);
 
   useEffect(() => {
     if (!property) return;
@@ -547,6 +552,7 @@ function PropertyForm({ property, onClose, onSaved }) {
       propertyValue: moneyText(property.propertyValue),
       investmentCost: moneyText(property.investmentCost),
       notes: property.notes ?? '',
+      custom: toEditable(rules.custom, property?.custom),
     });
     setError(null);
     setBusy(false);
@@ -560,6 +566,7 @@ function PropertyForm({ property, onClose, onSaved }) {
       floors: intOrNull(form.floors),
       propertyValue: moneyOrNull(form.propertyValue),
       investmentCost: moneyOrNull(form.investmentCost),
+      custom: toPayload(rules.custom, form.custom),
     };
     for (const k of ['floors', 'propertyValue', 'investmentCost']) {
       if (Number.isNaN(payload[k])) return setError({ code: 'validation.invalid', field: k });
@@ -602,14 +609,14 @@ function PropertyForm({ property, onClose, onSaved }) {
         options={['OWNED', 'MANAGED'].map((o) => ({ value: o, label: t(`properties.ownershipValues.${o}`) }))}
       />
       <FieldRow>
-        <Field label={t('properties.governorate')} value={form.governorate} onChangeText={set('governorate')} />
-        <Field label={t('properties.wilayat')} value={form.wilayat} onChangeText={set('wilayat')} />
+        <Field {...rules.props('governorate', t('properties.governorate'))} value={form.governorate} onChangeText={set('governorate')} />
+        <Field {...rules.props('wilayat', t('properties.wilayat'))} value={form.wilayat} onChangeText={set('wilayat')} />
       </FieldRow>
-      <Field label={t('properties.address')} value={form.address} onChangeText={set('address')} />
+      <Field {...rules.props('address', t('properties.address'))} value={form.address} onChangeText={set('address')} />
       <FieldRow>
-        <Field label={t('properties.plotNumber')} value={form.plotNumber} onChangeText={set('plotNumber')} />
+        <Field {...rules.props('plotNumber', t('properties.plotNumber'))} value={form.plotNumber} onChangeText={set('plotNumber')} />
         <Field
-          label={t('properties.floors')}
+          {...rules.props('floors', t('properties.floors'))}
           value={form.floors}
           onChangeText={set('floors')}
           keyboardType="number-pad"
@@ -619,10 +626,11 @@ function PropertyForm({ property, onClose, onSaved }) {
       </FieldRow>
       <Txt muted size="small">{t('properties.financialInfo')}</Txt>
       <FieldRow>
-        <MoneyField label={t('properties.propertyValue')} value={form.propertyValue} onChangeText={set('propertyValue')} error={fieldError('propertyValue')} />
-        <MoneyField label={t('properties.investmentCost')} value={form.investmentCost} onChangeText={set('investmentCost')} error={fieldError('investmentCost')} />
+        <MoneyField {...rules.props('propertyValue', t('properties.propertyValue'))} value={form.propertyValue} onChangeText={set('propertyValue')} error={fieldError('propertyValue')} />
+        <MoneyField {...rules.props('investmentCost', t('properties.investmentCost'))} value={form.investmentCost} onChangeText={set('investmentCost')} error={fieldError('investmentCost')} />
       </FieldRow>
-      <Field label={t('properties.notes')} value={form.notes} onChangeText={set('notes')} multiline inputStyle={{ minHeight: 70 }} />
+      <Field {...rules.props('notes', t('properties.notes'))} value={form.notes} onChangeText={set('notes')} multiline inputStyle={{ minHeight: 70 }} />
+      <CustomFields defs={rules.custom} values={form.custom} onChange={set('custom')} error={error} />
     </Sheet>
   );
 }
@@ -633,6 +641,7 @@ function UnitForm({ propertyId, unit, onClose, onSaved }) {
   const [form, setForm] = useState({});
   const [busy, setBusy] = useState(false);
   const { error, setError, fieldError } = useFormError();
+  const rules = useFieldRules('unit', error);
 
   useEffect(() => {
     if (!unit) return;
@@ -648,6 +657,7 @@ function UnitForm({ propertyId, unit, onClose, onSaved }) {
       electricityMeter: unit.electricityMeter ?? '',
       waterMeter: unit.waterMeter ?? '',
       notes: unit.notes ?? '',
+      custom: toEditable(rules.custom, unit?.custom),
     });
     setError(null);
     setBusy(false);
@@ -662,6 +672,7 @@ function UnitForm({ propertyId, unit, onClose, onSaved }) {
       area: numOrNull(form.area),
       bedrooms: intOrNull(form.bedrooms),
       bathrooms: intOrNull(form.bathrooms),
+      custom: toPayload(rules.custom, form.custom),
     };
     for (const k of ['askingRent', 'area', 'bedrooms', 'bathrooms']) {
       if (Number.isNaN(payload[k])) return setError({ code: 'validation.invalid', field: k });
@@ -693,23 +704,24 @@ function UnitForm({ propertyId, unit, onClose, onSaved }) {
       {error && !error.field ? <ErrorBox error={error} /> : null}
       <FieldRow>
         <Field label={t('units.number')} value={form.number} onChangeText={set('number')} error={fieldError('number')} />
-        <Field label={t('units.floor')} value={form.floor} onChangeText={set('floor')} />
+        <Field {...rules.props('floor', t('units.floor'))} value={form.floor} onChangeText={set('floor')} />
       </FieldRow>
       <Txt weight="weightMedium" size="small">{t('units.type')}</Txt>
       <ChipSelect value={form.type} onChange={set('type')} options={UNIT_TYPES.map((v) => ({ value: v, label: t(`units.typeValues.${v}`) }))} />
       <Txt weight="weightMedium" size="small">{t('units.status')}</Txt>
       <ChipSelect value={form.status} onChange={set('status')} options={UNIT_STATUSES.map((v) => ({ value: v, label: t(`units.statusValues.${v}`) }))} />
-      <MoneyField label={t('units.askingRent')} value={form.askingRent} onChangeText={set('askingRent')} error={fieldError('askingRent')} />
+      <MoneyField {...rules.props('askingRent', t('units.askingRent'))} value={form.askingRent} onChangeText={set('askingRent')} error={fieldError('askingRent')} />
       <FieldRow>
-        <Field label={t('units.area')} value={form.area} onChangeText={set('area')} keyboardType="decimal-pad" inputMode="decimal" error={fieldError('area')} />
-        <Field label={t('units.bedrooms')} value={form.bedrooms} onChangeText={set('bedrooms')} keyboardType="number-pad" inputMode="numeric" error={fieldError('bedrooms')} />
-        <Field label={t('units.bathrooms')} value={form.bathrooms} onChangeText={set('bathrooms')} keyboardType="number-pad" inputMode="numeric" error={fieldError('bathrooms')} />
+        <Field {...rules.props('area', t('units.area'))} value={form.area} onChangeText={set('area')} keyboardType="decimal-pad" inputMode="decimal" error={fieldError('area')} />
+        <Field {...rules.props('bedrooms', t('units.bedrooms'))} value={form.bedrooms} onChangeText={set('bedrooms')} keyboardType="number-pad" inputMode="numeric" error={fieldError('bedrooms')} />
+        <Field {...rules.props('bathrooms', t('units.bathrooms'))} value={form.bathrooms} onChangeText={set('bathrooms')} keyboardType="number-pad" inputMode="numeric" error={fieldError('bathrooms')} />
       </FieldRow>
       <FieldRow>
-        <Field label={t('units.electricityMeter')} value={form.electricityMeter} onChangeText={set('electricityMeter')} />
-        <Field label={t('units.waterMeter')} value={form.waterMeter} onChangeText={set('waterMeter')} />
+        <Field {...rules.props('electricityMeter', t('units.electricityMeter'))} value={form.electricityMeter} onChangeText={set('electricityMeter')} />
+        <Field {...rules.props('waterMeter', t('units.waterMeter'))} value={form.waterMeter} onChangeText={set('waterMeter')} />
       </FieldRow>
-      <Field label={t('units.notes')} value={form.notes} onChangeText={set('notes')} multiline inputStyle={{ minHeight: 60 }} />
+      <Field {...rules.props('notes', t('units.notes'))} value={form.notes} onChangeText={set('notes')} multiline inputStyle={{ minHeight: 60 }} />
+      <CustomFields defs={rules.custom} values={form.custom} onChange={set('custom')} error={error} />
     </Sheet>
   );
 }
@@ -719,6 +731,7 @@ function BulkUnitsForm({ propertyId, visible, onClose, onSaved }) {
   const [form, setForm] = useState({ prefix: '', from: '', to: '', floor: '', type: 'APARTMENT', askingRent: '' });
   const [busy, setBusy] = useState(false);
   const { error, setError, fieldError } = useFormError();
+  const rules = useFieldRules('unit', error);
 
   useEffect(() => {
     if (visible) {
@@ -746,6 +759,7 @@ function BulkUnitsForm({ propertyId, visible, onClose, onSaved }) {
         floor: form.floor,
         type: form.type,
         askingRent,
+        custom: toPayload(rules.custom, form.custom),
       });
       onSaved(res.created);
     } catch (e) {
@@ -782,6 +796,7 @@ function BulkUnitsForm({ propertyId, visible, onClose, onSaved }) {
       <Txt weight="weightMedium" size="small">{t('units.type')}</Txt>
       <ChipSelect value={form.type} onChange={set('type')} options={UNIT_TYPES.map((v) => ({ value: v, label: t(`units.typeValues.${v}`) }))} />
       <MoneyField label={t('units.askingRent')} value={form.askingRent} onChangeText={set('askingRent')} error={fieldError('askingRent')} />
+      <CustomFields defs={rules.custom} values={form.custom} onChange={set('custom')} error={error} />
     </Sheet>
   );
 }

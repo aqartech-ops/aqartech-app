@@ -5,6 +5,7 @@ import { ActivityService } from '../common/activity.service.js';
 import { PlansService } from '../plans/plans.service.js';
 import type { UserAuth } from '../common/auth-context.js';
 import * as v from '../common/validate.js';
+import { FieldsService } from '../fields/fields.module.js';
 
 export const OWNERSHIPS = ['OWNED', 'MANAGED'] as const;
 export const CATEGORIES = ['BUILDING', 'VILLA_COMPOUND', 'VILLA', 'COMMERCIAL_COMPLEX', 'LAND', 'OTHER'] as const;
@@ -41,6 +42,7 @@ export class PropertiesService {
     private readonly prisma: PrismaService,
     private readonly plans: PlansService,
     private readonly activity: ActivityService,
+    private readonly fields: FieldsService,
   ) {}
 
   // ---------------------------------------------------------------- properties
@@ -78,7 +80,10 @@ export class PropertiesService {
 
   async create(auth: UserAuth, input: unknown) {
     this.assertAllProperties(auth);
-    const data = this.propertyData(v.body(input), true) as Prisma.PropertyUncheckedCreateInput;
+    const src = v.body(input);
+    const data = this.propertyData(src, true) as Prisma.PropertyUncheckedCreateInput;
+    const custom = await this.fields.apply('property', src, null);
+    if (custom !== undefined) data.custom = custom;
     await this.plans.assertCanAdd(auth.companyId, 'properties');
     const property = await this.prisma.property.create({
       data: { ...data, companyId: auth.companyId, createdById: auth.userId },
@@ -88,8 +93,11 @@ export class PropertiesService {
   }
 
   async update(auth: UserAuth, id: string, input: unknown) {
-    await this.findProperty(auth, id);
-    const data = this.propertyData(v.body(input), false);
+    const saved = await this.findProperty(auth, id);
+    const src = v.body(input);
+    const data = this.propertyData(src, false);
+    const custom = await this.fields.apply('property', src, saved);
+    if (custom !== undefined) data.custom = custom;
     const property = await this.prisma.property.update({ where: { id }, data });
     await this.activity.log(auth, { action: 'property.update', entity: 'Property', entityId: id, details: data });
     return property;
@@ -126,7 +134,10 @@ export class PropertiesService {
 
   async createUnit(auth: UserAuth, propertyId: string, input: unknown) {
     await this.findProperty(auth, propertyId);
-    const data = this.unitData(v.body(input), true) as Prisma.UnitUncheckedCreateInput;
+    const src = v.body(input);
+    const data = this.unitData(src, true) as Prisma.UnitUncheckedCreateInput;
+    const custom = await this.fields.apply('unit', src, null);
+    if (custom !== undefined) data.custom = custom;
     await this.assertNumbersFree(propertyId, [data.number]);
     await this.plans.assertCanAdd(auth.companyId, 'units');
     const unit = await this.prisma.unit.create({
@@ -145,6 +156,8 @@ export class PropertiesService {
     if (to < from || to - from + 1 > MAX_BULK) throw new BadRequestException({ message: 'units.bulkRange', field: 'to', max: MAX_BULK });
     const prefix = v.optionalString(src, 'prefix', 10) ?? '';
     const template = this.unitData({ ...src, number: 'x' }, true) as Prisma.UnitUncheckedCreateInput;
+    const custom = await this.fields.apply('unit', src, null);
+    if (custom !== undefined) template.custom = custom;
     const numbers = Array.from({ length: to - from + 1 }, (_, i) => `${prefix}${from + i}`);
 
     await this.assertNumbersFree(propertyId, numbers);
@@ -170,7 +183,10 @@ export class PropertiesService {
 
   async updateUnit(auth: UserAuth, id: string, input: unknown) {
     const unit = await this.findUnit(auth, id);
-    const data = this.unitData(v.body(input), false);
+    const src = v.body(input);
+    const data = this.unitData(src, false);
+    const custom = await this.fields.apply('unit', src, unit);
+    if (custom !== undefined) data.custom = custom;
     if (typeof data.number === 'string' && data.number !== unit.number) await this.assertNumbersFree(unit.propertyId, [data.number], id);
     if (data.status && data.status !== unit.status) {
       data.vacantSince = data.status === 'VACANT' ? new Date() : null;

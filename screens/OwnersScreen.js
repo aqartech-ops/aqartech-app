@@ -1,4 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { toEditable, toPayload, useFieldRules } from '../services/fields';
+import CustomFields, { CustomValues } from '../components/CustomFields';
 import { Linking, Pressable, StyleSheet, View } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { COLORS, RADIUS, SPACING } from '../theme';
@@ -132,6 +134,7 @@ function OwnerList({ onOpen }) {
 
 function OwnerDetail({ id, onBack, onNavigate }) {
   const { t, lang, isRTL, start } = useI18n();
+  const extraFields = useFieldRules('owner');
   const { canEdit, levelOf } = useSession();
   const editable = canEdit('owners');
   const canLink = editable && levelOf('properties') !== 'HIDDEN';
@@ -251,6 +254,7 @@ function OwnerDetail({ id, onBack, onNavigate }) {
             </View>
           ) : null}
           {owner.notes ? <Txt muted>{owner.notes}</Txt> : null}
+          <CustomValues defs={extraFields.custom} values={owner.custom} />
         </Card>
 
         <Row style={{ justifyContent: 'space-between', flexWrap: 'wrap' }}>
@@ -363,6 +367,7 @@ export function OwnerForm({ owner, onClose, onSaved }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
   const fieldError = (name) => (error?.field === name ? errorText(t, error) : undefined);
+  const rules = useFieldRules('owner', error);
 
   useEffect(() => {
     if (!owner) return;
@@ -378,6 +383,7 @@ export function OwnerForm({ owner, onClose, onSaved }) {
       accountName: owner.accountName ?? '',
       accountNumber: owner.accountNumber ?? '',
       notes: owner.notes ?? '',
+      custom: toEditable(rules.custom, owner?.custom),
     });
     setError(null);
     setBusy(false);
@@ -390,7 +396,7 @@ export function OwnerForm({ owner, onClose, onSaved }) {
     setBusy(true);
     setError(null);
     try {
-      const payload = { ...form, email: form.email.trim() };
+      const payload = { ...form, email: form.email.trim(), custom: toPayload(rules.custom, form.custom) };
       const saved = isNew ? await ownersApi.create(payload) : await ownersApi.update(owner.id, payload);
       onSaved(isNew ? saved : null);
     } catch (e) {
@@ -416,23 +422,24 @@ export function OwnerForm({ owner, onClose, onSaved }) {
       <Field label={t('owners.name')} value={form.name} onChangeText={set('name')} error={fieldError('name')} />
       <FieldRow>
         {company ? (
-          <Field label={t('owners.crNumber')} value={form.crNumber} onChangeText={set('crNumber')} />
+          <Field {...rules.props('crNumber', t('owners.crNumber'))} value={form.crNumber} onChangeText={set('crNumber')} />
         ) : (
-          <Field label={t('owners.civilId')} value={form.civilId} onChangeText={set('civilId')} keyboardType="number-pad" />
+          <Field {...rules.props('civilId', t('owners.civilId'))} value={form.civilId} onChangeText={set('civilId')} keyboardType="number-pad" />
         )}
-        <Field label={t('owners.nationality')} value={form.nationality} onChangeText={set('nationality')} />
+        <Field {...rules.props('nationality', t('owners.nationality'))} value={form.nationality} onChangeText={set('nationality')} />
       </FieldRow>
       <FieldRow>
-        <Field label={t('owners.phone')} value={form.phone} onChangeText={set('phone')} keyboardType="phone-pad" inputMode="tel" placeholder="+968" />
-        <Field label={t('owners.email')} value={form.email} onChangeText={set('email')} autoCapitalize="none" inputMode="email" error={fieldError('email')} />
+        <Field {...rules.props('phone', t('owners.phone'))} value={form.phone} onChangeText={set('phone')} keyboardType="phone-pad" inputMode="tel" placeholder="+968" />
+        <Field {...rules.props('email', t('owners.email'))} value={form.email} onChangeText={set('email')} autoCapitalize="none" inputMode="email" error={fieldError('email')} />
       </FieldRow>
       <Txt weight="weightBold" size="small">{t('owners.bank')}</Txt>
       <FieldRow>
-        <Field label={t('owners.bankName')} value={form.bankName} onChangeText={set('bankName')} />
-        <Field label={t('owners.accountName')} value={form.accountName} onChangeText={set('accountName')} />
+        <Field {...rules.props('bankName', t('owners.bankName'))} value={form.bankName} onChangeText={set('bankName')} />
+        <Field {...rules.props('accountName', t('owners.accountName'))} value={form.accountName} onChangeText={set('accountName')} />
       </FieldRow>
-      <Field label={t('owners.accountNumber')} value={form.accountNumber} onChangeText={set('accountNumber')} autoCapitalize="characters" />
-      <Field label={t('owners.notes')} value={form.notes} onChangeText={set('notes')} multiline inputStyle={{ minHeight: 60 }} />
+      <Field {...rules.props('accountNumber', t('owners.accountNumber'))} value={form.accountNumber} onChangeText={set('accountNumber')} autoCapitalize="characters" />
+      <Field {...rules.props('notes', t('owners.notes'))} value={form.notes} onChangeText={set('notes')} multiline inputStyle={{ minHeight: 60 }} />
+      <CustomFields defs={rules.custom} values={form.custom} onChange={set('custom')} error={error} />
     </Sheet>
   );
 }

@@ -60,9 +60,10 @@ export function SectionIcon({ name, size = 22, color = COLORS.textDark }) {
  * Money input: the user types OMR ("1250.5"), the form keeps the text; convert with parseOMR()
  * to integer baisa when saving. The rial symbol sits inside the field.
  */
-export function MoneyField({ label, value, onChangeText, error, hint }) {
+export function MoneyField({ label, value, onChangeText, error, hint, hidden }) {
   const { row, align } = useI18n();
   const reveal = useRevealOnFocus();
+  if (hidden) return null;
   const small = (extra) => [{ fontSize: FONT.small, textAlign: align, color: COLORS.textDark }, extra];
   return (
     <View style={{ gap: 4 }}>

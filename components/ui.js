@@ -90,10 +90,11 @@ export function IconButton({ icon, onPress, color = COLORS.textDark, size = 22, 
   );
 }
 
-export function Field({ label, hint, error, secure, style, inputStyle, onFocus, ...inputProps }) {
+export function Field({ label, hint, error, secure, style, inputStyle, onFocus, hidden: hiddenByAdmin, ...inputProps }) {
   const { t, align, row } = useI18n();
   const [hidden, setHidden] = useState(true);
   const reveal = useRevealOnFocus(onFocus);
+  if (hiddenByAdmin) return null; // a field hidden by the platform team (الحقول)
   return (
     <View style={[{ gap: SPACING.xs }, style]}>
       {label ? <Txt weight="weightMedium" size="small">{label}</Txt> : null}
@@ -392,7 +393,7 @@ export function FieldRow({ children }) {
   const { row } = useI18n();
   return (
     <View style={{ flexDirection: row, flexWrap: 'wrap', gap: SPACING.md }}>
-      {React.Children.toArray(children).map((child, i) => (
+      {React.Children.toArray(children).filter((child) => !child?.props?.hidden).map((child, i) => (
         <View key={i} style={{ flexGrow: 1, flexBasis: 160 }}>
           {child}
         </View>

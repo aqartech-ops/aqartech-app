@@ -2,6 +2,7 @@ import { AppState } from 'react-native';
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import storage from './storage';
 import { authApi, setAuthToken, setUnauthorizedHandler } from './api';
+import { clearFields } from './fields';
 
 // Who is signed in: a company user (staff / owner) or a platform admin.
 // `me` is the /auth/me payload: { kind: 'user', user, company, subscription, access } | { kind: 'admin', admin }
@@ -15,6 +16,7 @@ export function SessionProvider({ children }) {
 
   const signOut = useCallback(async () => {
     setAuthToken(null);
+    clearFields();
     await storage.remove(TOKEN_KEY);
     setMe(null);
     setStatus('signedOut');
