@@ -8,6 +8,8 @@ import { ChequesService } from './cheques.service.js';
 import { ExpensesService } from './expenses.service.js';
 import { OwnersFinanceService } from './owners-finance.service.js';
 import { ReportsService } from './reports.service.js';
+import { ClosingService } from './closing.service.js';
+import { MunicipalityService } from './municipality.service.js';
 
 /** Ledger + charges: used by leases (activation / termination) and by the finance reports. */
 @Module({
@@ -26,7 +28,43 @@ export class FinanceController {
     private readonly expenses: ExpensesService,
     private readonly owners: OwnersFinanceService,
     private readonly reports: ReportsService,
+    private readonly closing: ClosingService,
+    private readonly municipality: MunicipalityService,
   ) {}
+
+  // ---------- month close (إقفال الشهر) ----------
+
+  @RequirePermission('financials', 'VIEW')
+  @Get('closing')
+  closingStatus(@Auth() auth: UserAuth) {
+    return this.closing.status(auth);
+  }
+
+  @RequirePermission('financials', 'EDIT')
+  @Post('closing')
+  closeMonth(@Auth() auth: UserAuth, @Body() body: unknown) {
+    return this.closing.close(auth, body);
+  }
+
+  @RequirePermission('financials', 'EDIT')
+  @Post('closing/reopen')
+  reopenMonth(@Auth() auth: UserAuth, @Body() body: unknown) {
+    return this.closing.reopen(auth, body);
+  }
+
+  // ---------- municipality (عقود البلدية) ----------
+
+  @RequirePermission('financials', 'VIEW')
+  @Get('municipality')
+  municipalityList(@Auth() auth: UserAuth, @Query('filter') filter?: string) {
+    return this.municipality.list(auth, { filter });
+  }
+
+  @RequirePermission('financials', 'EDIT')
+  @Post('municipality')
+  municipalityRegister(@Auth() auth: UserAuth, @Body() body: unknown) {
+    return this.municipality.register(auth, body);
+  }
 
   // ---------- reports (التقارير) ----------
 
@@ -116,8 +154,9 @@ export class FinanceController {
     @Query('categoryId') categoryId?: string,
     @Query('bearer') bearer?: string,
     @Query('page') page?: string,
+    @Query('all') all?: string,
   ) {
-    return this.expenses.list(auth, { from, to, propertyId, categoryId, bearer, page });
+    return this.expenses.list(auth, { from, to, propertyId, categoryId, bearer, page, all });
   }
 
   @RequirePermission('financials', 'VIEW')
@@ -234,8 +273,9 @@ export class FinanceController {
     @Query('from') from?: string,
     @Query('to') to?: string,
     @Query('page') page?: string,
+    @Query('all') all?: string,
   ) {
-    return this.payments.list(auth, { tenantId, leaseId, method, from, to, page });
+    return this.payments.list(auth, { tenantId, leaseId, method, from, to, page, all });
   }
 
   @RequirePermission('financials', 'VIEW')
@@ -288,8 +328,8 @@ export class FinanceController {
 
   @RequirePermission('financials', 'VIEW')
   @Get('journal')
-  journal(@Auth() auth: UserAuth, @Query('page') page?: string) {
-    return this.finance.journal(auth, Number(page) || 1);
+  journal(@Auth() auth: UserAuth, @Query('page') page?: string, @Query('all') all?: string) {
+    return this.finance.journal(auth, Number(page) || 1, all === '1');
   }
 
   @RequirePermission('financials', 'VIEW')
@@ -302,7 +342,7 @@ export class FinanceController {
 @Module({
   imports: [FinanceCoreModule],
   controllers: [FinanceController],
-  providers: [FinanceService, PaymentsService, ChequesService, OwnersFinanceService, ReportsService],
-  exports: [FinanceService, ChequesService],
+  providers: [FinanceService, PaymentsService, ChequesService, OwnersFinanceService, ReportsService, ClosingService, MunicipalityService],
+  exports: [FinanceService, ChequesService, MunicipalityService],
 })
 export class FinanceModule {}

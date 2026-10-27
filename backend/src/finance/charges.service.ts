@@ -82,6 +82,7 @@ export class ChargesService {
           chargeId: charge.id,
           createdById: userId,
           lines: chargeLines('RENT', cut.amount, this.dims(charge)),
+          autoRoll: true,
         });
         entryId = entry.id;
       }
@@ -115,6 +116,7 @@ export class ChargesService {
             leaseId: charge.leaseId,
             chargeId: charge.id,
             lines: chargeLines(charge.kind, charge.amount, this.dims(charge)),
+            autoRoll: true, // a backdated lease must not fail on a closed month: it posts in the open period
           });
           await tx.rentCharge.update({ where: { id: charge.id }, data: { entryId: entry.id } });
         });

@@ -142,8 +142,8 @@ export class FinanceService {
   }
 
   /** Journal (سجل القيود): newest first, 30 per page. */
-  async journal(auth: UserAuth, page = 1) {
-    const take = 30;
+  async journal(auth: UserAuth, page = 1, all = false) {
+    const take = all ? 5000 : 30; // all: export (تصدير)
     const where: Prisma.JournalEntryWhereInput = {
       companyId: auth.companyId,
       ...(auth.propertyIds ? { lines: { some: { propertyId: { in: auth.propertyIds } } } } : {}),

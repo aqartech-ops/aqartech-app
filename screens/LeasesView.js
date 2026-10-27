@@ -9,6 +9,7 @@ import { confirm } from '../services/dialog';
 import { formatOMR, parseOMR } from '../services/money';
 import { matches } from '../services/text';
 import { Money, MoneyField } from '../components/Rial';
+import { LeaseMunicipalityCard } from './MunicipalityView';
 import { DateField, PickerButton, dateText, formatDate, isDateText, today } from '../components/Fields';
 import {
   Badge,
@@ -317,6 +318,7 @@ export function LeaseDetail({ id, onBack, onOpen, onOpenTenant, backLabel }) {
           </Card>
         ) : null}
 
+        <LeaseMunicipalityCard lease={lease} editable={canEdit('financials')} onChanged={load} />
         <ScheduleCard schedule={lease.schedule} total={lease.total} deposit={lease.depositCharge} />
       </View>
 

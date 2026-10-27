@@ -9,6 +9,8 @@ import { incomeReportHtml, propertiesReportHtml } from '../services/reportsHtml'
 import { Money } from '../components/Rial';
 import { DateField, formatDate, isDateText, today } from '../components/Fields';
 import { Button, Card, ChipSelect, EmptyState, ErrorBox, Loading, Row, Segmented, Txt } from '../components/ui';
+import ExportButton from '../components/ExportButton';
+import { day, omr } from '../services/exportCsv';
 
 // Reports (التقارير): income statement and property comparison — computed by the server from the ledger.
 
@@ -140,6 +142,27 @@ function IncomeReport() {
           </Card>
 
           <Row style={{ flexWrap: 'wrap' }}>
+            <ExportButton
+              small={false}
+              filename="income-statement"
+              build={() => [
+                [t('reports.incomeTitle'), `${day(r.from)} → ${day(r.to)}`],
+                [t('reports.rentIncome'), omr(r.rentIncome)],
+                [t('reports.otherIncome'), omr(r.otherIncome)],
+                [t('reports.operatingIncome'), omr(r.operatingIncome)],
+                [t('reports.expenses'), omr(r.expenses)],
+                [t('reports.noi'), omr(r.noi)],
+                [t('reports.managementFees'), omr(r.managementFees)],
+                [t('reports.ownerShare'), omr(r.ownerShare)],
+                [t('reports.companyProfit'), omr(r.companyProfit)],
+                [],
+                [t('reports.month'), t('reports.operatingIncome'), t('reports.expenses'), t('reports.noi')],
+                ...r.monthly.map((m) => [m.month, omr(m.income), omr(m.expenses), omr(m.noi)]),
+                [],
+                [t('reports.expensesByCategory')],
+                ...r.expensesByCategory.map((c) => [c.category ? (lang === 'ar' ? c.category.nameAr : c.category.nameEn) : '', omr(c.amount)]),
+              ]}
+            />
             <Button variant="secondary" icon="printer-outline" title={t('receipt.print')} onPress={() => run(() => printHtml(html()))} />
             <Button icon="share-variant-outline" title={t('receipt.share')} onPress={() => run(() => shareHtml(html(), t('reports.incomeTitle')))} />
           </Row>
@@ -277,6 +300,14 @@ function PropertiesReport() {
             ))}
             <Txt muted size="small">{t('reports.formulas')}</Txt>
             <Row style={{ flexWrap: 'wrap' }}>
+              <ExportButton
+                small={false}
+                filename={`property-comparison-${r.year}`}
+                build={() => [
+                  [t('reports.property'), t('reports.units'), t('reports.rentIncome'), t('reports.otherIncome'), t('reports.expenses'), t('reports.noi'), t('reports.noiMargin'), t('reports.capRate'), t('reports.roi'), t('reports.occupancy'), t('reports.collectionRate'), t('reports.avgVacantDays'), t('reports.renewalRate'), t('reports.maintenancePerUnit'), t('reports.openWorkOrders')],
+                  ...r.properties.map((p) => [p.name, p.units, omr(p.rentIncome), omr(p.otherIncome), omr(p.expenses), omr(p.noi), p.noiMargin, p.capRate, p.roi, p.occupancy, p.collectionRate, p.avgVacantDays, p.renewalRate, omr(p.maintenancePerUnit), p.openWorkOrders]),
+                ]}
+              />
               <Button variant="secondary" icon="printer-outline" title={t('receipt.print')} onPress={() => run(() => printHtml(html()))} />
               <Button icon="share-variant-outline" title={t('receipt.share')} onPress={() => run(() => shareHtml(html(), t('reports.propertiesTitle')))} />
             </Row>

@@ -10,6 +10,8 @@ import { matches } from '../services/text';
 import { Money, MoneyField } from '../components/Rial';
 import { DateField, formatDate, isDateText, today } from '../components/Fields';
 import { Badge, Button, Card, ChipSelect, EmptyState, ErrorBox, Field, FieldRow, IconButton, Loading, Row, Sheet, Txt, errorText } from '../components/ui';
+import ExportButton from '../components/ExportButton';
+import { day, omr } from '../services/exportCsv';
 
 // Expenses (المصروفات): recorded once, posted to the ledger; voided with a reversing entry, never deleted.
 
@@ -127,7 +129,21 @@ export function ExpensesTab({ editable, version, onChanged }) {
         onChange={setBearer}
         options={[{ value: 'all', label: t('payments.allMethods') }, ...BEARERS.map((b) => ({ value: b, label: t(`expenses.bearers.${b}`) }))]}
       />
-      <Field value={text} onChangeText={setText} placeholder={t('expenses.searchPlaceholder')} />
+      <Row style={{ flexWrap: 'wrap' }}>
+        <View style={{ flex: 1, minWidth: 200 }}>
+          <Field value={text} onChangeText={setText} placeholder={t('expenses.searchPlaceholder')} />
+        </View>
+        <ExportButton
+          filename="expenses"
+          build={async () => {
+            const all = await financeApi.expenses({ all: '1', ...(bearer !== 'all' ? { bearer } : {}) });
+            return [
+              [t('finance.entryNo'), t('expenses.date'), t('expenses.description'), t('expenses.category'), t('expenses.property'), t('expenses.unit'), t('expenses.bearer'), t('expenses.paidFrom'), t('expenses.vendor'), t('expenses.invoiceNo'), t('finance.amount'), t('finance.status')],
+              ...all.expenses.map((x) => [x.number, day(x.date), x.description, categoryName(x.category, lang), x.property?.name ?? t('expenses.noProperty'), x.unit?.number, t(`expenses.bearers.${x.bearer}`), t(`finance.accounts.${x.paidFrom}`), x.vendor?.name, x.invoiceNo, omr(x.amount), x.status === 'VOIDED' ? t('payments.voided') : '']),
+            ];
+          }}
+        />
+      </Row>
       <ErrorBox error={error} onRetry={() => load(1)} />
       {data ? (
         <Row style={{ justifyContent: 'space-between' }}>

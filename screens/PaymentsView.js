@@ -11,6 +11,8 @@ import { printReceipt, shareReceipt } from '../services/receipt';
 import { Money, MoneyField } from '../components/Rial';
 import { DateField, PickerButton, formatDate, isDateText, today } from '../components/Fields';
 import { Badge, Button, Card, ChipSelect, EmptyState, ErrorBox, Field, FieldRow, Loading, Row, Sheet, Txt, errorText } from '../components/ui';
+import ExportButton from '../components/ExportButton';
+import { day, omr } from '../services/exportCsv';
 
 // Collections & receipts (التحصيل وإيصالات القبض).
 
@@ -61,7 +63,21 @@ export function PaymentsList({ onOpen, version }) {
         onChange={setMethod}
         options={[{ value: 'all', label: t('payments.allMethods') }, ...METHODS.map((m) => ({ value: m, label: t(`payments.methods.${m}`) }))]}
       />
-      <Field value={text} onChangeText={setText} placeholder={t('payments.searchPlaceholder')} />
+      <Row style={{ flexWrap: 'wrap' }}>
+        <View style={{ flex: 1, minWidth: 200 }}>
+          <Field value={text} onChangeText={setText} placeholder={t('payments.searchPlaceholder')} />
+        </View>
+        <ExportButton
+          filename="collections"
+          build={async () => {
+            const all = await financeApi.payments({ all: '1', ...(method !== 'all' ? { method } : {}) });
+            return [
+              [t('receipt.title'), t('payments.date'), t('payments.tenant'), t('payments.lease'), t('expenses.property'), t('expenses.unit'), t('payments.method'), t('payments.chequeNo'), t('payments.reference'), t('finance.amount'), t('finance.status')],
+              ...all.payments.map((p) => [p.number, day(p.date), p.tenant.name, p.lease.number, p.lease.property.name, p.lease.unit.number, t(`payments.methods.${p.method}`), p.chequeNo, p.reference, omr(p.amount), p.status === 'VOIDED' ? t('payments.voided') : '']),
+            ];
+          }}
+        />
+      </Row>
       <ErrorBox error={error} onRetry={() => load(1)} />
       {data === null ? (
         <Loading />

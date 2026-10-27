@@ -10,10 +10,14 @@ import { ChequesTab } from './ChequesView';
 import { ExpensesTab } from './ExpensesView';
 import { OwnersTab } from './OwnerStatementsView';
 import { ReportsTab } from './ReportsView';
+import { MunicipalityTab } from './MunicipalityView';
 import { matches } from '../services/text';
 import { Money, SectionIcon } from '../components/Rial';
 import { formatDate } from '../components/Fields';
 import { Badge, Button, Card, ChipSelect, EmptyState, ErrorBox, Field, Loading, Row, Screen, Segmented, Sheet, Txt } from '../components/ui';
+import ExportButton from '../components/ExportButton';
+import { day, omr } from '../services/exportCsv';
+import { ClosingCard } from './ClosingView';
 
 // Financials (المالية) — batch 1: the ledger and what tenants owe.
 // Every number here is computed by the server from journal entries; nothing is typed in.
@@ -66,7 +70,7 @@ export default function FinancialsScreen({ params }) {
         <ChipSelect
           value={tab}
           onChange={setTab}
-          options={['receivables', 'payments', 'cheques', 'expenses', 'owners', 'reports', 'balances', 'journal'].map((v) => ({ value: v, label: t(`finance.tabs.${v}`) }))}
+          options={['receivables', 'payments', 'cheques', 'expenses', 'owners', 'municipality', 'reports', 'balances', 'journal'].map((v) => ({ value: v, label: t(`finance.tabs.${v}`) }))}
         />
         {tab === 'receivables' ? <Receivables key={version} onOpenTenant={setStatementOf} onCollect={editable ? collect : null} /> : null}
         {tab === 'payments' ? <PaymentsList version={version} onOpen={setReceiptId} /> : null}
@@ -81,6 +85,7 @@ export default function FinancialsScreen({ params }) {
         ) : null}
         {tab === 'expenses' ? <ExpensesTab editable={editable} version={version} onChanged={() => setVersion((v) => v + 1)} /> : null}
         {tab === 'owners' ? <OwnersTab editable={editable} version={version} onChanged={() => setVersion((v) => v + 1)} focusOwnerId={params?.ownerId} /> : null}
+        {tab === 'municipality' ? <MunicipalityTab editable={editable} version={version} onChanged={() => setVersion((v) => v + 1)} /> : null}
         {tab === 'reports' ? <ReportsTab key={version} /> : null}
         {tab === 'balances' ? <Balances key={version} onOpenTenant={setStatementOf} /> : null}
         {tab === 'journal' ? <Journal key={version} /> : null}
@@ -268,7 +273,18 @@ function Receivables({ onOpenTenant, onCollect }) {
         onChange={setFilter}
         options={['overdue', 'open', 'upcoming'].map((f) => ({ value: f, label: t(`finance.filters.${f}`) }))}
       />
-      <Field value={text} onChangeText={setText} placeholder={t('finance.searchPlaceholder')} />
+      <Row style={{ flexWrap: 'wrap' }}>
+        <View style={{ flex: 1, minWidth: 200 }}>
+          <Field value={text} onChangeText={setText} placeholder={t('finance.searchPlaceholder')} />
+        </View>
+        <ExportButton
+          filename={`receivables-${filter}`}
+          build={() => [
+            [t('payments.tenant'), t('expenses.property'), t('expenses.unit'), t('payments.lease'), t('finance.item'), t('finance.dueDate'), t('finance.amount'), t('finance.outstanding'), t('finance.daysLate')],
+            ...visible.map((c) => [c.tenant.name, c.property.name, c.unit.number, c.lease.number, chargeLabel(t, lang, c), day(c.dueDate), omr(c.amount), omr(c.outstanding), c.daysOverdue]),
+          ]}
+        />
+      </Row>
       <ErrorBox error={error} onRetry={load} />
       {rows === null ? (
         <Loading />
@@ -348,7 +364,18 @@ function Balances({ onOpenTenant }) {
 
   return (
     <View style={{ gap: SPACING.md }}>
-      <Field value={text} onChangeText={setText} placeholder={t('tenants.filterPlaceholder')} />
+      <Row style={{ flexWrap: 'wrap' }}>
+        <View style={{ flex: 1, minWidth: 200 }}>
+          <Field value={text} onChangeText={setText} placeholder={t('tenants.filterPlaceholder')} />
+        </View>
+        <ExportButton
+          filename="tenant-balances"
+          build={() => [
+            [t('payments.tenant'), t('tenants.phone'), t('finance.receivable'), t('finance.overdue'), t('finance.depositHeld')],
+            ...visible.map((r) => [r.name, r.phone, omr(r.receivable), omr(r.overdue), omr(r.deposit)]),
+          ]}
+        />
+      </Row>
       <ErrorBox error={error} onRetry={load} />
       {rows === null ? (
         <Loading />
@@ -516,7 +543,22 @@ function Journal() {
         </Card>
       ) : null}
 
-      <Txt weight="weightBold">{t('finance.journal')}</Txt>
+      <ClosingCard />
+      <Row style={{ justifyContent: 'space-between', flexWrap: 'wrap' }}>
+        <Txt weight="weightBold">{t('finance.journal')}</Txt>
+        <ExportButton
+          filename="journal"
+          build={async () => {
+            const all = await financeApi.journal(1, true);
+            return [
+              [t('finance.entryNo'), t('finance.date'), t('finance.type'), t('finance.memo'), t('finance.account'), t('finance.debit'), t('finance.credit')],
+              ...all.entries.flatMap((e) =>
+                e.lines.map((l) => [e.number, day(e.date), t(`finance.entryTypes.${e.type}`), e.memo, t(`finance.accounts.${l.account}`), l.amount > 0 ? omr(l.amount) : '', l.amount < 0 ? omr(-l.amount) : '']),
+              ),
+            ];
+          }}
+        />
+      </Row>
       <Txt muted size="small">{t('finance.journalHint')}</Txt>
       {entries === null ? (
         <Loading />
