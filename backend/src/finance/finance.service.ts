@@ -4,7 +4,7 @@ import { PrismaService } from '../prisma/prisma.service.js';
 import type { UserAuth } from '../common/auth-context.js';
 import { addDays, daysBetween, monthStart, today } from '../common/dates.js';
 import { ChargesService } from './charges.service.js';
-import { ACCOUNTS, agingBucket, naturalBalance, openItems, withRunningBalance, type Account } from './journal.js';
+import { ACCOUNTS, agingBucket, collectionRate, naturalBalance, openItems, withRunningBalance, type Account } from './journal.js';
 
 const UPCOMING_DAYS = 30;
 const BUCKETS = ['0_30', '31_60', '61_90', '90_plus'] as const;
@@ -24,17 +24,23 @@ export class FinanceService {
   async summary(auth: UserAuth) {
     await this.charges.sync(auth.companyId);
     const now = today();
-    const [balances, monthIncome, yearIncome, open, upcoming] = await Promise.all([
+    const yearStart = new Date(Date.UTC(now.getUTCFullYear(), 0, 1));
+    const [balances, monthIncome, yearIncome, open, upcoming, collectedMonth, collectedYear, billedMonth] = await Promise.all([
       this.accountSums(auth),
       this.incomeSince(auth, monthStart(now)),
-      this.incomeSince(auth, new Date(Date.UTC(now.getUTCFullYear(), 0, 1))),
+      this.incomeSince(auth, yearStart),
       this.openCharges(auth),
       this.prisma.rentCharge.aggregate({
         where: { ...this.chargeScope(auth), status: 'SCHEDULED', dueDate: { gt: now, lte: addDays(now, UPCOMING_DAYS) } },
         _sum: { amount: true },
         _count: true,
       }),
+      this.receivableMovement(auth, monthStart(now), ['PAYMENT']),
+      this.receivableMovement(auth, yearStart, ['PAYMENT']),
+      this.receivableMovement(auth, monthStart(now), ['RENT_CHARGE', 'DEPOSIT_CHARGE']),
     ]);
+    // payments credit the receivable (negative); charges debit it (positive)
+    const collected = { month: -collectedMonth, year: -collectedYear };
     const overdue = open.filter((c) => c.daysOverdue > 0);
     const buckets = Object.fromEntries(BUCKETS.map((b) => [b, 0])) as Record<(typeof BUCKETS)[number], number>;
     for (const c of overdue) buckets[c.bucket!] += c.outstanding;
@@ -43,6 +49,12 @@ export class FinanceService {
       receivable: naturalBalance('TENANT_RECEIVABLE', balances.TENANT_RECEIVABLE),
       depositsHeld: naturalBalance('SECURITY_DEPOSITS', balances.SECURITY_DEPOSITS),
       rentIncome: { month: monthIncome, year: yearIncome },
+      collected,
+      billedMonth,
+      collectionRate: collectionRate(collected.month, billedMonth),
+      cash: naturalBalance('CASH', balances.CASH),
+      bank: naturalBalance('BANK', balances.BANK),
+      chequesOnHand: naturalBalance('CHEQUES_ON_HAND', balances.CHEQUES_ON_HAND),
       overdue: { total: overdue.reduce((s, c) => s + c.outstanding, 0), count: overdue.length, buckets },
       dueToday: open.filter((c) => c.daysOverdue === 0).reduce((s, c) => s + c.outstanding, 0),
       upcoming: { total: upcoming._sum.amount ?? 0, count: upcoming._count, days: UPCOMING_DAYS },
@@ -170,18 +182,19 @@ export class FinanceService {
         where: { ...this.chargeScope(auth), status: 'POSTED', ...(tenantId ? { tenantId } : {}) },
         include: CHARGE_INCLUDE,
       }),
+      // per lease: every charge and every payment carries its lease, so each lease settles on its own
       this.prisma.journalLine.groupBy({
-        by: ['tenantId'],
-        where: { ...this.lineScope(auth), account: 'TENANT_RECEIVABLE', tenantId: tenantId ?? { not: null } },
+        by: ['leaseId'],
+        where: { ...this.lineScope(auth), account: 'TENANT_RECEIVABLE', leaseId: { not: null }, ...(tenantId ? { tenantId } : {}) },
         _sum: { amount: true },
       }),
     ]);
-    const balanceOf = new Map(receivables.map((g) => [g.tenantId!, g._sum.amount ?? 0]));
-    const byTenant = new Map<string, typeof charges>();
-    for (const c of charges) byTenant.set(c.tenantId, [...(byTenant.get(c.tenantId) ?? []), c]);
+    const balanceOf = new Map(receivables.map((g) => [g.leaseId!, g._sum.amount ?? 0]));
+    const byLease = new Map<string, typeof charges>();
+    for (const c of charges) byLease.set(c.leaseId, [...(byLease.get(c.leaseId) ?? []), c]);
     const result: (ReturnType<typeof shapeCharge> & { outstanding: number; daysOverdue: number; bucket: ReturnType<typeof agingBucket> })[] = [];
-    for (const [tid, list] of byTenant) {
-      for (const c of openItems(list, balanceOf.get(tid) ?? 0)) {
+    for (const [leaseId, list] of byLease) {
+      for (const c of openItems(list, balanceOf.get(leaseId) ?? 0)) {
         if (c.outstanding <= 0) continue;
         const daysOverdue = Math.max(0, daysBetween(c.dueDate, now));
         result.push({ ...shapeCharge(c), outstanding: c.outstanding, daysOverdue, bucket: agingBucket(daysOverdue) });
@@ -190,11 +203,54 @@ export class FinanceService {
     return result;
   }
 
+  /** Receivable balance of each (non-draft) lease of a tenant — used by the payment form. */
+  async tenantLeases(auth: UserAuth, tenantId: string) {
+    await this.charges.sync(auth.companyId);
+    const leases = await this.prisma.lease.findMany({
+      where: { companyId: auth.companyId, tenantId, deletedAt: null, status: { not: 'DRAFT' }, ...(auth.propertyIds ? { propertyId: { in: auth.propertyIds } } : {}) },
+      include: { unit: { select: { number: true } }, property: { select: { name: true } } },
+      orderBy: { startDate: 'desc' },
+    });
+    const sums = await this.prisma.journalLine.groupBy({
+      by: ['leaseId'],
+      where: { companyId: auth.companyId, account: 'TENANT_RECEIVABLE', leaseId: { in: leases.map((l) => l.id) } },
+      _sum: { amount: true },
+    });
+    const balanceOf = new Map(sums.map((g) => [g.leaseId!, g._sum.amount ?? 0]));
+    const overdue = await this.openCharges(auth, tenantId);
+    return leases.map((l) => ({
+      id: l.id,
+      number: l.number,
+      status: l.status,
+      unit: l.unit,
+      property: l.property,
+      monthlyRent: l.monthlyRent,
+      balance: balanceOf.get(l.id) ?? 0,
+      overdue: overdue.filter((c) => c.lease.id === l.id && c.daysOverdue > 0).reduce((sum, c) => sum + c.outstanding, 0),
+    }));
+  }
+
   private async accountSums(auth: UserAuth): Promise<Record<Account, number>> {
     const groups = await this.prisma.journalLine.groupBy({ by: ['account'], where: this.lineScope(auth), _sum: { amount: true } });
     const out = Object.fromEntries(ACCOUNTS.map((a) => [a, 0])) as Record<Account, number>;
     for (const g of groups) out[g.account] = g._sum.amount ?? 0;
     return out;
+  }
+
+  /** Signed movement of tenant receivables since `from` from entries of the given types, net of their reversals. */
+  private async receivableMovement(auth: UserAuth, from: Date, types: ('PAYMENT' | 'RENT_CHARGE' | 'DEPOSIT_CHARGE')[]) {
+    const agg = await this.prisma.journalLine.aggregate({
+      where: {
+        ...this.lineScope(auth),
+        account: 'TENANT_RECEIVABLE',
+        entry: {
+          date: { gte: from, lte: today() },
+          OR: [{ type: { in: types } }, { type: 'REVERSAL', reverses: { is: { type: { in: types } } } }],
+        },
+      },
+      _sum: { amount: true },
+    });
+    return agg._sum.amount ?? 0;
   }
 
   private async incomeSince(auth: UserAuth, from: Date) {
@@ -238,6 +294,7 @@ function shapeCharge(c: ChargeWithRefs) {
     unit: c.unit,
     property: c.property,
     lease: c.lease,
+    leaseId: c.leaseId,
   };
 }
 

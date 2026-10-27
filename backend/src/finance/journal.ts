@@ -126,3 +126,26 @@ export function openItems<T extends { id: string; amount: number; dueDate: Date 
   });
   return out.reverse(); // oldest first
 }
+
+export const PAYMENT_METHODS = ['CASH', 'BANK_TRANSFER', 'CHEQUE', 'CARD', 'ONLINE'] as const;
+export type PaymentMethod = (typeof PAYMENT_METHODS)[number];
+
+/** Where collected money lands: cash box, bank, or cheques waiting to be deposited. */
+export const PAYMENT_ACCOUNT: Record<PaymentMethod, Account> = {
+  CASH: 'CASH',
+  BANK_TRANSFER: 'BANK',
+  CARD: 'BANK',
+  ONLINE: 'BANK',
+  CHEQUE: 'CHEQUES_ON_HAND',
+};
+
+/** A collection: Dr cash/bank/cheques / Cr tenant receivable. */
+export function paymentLines(method: PaymentMethod, amount: number, dims: Dimensions): Line[] {
+  return pair(PAYMENT_ACCOUNT[method], 'TENANT_RECEIVABLE', amount, dims);
+}
+
+/** Collection rate as a percentage with one decimal (null when nothing was billed). */
+export function collectionRate(collected: number, billed: number): number | null {
+  if (billed <= 0) return null;
+  return Math.round((collected * 1000) / billed) / 10;
+}
