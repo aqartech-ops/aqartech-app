@@ -206,6 +206,8 @@ export const financeApi = {
   ownerAccount: (ownerId) => api.get(`/finance/owners/${ownerId}/account`),
   createPayout: (data) => api.post('/finance/owner-payouts', data),
   voidPayout: (id, reason) => api.post(`/finance/owner-payouts/${id}/void`, { reason }),
+  incomeReport: (query) => api.get('/finance/reports/income', query),
+  propertiesReport: (year) => api.get('/finance/reports/properties', { year }),
 };
 
 export const maintenanceApi = {
