@@ -212,6 +212,15 @@ function OwnerDetail({ id, onBack, onNavigate }) {
       }
     >
       <View style={{ gap: SPACING.lg }}>
+        {levelOf('financials') !== 'HIDDEN' ? (
+          <Button
+            variant="secondary"
+            icon="file-document-outline"
+            title={t('ownerStatements.account')}
+            onPress={() => onNavigate?.('financials', { ownerId: id })}
+            style={{ alignSelf: start }}
+          />
+        ) : null}
         <ErrorBox error={error} onRetry={load} />
 
         {owner.phone ? (
