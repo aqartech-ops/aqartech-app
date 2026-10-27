@@ -122,6 +122,10 @@ model Company {
   partners     PropertyPartner[]
   tenants      Tenant[]
   leases       Lease[]
+  journal      JournalEntry[]
+  journalLines JournalLine[]
+  charges      RentCharge[]
+  counters     Counter[]
 }
 
 // ==========================================
@@ -257,6 +261,7 @@ model Property {
   agreements ManagementAgreement[]
   partners   PropertyPartner[]
   leases     Lease[]
+  charges    RentCharge[]
 
   @@index([companyId])
 }
@@ -302,6 +307,7 @@ model Unit {
   deletedAt        DateTime?
 
   leases Lease[]
+  charges RentCharge[]
 
   @@index([companyId])
   @@index([propertyId])
@@ -425,6 +431,7 @@ model Tenant {
   deletedAt        DateTime?
 
   leases Lease[]
+  charges RentCharge[]
 
   @@index([companyId])
 }
@@ -487,8 +494,134 @@ model Lease {
   updatedAt         DateTime         @updatedAt
   deletedAt         DateTime?
 
+  charges RentCharge[]
+
   @@unique([companyId, number])
   @@index([companyId, status])
   @@index([unitId])
   @@index([tenantId])
+}
+
+// ==========================================
+// 9. FINANCE (المالية) — phase 4
+// ==========================================
+// Every money movement is ONE journal entry made of lines whose amounts sum to zero
+// (double entry: + = debit, − = credit, integer baisa). Balances and reports are computed
+// from lines only. Entries are never edited or deleted: a correction is a REVERSAL entry.
+
+enum LedgerAccount {
+  CASH // الصندوق
+  BANK // البنك
+  CHEQUES_ON_HAND // شيكات مستلمة لم تُحصّل
+  TENANT_RECEIVABLE // ذمم المستأجرين
+  SECURITY_DEPOSITS // تأمينات المستأجرين (التزام — ليست إيراداً)
+  RENT_INCOME // إيراد الإيجار
+  OTHER_INCOME // إيرادات أخرى
+  MGMT_FEE_INCOME // عمولة الإدارة
+  OWNER_PAYABLE // مستحقات الملاك
+  EXPENSES // المصروفات
+}
+
+enum EntryType {
+  RENT_CHARGE // استحقاق إيجار
+  DEPOSIT_CHARGE // استحقاق تأمين
+  PAYMENT // تحصيل
+  DEPOSIT_REFUND // رد تأمين
+  EXPENSE // مصروف
+  OWNER_PAYOUT // تحويل للمالك
+  MANUAL // قيد يدوي
+  REVERSAL // قيد عكسي
+}
+
+model JournalEntry {
+  id          String        @id @default(uuid())
+  companyId   String
+  company     Company       @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  number      String // J-2026-000001
+  date        DateTime // accounting date
+  type        EntryType
+  memo        String?
+  leaseId     String?
+  chargeId    String?
+  reversesId  String?       @unique // set on a REVERSAL entry
+  reverses    JournalEntry? @relation("Reversal", fields: [reversesId], references: [id])
+  reversedBy  JournalEntry? @relation("Reversal")
+  createdById String?
+  createdAt   DateTime      @default(now())
+
+  lines JournalLine[]
+
+  @@unique([companyId, number])
+  @@index([companyId, date])
+  @@index([leaseId])
+}
+
+model JournalLine {
+  id         String        @id @default(uuid())
+  entryId    String
+  entry      JournalEntry  @relation(fields: [entryId], references: [id], onDelete: Cascade)
+  companyId  String
+  company    Company       @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  account    LedgerAccount
+  amount     Int // baisa: + debit, − credit
+  propertyId String?
+  unitId     String?
+  leaseId    String?
+  tenantId   String?
+  ownerId    String?
+
+  @@index([companyId, account])
+  @@index([tenantId])
+  @@index([leaseId])
+  @@index([propertyId])
+}
+
+enum ChargeKind {
+  RENT
+  DEPOSIT
+}
+
+enum ChargeStatus {
+  SCHEDULED // not due yet — no journal entry
+  POSTED // due: entry posted (receivable)
+  CANCELLED // lease ended early before this period
+}
+
+/// Rent schedule (جدول الاستحقاقات) saved when a lease is activated. Posted to the ledger on its due date.
+model RentCharge {
+  id          String       @id @default(uuid())
+  companyId   String
+  company     Company      @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  leaseId     String
+  lease       Lease        @relation(fields: [leaseId], references: [id], onDelete: Cascade)
+  propertyId  String
+  property    Property     @relation(fields: [propertyId], references: [id])
+  unitId      String
+  unit        Unit         @relation(fields: [unitId], references: [id])
+  tenantId    String
+  tenant      Tenant       @relation(fields: [tenantId], references: [id])
+  kind        ChargeKind   @default(RENT)
+  index       Int // installment number (deposit = 0)
+  periodStart DateTime?
+  periodEnd   DateTime?
+  dueDate     DateTime
+  amount      Int // baisa
+  status      ChargeStatus @default(SCHEDULED)
+  entryId     String? // the posting entry
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@unique([leaseId, kind, index])
+  @@index([companyId, status, dueDate])
+  @@index([tenantId])
+}
+
+/// Sequential numbers per company (journal entries, later receipts) — safe under concurrent requests.
+model Counter {
+  companyId String
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  key       String // e.g. "journal:2026"
+  value     Int     @default(0)
+
+  @@id([companyId, key])
 }

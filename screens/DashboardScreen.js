@@ -1,13 +1,13 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { StyleSheet, View, useWindowDimensions } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { COLORS, RADIUS, SPACING } from '../theme';
+import { COLORS, FONT, RADIUS, SPACING } from '../theme';
 import { BREAKPOINTS } from '../services/config';
 import { useI18n } from '../i18n';
 import { useSession } from '../services/session';
 import { adminApi, dashboardApi } from '../services/api';
 import { Badge, Button, Card, ErrorBox, Loading, Row, STATUS_TONE, Screen, Txt } from '../components/ui';
-import { SectionIcon } from '../components/Rial';
+import { Money, SectionIcon } from '../components/Rial';
 
 export default function DashboardScreen({ onNavigate }) {
   const { isAdmin } = useSession();
@@ -44,7 +44,7 @@ function Kpi({ icon, label, value, hint, tone = COLORS.primary }) {
         </View>
         <Txt muted style={{ flex: 1 }}>{label}</Txt>
       </Row>
-      <Txt size="large" weight="weightBold">{value}</Txt>
+      {React.isValidElement(value) ? value : <Txt size="large" weight="weightBold">{value}</Txt>}
       {hint ? <Txt muted size="small">{hint}</Txt> : null}
     </Card>
   );
@@ -143,9 +143,15 @@ function CompanyDashboard({ onNavigate }) {
         <>
           <View style={{ height: SPACING.sm }} />
           <Grid columns={columns}>
-            <Kpi icon="rial" label={t('dashboard.collection')} value="—" hint={t('dashboard.kpiPhase4')} />
-            <Kpi icon="chart-line" label={t('dashboard.noi')} value="—" hint={t('dashboard.kpiPhase4')} />
-            <Kpi icon="alert-octagon-outline" label={t('dashboard.arrears')} value="—" hint={t('dashboard.kpiPhase4')} />
+            <Kpi icon="rial" label={t('finance.rentIncomeMonth')} value={<Money baisa={w.financials.rentIncomeMonth} size={FONT.title} weight="weightBold" />} />
+            <Kpi icon="cash-clock" label={t('finance.receivable')} value={<Money baisa={w.financials.receivable} size={FONT.title} weight="weightBold" />} />
+            <Kpi
+              icon="alert-octagon-outline"
+              label={t('dashboard.arrears')}
+              tone={COLORS.danger}
+              value={<Money baisa={w.financials.overdue} size={FONT.title} weight="weightBold" color={w.financials.overdue ? COLORS.danger : COLORS.textDark} />}
+            />
+            <Kpi icon="chart-line" label={t('dashboard.noi')} value="—" hint={t('dashboard.kpiNoiLater')} />
           </Grid>
         </>
       ) : null}

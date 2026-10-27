@@ -166,6 +166,15 @@ export const leasesApi = {
   remove: (id) => api.delete(`/leases/${id}`),
 };
 
+export const financeApi = {
+  summary: () => api.get('/finance/summary'),
+  receivables: (query) => api.get('/finance/receivables', query),
+  balances: () => api.get('/finance/balances'),
+  statement: (tenantId) => api.get(`/finance/tenants/${tenantId}/statement`),
+  journal: (page = 1) => api.get('/finance/journal', { page }),
+  trialBalance: () => api.get('/finance/trial-balance'),
+};
+
 export const searchApi = {
   run: (q) => api.get('/search', { q }),
 };

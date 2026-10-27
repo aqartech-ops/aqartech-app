@@ -40,7 +40,7 @@ function idState(idExpiry) {
 }
 
 /** Tenants (المستأجرون) — records only — and their leases (العقود), in two tabs. */
-export default function TenantsScreen({ params }) {
+export default function TenantsScreen({ params, onNavigate }) {
   const { t } = useI18n();
   const [tab, setTab] = useState(params?.leaseId || params?.tab === 'leases' ? 'leases' : 'tenants');
   const [tenantId, setTenantId] = useState(params?.tenantId ?? null);
@@ -61,7 +61,7 @@ export default function TenantsScreen({ params }) {
       />
     );
   }
-  if (tenantId) return <TenantDetail id={tenantId} onBack={() => setTenantId(null)} onOpenLease={setLeaseId} />;
+  if (tenantId) return <TenantDetail id={tenantId} onBack={() => setTenantId(null)} onOpenLease={setLeaseId} onNavigate={onNavigate} />;
   const tabs = <TabSwitch value={tab} onChange={setTab} />;
   if (tab === 'leases') return <LeasesList tabs={tabs} onOpen={setLeaseId} />;
   return <TenantList tabs={tabs} onOpen={setTenantId} openCreate={!!params?.create} />;
@@ -211,9 +211,9 @@ function TenantList({ tabs, onOpen, openCreate }) {
   );
 }
 
-function TenantDetail({ id, onBack, onOpenLease }) {
+function TenantDetail({ id, onBack, onOpenLease, onNavigate }) {
   const { t, lang, isRTL, start } = useI18n();
-  const { canEdit } = useSession();
+  const { canEdit, levelOf } = useSession();
   const editable = canEdit('tenants');
   const [tenant, setTenant] = useState(null);
   const [error, setError] = useState(null);
@@ -295,6 +295,15 @@ function TenantDetail({ id, onBack, onOpenLease }) {
               {t(ids === 'expired' ? 'tenants.idExpired' : 'tenants.idExpiresSoon')} · {formatDate(tenant.idExpiry, lang)}
             </Txt>
           </View>
+        ) : null}
+        {levelOf('financials') !== 'HIDDEN' ? (
+          <Button
+            variant="secondary"
+            icon="file-document-outline"
+            title={t('finance.statement')}
+            onPress={() => onNavigate?.('financials', { tenantId: id })}
+            style={{ alignSelf: start }}
+          />
         ) : null}
         {tenant.phone ? (
           <Row style={{ flexWrap: 'wrap' }}>

@@ -1,5 +1,6 @@
 import { Body, Controller, Delete, Get, Module, Param, Patch, Post, Query } from '@nestjs/common';
 import { LeasesService } from './leases.service.js';
+import { FinanceCoreModule } from '../finance/finance.module.js';
 import { Auth, RequirePermission, type UserAuth } from '../common/auth-context.js';
 
 /** Leases belong to the "tenants" section (المستأجرون والعقود). */
@@ -70,6 +71,7 @@ export class LeasesController {
 }
 
 @Module({
+  imports: [FinanceCoreModule],
   controllers: [LeasesController],
   providers: [LeasesService],
   exports: [LeasesService],
