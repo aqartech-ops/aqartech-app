@@ -144,6 +144,13 @@ function CompanyDashboard({ onNavigate }) {
           <View style={{ height: SPACING.sm }} />
           <Grid columns={columns}>
             <Kpi icon="rial" label={t('finance.rentIncomeMonth')} value={<Money baisa={w.financials.rentIncomeMonth} size={FONT.title} weight="weightBold" />} />
+            <Kpi
+              icon="cash-check"
+              label={t('dashboard.collection')}
+              tone={COLORS.success}
+              value={w.financials.collectionRate === null || w.financials.collectionRate === undefined ? '—' : `${w.financials.collectionRate}%`}
+              hint={t('finance.collectedOfMonth')}
+            />
             <Kpi icon="cash-clock" label={t('finance.receivable')} value={<Money baisa={w.financials.receivable} size={FONT.title} weight="weightBold" />} />
             <Kpi
               icon="alert-octagon-outline"

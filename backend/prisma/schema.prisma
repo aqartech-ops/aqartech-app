@@ -125,6 +125,7 @@ model Company {
   journal      JournalEntry[]
   journalLines JournalLine[]
   charges      RentCharge[]
+  payments     Payment[]
   counters     Counter[]
 }
 
@@ -432,6 +433,7 @@ model Tenant {
 
   leases Lease[]
   charges RentCharge[]
+  payments Payment[]
 
   @@index([companyId])
 }
@@ -495,6 +497,7 @@ model Lease {
   deletedAt         DateTime?
 
   charges RentCharge[]
+  payments Payment[]
 
   @@unique([companyId, number])
   @@index([companyId, status])
@@ -624,4 +627,53 @@ model Counter {
   value     Int     @default(0)
 
   @@id([companyId, key])
+}
+
+enum PaymentMethod {
+  CASH // نقداً
+  BANK_TRANSFER // تحويل بنكي
+  CHEQUE // شيك (حالي — الشيكات المؤجلة في قسم الشيكات)
+  CARD // بطاقة
+  ONLINE // دفع إلكتروني
+}
+
+enum PaymentStatus {
+  POSTED
+  VOIDED // cancelled with a reversing entry — never deleted
+}
+
+/// A collection from a tenant (تحصيل) and its receipt (إيصال قبض). Always tied to one lease so the
+/// money is attributed to the right property and owner.
+model Payment {
+  id          String        @id @default(uuid())
+  companyId   String
+  company     Company       @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  number      String // receipt number R-2026-000001
+  tenantId    String
+  tenant      Tenant        @relation(fields: [tenantId], references: [id])
+  leaseId     String
+  lease       Lease         @relation(fields: [leaseId], references: [id])
+  propertyId  String
+  unitId      String
+  date        DateTime
+  amount      Int // baisa
+  method      PaymentMethod
+  reference   String? // transfer / card reference
+  bankName    String?
+  chequeNo    String?
+  chequeDate  DateTime?
+  notes       String?
+  status      PaymentStatus @default(POSTED)
+  entryId     String?
+  voidedAt    DateTime?
+  voidReason  String?
+  voidEntryId String?
+  createdById String?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  @@unique([companyId, number])
+  @@index([companyId, date])
+  @@index([tenantId])
+  @@index([leaseId])
 }

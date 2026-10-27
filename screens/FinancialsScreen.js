@@ -4,6 +4,8 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { COLORS, FONT, RADIUS, SPACING } from '../theme';
 import { useI18n } from '../i18n';
 import { financeApi } from '../services/api';
+import { useSession } from '../services/session';
+import { PaymentForm, PaymentsList, ReceiptSheet } from './PaymentsView';
 import { matches } from '../services/text';
 import { Money, SectionIcon } from '../components/Rial';
 import { formatDate } from '../components/Fields';
@@ -17,10 +19,20 @@ const BUCKET_COLOR = { '0_30': COLORS.warning, '31_60': '#C2410C', '61_90': COLO
 
 export default function FinancialsScreen({ params }) {
   const { t, lang } = useI18n();
+  const { canEdit } = useSession();
+  const editable = canEdit('financials');
   const [summary, setSummary] = useState(null);
   const [error, setError] = useState(null);
-  const [tab, setTab] = useState('receivables');
+  const [tab, setTab] = useState(params?.paymentId ? 'payments' : 'receivables');
   const [statementOf, setStatementOf] = useState(params?.tenantId ?? null);
+  const [paying, setPaying] = useState(null); // PaymentForm preset
+  const [receiptId, setReceiptId] = useState(params?.paymentId ?? null);
+  const [version, setVersion] = useState(0); // bumped after a payment / void so every list reloads
+
+  const collect = (preset) => {
+    setStatementOf(null);
+    setPaying(preset);
+  };
 
   const load = useCallback(async () => {
     setError(null);
@@ -33,10 +45,14 @@ export default function FinancialsScreen({ params }) {
 
   useEffect(() => {
     load();
-  }, [load]);
+  }, [load, version]);
 
   return (
-    <Screen title={t('sections.financials')} subtitle={summary ? t('finance.asOf', { date: formatDate(summary.asOf, lang) }) : null}>
+    <Screen
+      title={t('sections.financials')}
+      subtitle={summary ? t('finance.asOf', { date: formatDate(summary.asOf, lang) }) : null}
+      actions={editable ? <Button icon="cash-plus" title={t('payments.add')} onPress={() => collect({})} /> : null}
+    >
       <View style={{ gap: SPACING.lg }}>
         <ErrorBox error={error} onRetry={load} />
         {!summary && !error ? <Loading /> : null}
@@ -48,15 +64,32 @@ export default function FinancialsScreen({ params }) {
           onChange={setTab}
           options={[
             { value: 'receivables', label: t('finance.tabs.receivables') },
+            { value: 'payments', label: t('finance.tabs.payments') },
             { value: 'balances', label: t('finance.tabs.balances') },
             { value: 'journal', label: t('finance.tabs.journal') },
           ]}
         />
-        {tab === 'receivables' ? <Receivables onOpenTenant={setStatementOf} /> : null}
-        {tab === 'balances' ? <Balances onOpenTenant={setStatementOf} /> : null}
-        {tab === 'journal' ? <Journal /> : null}
+        {tab === 'receivables' ? <Receivables key={version} onOpenTenant={setStatementOf} onCollect={editable ? collect : null} /> : null}
+        {tab === 'payments' ? <PaymentsList version={version} onOpen={setReceiptId} /> : null}
+        {tab === 'balances' ? <Balances key={version} onOpenTenant={setStatementOf} /> : null}
+        {tab === 'journal' ? <Journal key={version} /> : null}
       </View>
-      <StatementSheet tenantId={statementOf} onClose={() => setStatementOf(null)} />
+      <StatementSheet
+        key={`s${version}`}
+        tenantId={statementOf}
+        onClose={() => setStatementOf(null)}
+        onCollect={editable ? (tenant) => collect({ tenantId: tenant.id, tenantName: tenant.name }) : null}
+      />
+      <PaymentForm
+        preset={paying}
+        onClose={() => setPaying(null)}
+        onSaved={(saved) => {
+          setPaying(null);
+          setReceiptId(saved.id);
+          setVersion((v) => v + 1);
+        }}
+      />
+      <ReceiptSheet paymentId={receiptId} onClose={() => setReceiptId(null)} onChanged={() => setVersion((v) => v + 1)} />
     </Screen>
   );
 }
@@ -90,6 +123,14 @@ function SummaryCards({ summary: s }) {
   const columns = useColumns();
   const items = [
     { id: 'income', icon: 'rial', label: t('finance.rentIncomeMonth'), baisa: s.rentIncome.month, extra: s.rentIncome.year },
+    {
+      id: 'collected',
+      icon: 'cash-check',
+      label: t('finance.collectedMonth'),
+      baisa: s.collected.month,
+      hint: s.collectionRate === null ? t('finance.collectionRateNone') : t('finance.collectionRate', { rate: s.collectionRate }),
+      tone: COLORS.success,
+    },
     { id: 'receivable', icon: 'cash-clock', label: t('finance.receivable'), baisa: s.receivable, hint: t('finance.receivableHint') },
     {
       id: 'overdue',
@@ -102,6 +143,9 @@ function SummaryCards({ summary: s }) {
     },
     { id: 'upcoming', icon: 'calendar-clock', label: t('finance.upcoming', { days: s.upcoming.days }), baisa: s.upcoming.total, hint: t('finance.upcomingCount', { count: s.upcoming.count }) },
     { id: 'deposits', icon: 'safe', label: t('finance.depositsHeld'), baisa: s.depositsHeld, hint: t('finance.depositsHint') },
+    { id: 'cash', icon: 'cash', label: t('finance.accounts.CASH'), baisa: s.cash },
+    { id: 'bank', icon: 'bank-outline', label: t('finance.accounts.BANK'), baisa: s.bank },
+    { id: 'cheques', icon: 'checkbook', label: t('finance.accounts.CHEQUES_ON_HAND'), baisa: s.chequesOnHand, hint: t('finance.chequesHint') },
   ];
   return (
     <View style={{ flexDirection: row, flexWrap: 'wrap', marginHorizontal: -SPACING.xs }}>
@@ -170,7 +214,7 @@ function chargeLabel(t, lang, c) {
   return `${t('leases.installment', { index: c.index })} · ${period}`;
 }
 
-function Receivables({ onOpenTenant }) {
+function Receivables({ onOpenTenant, onCollect }) {
   const { t, lang } = useI18n();
   const [filter, setFilter] = useState('overdue');
   const [text, setText] = useState('');
@@ -230,13 +274,22 @@ function Receivables({ onOpenTenant }) {
                   <Txt muted size="small">{`${c.property.name} · ${c.unit.number} · ${c.lease.number}`}</Txt>
                   <Txt muted size="small">{chargeLabel(t, lang, c)}</Txt>
                 </View>
-                <View style={{ alignItems: 'flex-end', gap: 2 }}>
+                <View style={{ alignItems: 'flex-end', gap: 4 }}>
                   <Money baisa={c.outstanding} weight="weightBold" color={c.daysOverdue > 0 ? COLORS.danger : COLORS.textDark} />
                   {c.outstanding !== c.amount ? (
                     <Row gap={4}>
                       <Txt muted size="small">{t('finance.ofAmount')}</Txt>
                       <Money baisa={c.amount} size={FONT.small} color={COLORS.textMuted} />
                     </Row>
+                  ) : null}
+                  {onCollect && filter !== 'upcoming' ? (
+                    <Button
+                      small
+                      variant="secondary"
+                      icon="cash-plus"
+                      title={t('payments.collect')}
+                      onPress={() => onCollect({ tenantId: c.tenant.id, tenantName: c.tenant.name, leaseId: c.lease.id })}
+                    />
                   ) : null}
                 </View>
               </Row>
@@ -320,7 +373,7 @@ function Balances({ onOpenTenant }) {
 
 // ---------------------------------------------------------------- statement
 
-function StatementSheet({ tenantId, onClose }) {
+function StatementSheet({ tenantId, onClose, onCollect }) {
   const { t, lang } = useI18n();
   const [data, setData] = useState(null);
   const [error, setError] = useState(null);
@@ -333,7 +386,12 @@ function StatementSheet({ tenantId, onClose }) {
   }, [tenantId]);
 
   return (
-    <Sheet visible={!!tenantId} title={data ? t('finance.statementOf', { name: data.tenant.name }) : t('finance.statement')} onClose={onClose}>
+    <Sheet
+      visible={!!tenantId}
+      title={data ? t('finance.statementOf', { name: data.tenant.name }) : t('finance.statement')}
+      onClose={onClose}
+      footer={data && onCollect ? <Button icon="cash-plus" title={t('payments.add')} onPress={() => onCollect(data.tenant)} /> : null}
+    >
       <ErrorBox error={error} />
       {!data && !error ? <Loading /> : null}
       {data ? (

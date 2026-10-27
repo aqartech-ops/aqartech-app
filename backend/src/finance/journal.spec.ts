@@ -4,6 +4,8 @@ import {
   chargeLines,
   naturalBalance,
   openItems,
+  paymentLines,
+  collectionRate,
   pair,
   reverseLines,
   sumByAccount,
@@ -78,6 +80,32 @@ describe('journal rules', () => {
     expect(openItems(charges, 0).every((c) => c.outstanding === 0)).toBe(true);
     expect(openItems(charges, -50000).every((c) => c.outstanding === 0)).toBe(true); // credit balance
     expect(openItems(charges, 2000000).map((c) => c.outstanding)).toEqual([300000, 300000, 300000]);
+  });
+
+  it('a payment settles the receivable into cash, bank or cheques', () => {
+    const charge = chargeLines('RENT', 300000, { tenantId: 't', leaseId: 'l' });
+    const cash = paymentLines('CASH', 300000, { tenantId: 't', leaseId: 'l' });
+    const totals = sumByAccount([...charge, ...cash]);
+    expect(totals.TENANT_RECEIVABLE).toBe(0);
+    expect(totals.CASH).toBe(300000);
+    expect(naturalBalance('RENT_INCOME', totals.RENT_INCOME)).toBe(300000);
+    expect(sumByAccount(paymentLines('CHEQUE', 1000, {})).CHEQUES_ON_HAND).toBe(1000);
+    expect(sumByAccount(paymentLines('CARD', 1000, {})).BANK).toBe(1000);
+  });
+
+  it('partial payment leaves the newest part open', () => {
+    const charges = [
+      { id: 'a', amount: 300000, dueDate: d('2026-01-01') },
+      { id: 'b', amount: 300000, dueDate: d('2026-02-01') },
+    ];
+    // billed 600, paid 350 → January settled, February 250 open
+    expect(openItems(charges, 600000 - 350000).map((c) => c.outstanding)).toEqual([0, 250000]);
+  });
+
+  it('collection rate', () => {
+    expect(collectionRate(0, 0)).toBeNull();
+    expect(collectionRate(250000, 300000)).toBe(83.3);
+    expect(collectionRate(600000, 300000)).toBe(200);
   });
 
   it('running balance', () => {

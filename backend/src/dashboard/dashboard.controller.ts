@@ -31,10 +31,18 @@ export class DashboardService {
     const leaseStats = await this.leases.stats(auth);
     if (can('properties')) widgets.portfolio = await this.properties.portfolioStats(auth);
     if (can('tenants')) widgets.tenants = { count: await this.tenants.count(auth), leases: leaseStats };
-    // Financial KPIs come from the ledger. Collection rate and NOI follow with collections and expenses.
+    // Financial KPIs come from the ledger. NOI follows with expenses.
     if (can('financials')) {
       const s = await this.finance.summary(auth);
-      widgets.financials = { available: true, receivable: s.receivable, overdue: s.overdue.total, rentIncomeMonth: s.rentIncome.month, upcoming: s.upcoming.total };
+      widgets.financials = {
+        available: true,
+        receivable: s.receivable,
+        overdue: s.overdue.total,
+        rentIncomeMonth: s.rentIncome.month,
+        collectedMonth: s.collected.month,
+        collectionRate: s.collectionRate,
+        upcoming: s.upcoming.total,
+      };
     }
     // Plan usage is for whoever manages the account / the team.
     if (auth.isCompanyAdmin || auth.access.users === 'EDIT') widgets.planUsage = await this.plans.usage(auth.companyId);

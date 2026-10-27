@@ -173,6 +173,11 @@ export const financeApi = {
   statement: (tenantId) => api.get(`/finance/tenants/${tenantId}/statement`),
   journal: (page = 1) => api.get('/finance/journal', { page }),
   trialBalance: () => api.get('/finance/trial-balance'),
+  tenantLeases: (tenantId) => api.get(`/finance/tenants/${tenantId}/leases`),
+  payments: (query) => api.get('/finance/payments', query),
+  payment: (id) => api.get(`/finance/payments/${id}`),
+  createPayment: (data) => api.post('/finance/payments', data),
+  voidPayment: (id, reason) => api.post(`/finance/payments/${id}/void`, { reason }),
 };
 
 export const searchApi = {
