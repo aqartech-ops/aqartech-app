@@ -131,6 +131,8 @@ model Company {
   expenseCategories ExpenseCategory[]
   vendors           Vendor[]
   workOrders        WorkOrder[]
+  ownerStatements   OwnerStatement[]
+  ownerPayouts      OwnerPayout[]
   counters     Counter[]
 }
 
@@ -270,6 +272,7 @@ model Property {
   charges    RentCharge[]
   expenses   Expense[]
   workOrders WorkOrder[]
+  ownerStatements OwnerStatement[]
 
   @@index([companyId])
 }
@@ -353,6 +356,8 @@ model Owner {
 
   agreements ManagementAgreement[]
   partners   PropertyPartner[]
+  statements OwnerStatement[]
+  payouts    OwnerPayout[]
 
   @@index([companyId])
 }
@@ -534,6 +539,7 @@ enum LedgerAccount {
   MGMT_FEE_INCOME // عمولة الإدارة
   OWNER_PAYABLE // مستحقات الملاك
   EXPENSES // المصروفات
+  OWNER_SHARE // حصة الملاك من صافي العقارات المُدارة (تُقيد عند إصدار كشف المالك)
 }
 
 enum EntryType {
@@ -547,6 +553,7 @@ enum EntryType {
   REVERSAL // قيد عكسي
   CHEQUE_CLEARED // تحصيل شيك في البنك
   FEE_CHARGE // رسوم على المستأجر
+  OWNER_STATEMENT // إصدار كشف حساب مالك
 }
 
 model JournalEntry {
@@ -883,4 +890,68 @@ model WorkOrder {
   @@unique([companyId, number])
   @@index([companyId, status])
   @@index([propertyId])
+}
+
+// ==========================================
+// 11. OWNER STATEMENTS & PAYOUTS (كشوف الملاك والتحويلات)
+// ==========================================
+
+enum DocStatus {
+  ISSUED
+  VOIDED // cancelled with a reversing entry — never deleted
+}
+
+/// Owner statement of a managed property for a period: rent collected − owner expenses − management fee = net,
+/// split between the partners. Issuing posts: Dr owner share / Cr management fee income / Cr owed to each owner.
+model OwnerStatement {
+  id            String    @id @default(uuid())
+  companyId     String
+  company       Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  number        String // OS-2026-0001
+  propertyId    String
+  property      Property  @relation(fields: [propertyId], references: [id])
+  ownerId       String? // main owner (agreement)
+  owner         Owner?    @relation(fields: [ownerId], references: [id])
+  periodStart   DateTime
+  periodEnd     DateTime
+  rentCollected Int // baisa
+  rentDue       Int
+  ownerExpenses Int
+  feeAmount     Int
+  net           Int // can be negative (the owner owes the company)
+  details       Json // snapshot: fee rule, expenses list, partner split, per-lease collections
+  status        DocStatus @default(ISSUED)
+  entryId       String?
+  voidedAt      DateTime?
+  voidReason    String?
+  createdById   String?
+  createdAt     DateTime  @default(now())
+
+  @@unique([companyId, number])
+  @@index([propertyId, periodStart])
+}
+
+/// Money transferred to an owner (تحويل للمالك): Dr owed to owners / Cr bank or cash.
+model OwnerPayout {
+  id          String    @id @default(uuid())
+  companyId   String
+  company     Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  number      String // OP-2026-0001
+  ownerId     String
+  owner       Owner     @relation(fields: [ownerId], references: [id])
+  propertyId  String? // optional: which property it is for
+  date        DateTime
+  amount      Int // baisa
+  paidFrom    PaidFrom
+  reference   String?
+  notes       String?
+  status      DocStatus @default(ISSUED)
+  entryId     String?
+  voidedAt    DateTime?
+  voidReason  String?
+  createdById String?
+  createdAt   DateTime  @default(now())
+
+  @@unique([companyId, number])
+  @@index([ownerId])
 }

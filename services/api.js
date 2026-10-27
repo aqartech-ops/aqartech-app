@@ -196,6 +196,16 @@ export const financeApi = {
   createCategory: (data) => api.post('/finance/expense-categories', data),
   updateCategory: (id, data) => api.patch(`/finance/expense-categories/${id}`, data),
   vendors: () => api.get('/finance/vendors'),
+  managedProperties: () => api.get('/finance/owner-statements/properties'),
+  previewStatement: (query) => api.get('/finance/owner-statements/preview', query),
+  statements: (query) => api.get('/finance/owner-statements', query),
+  statement: (id) => api.get(`/finance/owner-statements/${id}`),
+  issueStatement: (data) => api.post('/finance/owner-statements', data),
+  voidStatement: (id, reason) => api.post(`/finance/owner-statements/${id}/void`, { reason }),
+  ownerBalances: () => api.get('/finance/owners/balances'),
+  ownerAccount: (ownerId) => api.get(`/finance/owners/${ownerId}/account`),
+  createPayout: (data) => api.post('/finance/owner-payouts', data),
+  voidPayout: (id, reason) => api.post(`/finance/owner-payouts/${id}/void`, { reason }),
 };
 
 export const maintenanceApi = {

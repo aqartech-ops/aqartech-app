@@ -6,6 +6,7 @@ import { FinanceService } from './finance.service.js';
 import { PaymentsService } from './payments.service.js';
 import { ChequesService } from './cheques.service.js';
 import { ExpensesService } from './expenses.service.js';
+import { OwnersFinanceService } from './owners-finance.service.js';
 
 /** Ledger + charges: used by leases (activation / termination) and by the finance reports. */
 @Module({
@@ -22,7 +23,70 @@ export class FinanceController {
     private readonly payments: PaymentsService,
     private readonly cheques: ChequesService,
     private readonly expenses: ExpensesService,
+    private readonly owners: OwnersFinanceService,
   ) {}
+
+  // ---------- owner statements & payouts (كشوف الملاك والتحويلات) ----------
+
+  @RequirePermission('financials', 'VIEW')
+  @Get('owner-statements/properties')
+  managedProperties(@Auth() auth: UserAuth) {
+    return this.owners.managedProperties(auth);
+  }
+
+  @RequirePermission('financials', 'VIEW')
+  @Get('owner-statements/preview')
+  previewStatement(@Auth() auth: UserAuth, @Query('propertyId') propertyId?: string, @Query('from') from?: string, @Query('to') to?: string) {
+    return this.owners.preview(auth, { propertyId, from, to });
+  }
+
+  @RequirePermission('financials', 'VIEW')
+  @Get('owner-statements')
+  listStatements(@Auth() auth: UserAuth, @Query('propertyId') propertyId?: string, @Query('ownerId') ownerId?: string) {
+    return this.owners.list(auth, { propertyId, ownerId });
+  }
+
+  @RequirePermission('financials', 'VIEW')
+  @Get('owner-statements/:id')
+  getStatement(@Auth() auth: UserAuth, @Param('id') id: string) {
+    return this.owners.get(auth, id);
+  }
+
+  @RequirePermission('financials', 'EDIT')
+  @Post('owner-statements')
+  issueStatement(@Auth() auth: UserAuth, @Body() body: unknown) {
+    return this.owners.issue(auth, body);
+  }
+
+  @RequirePermission('financials', 'EDIT')
+  @Post('owner-statements/:id/void')
+  voidStatement(@Auth() auth: UserAuth, @Param('id') id: string, @Body() body: unknown) {
+    return this.owners.voidStatement(auth, id, body);
+  }
+
+  @RequirePermission('financials', 'VIEW')
+  @Get('owners/balances')
+  ownerBalances(@Auth() auth: UserAuth) {
+    return this.owners.balances(auth);
+  }
+
+  @RequirePermission('financials', 'VIEW')
+  @Get('owners/:id/account')
+  ownerAccount(@Auth() auth: UserAuth, @Param('id') id: string) {
+    return this.owners.ownerAccount(auth, id);
+  }
+
+  @RequirePermission('financials', 'EDIT')
+  @Post('owner-payouts')
+  createPayout(@Auth() auth: UserAuth, @Body() body: unknown) {
+    return this.owners.payout(auth, body);
+  }
+
+  @RequirePermission('financials', 'EDIT')
+  @Post('owner-payouts/:id/void')
+  voidPayout(@Auth() auth: UserAuth, @Param('id') id: string, @Body() body: unknown) {
+    return this.owners.voidPayout(auth, id, body);
+  }
 
   // ---------- expenses (المصروفات) ----------
 
@@ -222,7 +286,7 @@ export class FinanceController {
 @Module({
   imports: [FinanceCoreModule],
   controllers: [FinanceController],
-  providers: [FinanceService, PaymentsService, ChequesService],
+  providers: [FinanceService, PaymentsService, ChequesService, OwnersFinanceService],
   exports: [FinanceService, ChequesService],
 })
 export class FinanceModule {}

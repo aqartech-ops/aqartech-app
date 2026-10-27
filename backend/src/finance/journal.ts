@@ -12,6 +12,7 @@ export const ACCOUNTS = [
   'MGMT_FEE_INCOME',
   'OWNER_PAYABLE',
   'EXPENSES',
+  'OWNER_SHARE',
 ] as const;
 export type Account = (typeof ACCOUNTS)[number];
 
@@ -22,6 +23,7 @@ export const DEBIT_NATURE: Record<Account, boolean> = {
   CHEQUES_ON_HAND: true,
   TENANT_RECEIVABLE: true,
   EXPENSES: true,
+  OWNER_SHARE: true,
   SECURITY_DEPOSITS: false,
   RENT_INCOME: false,
   OTHER_INCOME: false,

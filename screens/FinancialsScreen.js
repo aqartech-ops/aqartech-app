@@ -8,6 +8,7 @@ import { useSession } from '../services/session';
 import { PaymentForm, PaymentsList, ReceiptSheet } from './PaymentsView';
 import { ChequesTab } from './ChequesView';
 import { ExpensesTab } from './ExpensesView';
+import { OwnersTab } from './OwnerStatementsView';
 import { matches } from '../services/text';
 import { Money, SectionIcon } from '../components/Rial';
 import { formatDate } from '../components/Fields';
@@ -25,7 +26,7 @@ export default function FinancialsScreen({ params }) {
   const editable = canEdit('financials');
   const [summary, setSummary] = useState(null);
   const [error, setError] = useState(null);
-  const [tab, setTab] = useState(params?.paymentId ? 'payments' : params?.chequeId ? 'cheques' : 'receivables');
+  const [tab, setTab] = useState(params?.paymentId ? 'payments' : params?.chequeId ? 'cheques' : params?.ownerId ? 'owners' : 'receivables');
   const [statementOf, setStatementOf] = useState(params?.tenantId ?? null);
   const [paying, setPaying] = useState(null); // PaymentForm preset
   const [receiptId, setReceiptId] = useState(params?.paymentId ?? null);
@@ -64,7 +65,7 @@ export default function FinancialsScreen({ params }) {
         <ChipSelect
           value={tab}
           onChange={setTab}
-          options={['receivables', 'payments', 'cheques', 'expenses', 'balances', 'journal'].map((v) => ({ value: v, label: t(`finance.tabs.${v}`) }))}
+          options={['receivables', 'payments', 'cheques', 'expenses', 'owners', 'balances', 'journal'].map((v) => ({ value: v, label: t(`finance.tabs.${v}`) }))}
         />
         {tab === 'receivables' ? <Receivables key={version} onOpenTenant={setStatementOf} onCollect={editable ? collect : null} /> : null}
         {tab === 'payments' ? <PaymentsList version={version} onOpen={setReceiptId} /> : null}
@@ -78,6 +79,7 @@ export default function FinancialsScreen({ params }) {
           />
         ) : null}
         {tab === 'expenses' ? <ExpensesTab editable={editable} version={version} onChanged={() => setVersion((v) => v + 1)} /> : null}
+        {tab === 'owners' ? <OwnersTab editable={editable} version={version} onChanged={() => setVersion((v) => v + 1)} focusOwnerId={params?.ownerId} /> : null}
         {tab === 'balances' ? <Balances key={version} onOpenTenant={setStatementOf} /> : null}
         {tab === 'journal' ? <Journal key={version} /> : null}
       </View>
