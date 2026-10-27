@@ -157,7 +157,7 @@ export class AdminFieldsController {
     if (data.required && data.hidden) throw new BadRequestException('fields.requiredHidden');
     const row = await this.prisma.fieldDefinition.upsert({
       where: { entity_key: { entity: e, key } },
-      create: { entity: e, key, isCore: true, ...(data as Prisma.FieldDefinitionCreateInput) },
+      create: { ...(data as Prisma.FieldDefinitionCreateInput), entity: e, key, isCore: true },
       update: data,
     });
     if (row.required && row.hidden) {
