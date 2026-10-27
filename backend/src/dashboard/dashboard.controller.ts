@@ -8,6 +8,7 @@ import { LeasesService } from '../leases/leases.service.js';
 import { FinanceModule } from '../finance/finance.module.js';
 import { FinanceService } from '../finance/finance.service.js';
 import { ChequesService } from '../finance/cheques.service.js';
+import { MaintenanceModule, WorkOrdersService } from '../maintenance/maintenance.module.js';
 import { Auth, type UserAuth } from '../common/auth-context.js';
 
 /**
@@ -23,6 +24,7 @@ export class DashboardService {
     private readonly leases: LeasesService,
     private readonly finance: FinanceService,
     private readonly cheques: ChequesService,
+    private readonly workOrders: WorkOrdersService,
   ) {}
 
   async get(auth: UserAuth) {
@@ -45,12 +47,15 @@ export class DashboardService {
         collectionRate: s.collectionRate,
         upcoming: s.upcoming.total,
         chequesToDeposit: cheques.toDeposit,
+        expensesMonth: s.expenses.month,
+        noiMonth: s.noi.month,
       };
     }
+    if (can('maintenance')) widgets.maintenance = await this.workOrders.stats(auth);
     // Plan usage is for whoever manages the account / the team.
     if (auth.isCompanyAdmin || auth.access.users === 'EDIT') widgets.planUsage = await this.plans.usage(auth.companyId);
 
-    const quickActions = (['properties', 'tenants'] as const).filter((s) => auth.access[s] === 'EDIT');
+    const quickActions = (['properties', 'tenants', 'maintenance'] as const).filter((s) => auth.access[s] === 'EDIT');
     return { widgets, quickActions };
   }
 }
@@ -66,7 +71,7 @@ export class DashboardController {
 }
 
 @Module({
-  imports: [PropertiesModule, TenantsModule, LeasesModule, FinanceModule],
+  imports: [PropertiesModule, TenantsModule, LeasesModule, FinanceModule, MaintenanceModule],
   controllers: [DashboardController],
   providers: [DashboardService],
 })

@@ -5,11 +5,12 @@ import { ChargesService } from './charges.service.js';
 import { FinanceService } from './finance.service.js';
 import { PaymentsService } from './payments.service.js';
 import { ChequesService } from './cheques.service.js';
+import { ExpensesService } from './expenses.service.js';
 
 /** Ledger + charges: used by leases (activation / termination) and by the finance reports. */
 @Module({
-  providers: [LedgerService, ChargesService],
-  exports: [LedgerService, ChargesService],
+  providers: [LedgerService, ChargesService, ExpensesService],
+  exports: [LedgerService, ChargesService, ExpensesService],
 })
 export class FinanceCoreModule {}
 
@@ -20,7 +21,66 @@ export class FinanceController {
     private readonly finance: FinanceService,
     private readonly payments: PaymentsService,
     private readonly cheques: ChequesService,
+    private readonly expenses: ExpensesService,
   ) {}
+
+  // ---------- expenses (المصروفات) ----------
+
+  @RequirePermission('financials', 'VIEW')
+  @Get('expenses')
+  listExpenses(
+    @Auth() auth: UserAuth,
+    @Query('from') from?: string,
+    @Query('to') to?: string,
+    @Query('propertyId') propertyId?: string,
+    @Query('categoryId') categoryId?: string,
+    @Query('bearer') bearer?: string,
+    @Query('page') page?: string,
+  ) {
+    return this.expenses.list(auth, { from, to, propertyId, categoryId, bearer, page });
+  }
+
+  @RequirePermission('financials', 'VIEW')
+  @Get('expenses/:id')
+  getExpense(@Auth() auth: UserAuth, @Param('id') id: string) {
+    return this.expenses.get(auth, id);
+  }
+
+  @RequirePermission('financials', 'EDIT')
+  @Post('expenses')
+  createExpense(@Auth() auth: UserAuth, @Body() body: unknown) {
+    return this.expenses.create(auth, body);
+  }
+
+  @RequirePermission('financials', 'EDIT')
+  @Post('expenses/:id/void')
+  voidExpense(@Auth() auth: UserAuth, @Param('id') id: string, @Body() body: unknown) {
+    return this.expenses.void(auth, id, body);
+  }
+
+  @RequirePermission('financials', 'VIEW')
+  @Get('expense-categories')
+  categories(@Auth() auth: UserAuth, @Query('all') all?: string) {
+    return this.expenses.categories(auth, all === '1' || all === 'true');
+  }
+
+  @RequirePermission('financials', 'EDIT')
+  @Post('expense-categories')
+  createCategory(@Auth() auth: UserAuth, @Body() body: unknown) {
+    return this.expenses.saveCategory(auth, null, body);
+  }
+
+  @RequirePermission('financials', 'EDIT')
+  @Patch('expense-categories/:id')
+  updateCategory(@Auth() auth: UserAuth, @Param('id') id: string, @Body() body: unknown) {
+    return this.expenses.saveCategory(auth, id, body);
+  }
+
+  @RequirePermission('financials', 'VIEW')
+  @Get('vendors')
+  vendors(@Auth() auth: UserAuth) {
+    return this.expenses.vendors(auth);
+  }
 
   // ---------- cheques (الشيكات) ----------
 

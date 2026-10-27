@@ -7,6 +7,7 @@ import { financeApi } from '../services/api';
 import { useSession } from '../services/session';
 import { PaymentForm, PaymentsList, ReceiptSheet } from './PaymentsView';
 import { ChequesTab } from './ChequesView';
+import { ExpensesTab } from './ExpensesView';
 import { matches } from '../services/text';
 import { Money, SectionIcon } from '../components/Rial';
 import { formatDate } from '../components/Fields';
@@ -63,7 +64,7 @@ export default function FinancialsScreen({ params }) {
         <ChipSelect
           value={tab}
           onChange={setTab}
-          options={['receivables', 'payments', 'cheques', 'balances', 'journal'].map((v) => ({ value: v, label: t(`finance.tabs.${v}`) }))}
+          options={['receivables', 'payments', 'cheques', 'expenses', 'balances', 'journal'].map((v) => ({ value: v, label: t(`finance.tabs.${v}`) }))}
         />
         {tab === 'receivables' ? <Receivables key={version} onOpenTenant={setStatementOf} onCollect={editable ? collect : null} /> : null}
         {tab === 'payments' ? <PaymentsList version={version} onOpen={setReceiptId} /> : null}
@@ -76,6 +77,7 @@ export default function FinancialsScreen({ params }) {
             onOpenReceipt={setReceiptId}
           />
         ) : null}
+        {tab === 'expenses' ? <ExpensesTab editable={editable} version={version} onChanged={() => setVersion((v) => v + 1)} /> : null}
         {tab === 'balances' ? <Balances key={version} onOpenTenant={setStatementOf} /> : null}
         {tab === 'journal' ? <Journal key={version} /> : null}
       </View>
@@ -147,6 +149,15 @@ function SummaryCards({ summary: s }) {
       color: s.overdue.total ? COLORS.danger : undefined,
     },
     { id: 'upcoming', icon: 'calendar-clock', label: t('finance.upcoming', { days: s.upcoming.days }), baisa: s.upcoming.total, hint: t('finance.upcomingCount', { count: s.upcoming.count }) },
+    { id: 'expenses', icon: 'cash-minus', label: t('finance.expensesMonth'), baisa: s.expenses.month, tone: COLORS.danger },
+    {
+      id: 'noi',
+      icon: 'chart-line',
+      label: t('finance.noiMonth'),
+      baisa: s.noi.month,
+      hint: t('finance.noiHint'),
+      color: s.noi.month < 0 ? COLORS.danger : undefined,
+    },
     { id: 'deposits', icon: 'safe', label: t('finance.depositsHeld'), baisa: s.depositsHeld, hint: t('finance.depositsHint') },
     { id: 'cash', icon: 'cash', label: t('finance.accounts.CASH'), baisa: s.cash },
     { id: 'bank', icon: 'bank-outline', label: t('finance.accounts.BANK'), baisa: s.bank },

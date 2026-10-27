@@ -114,7 +114,7 @@ export default function SearchModal({ visible, onClose, items, onNavigate }) {
                   icon={items.find((i) => i.key === g.section)?.icon ?? 'file-outline'}
                   title={item.title}
                   subtitle={item.subtitle}
-                  onPress={() => go(g.section, item.propertyId ? { propertyId: item.propertyId } : item.ownerId ? { ownerId: item.ownerId } : item.tenantId ? { tenantId: item.tenantId } : item.leaseId ? { leaseId: item.leaseId } : item.paymentId ? { paymentId: item.paymentId } : item.chequeId ? { chequeId: item.chequeId } : null)}
+                  onPress={() => go(g.section, item.propertyId ? { propertyId: item.propertyId } : item.ownerId ? { ownerId: item.ownerId } : item.tenantId ? { tenantId: item.tenantId } : item.leaseId ? { leaseId: item.leaseId } : item.paymentId ? { paymentId: item.paymentId } : item.chequeId ? { chequeId: item.chequeId } : item.workOrderId ? { workOrderId: item.workOrderId } : null)}
                 />
               ))}
             </Group>

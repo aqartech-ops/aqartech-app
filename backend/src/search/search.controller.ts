@@ -3,7 +3,7 @@ import { PrismaService } from '../prisma/prisma.service.js';
 import { Auth, AnyAuthenticated, type AuthContext } from '../common/auth-context.js';
 import { likePattern, normalizeSearch, normalizedColumn } from '../common/text.js';
 
-type ResultItem = { id: string; title: string; subtitle: string | null; propertyId?: string; ownerId?: string; tenantId?: string; leaseId?: string; paymentId?: string; chequeId?: string; status?: string };
+type ResultItem = { id: string; title: string; subtitle: string | null; propertyId?: string; ownerId?: string; tenantId?: string; leaseId?: string; paymentId?: string; chequeId?: string; workOrderId?: string; status?: string };
 type ResultGroup = { type: string; section: string; items: ResultItem[] };
 
 const LIMIT = 20;
@@ -38,6 +38,7 @@ export class SearchService {
       if (auth.access.properties !== 'HIDDEN') groups.push(...(await this.propertyGroups(auth, pattern)));
       if (auth.access.tenants !== 'HIDDEN') groups.push(await this.tenantGroup(auth, pattern), await this.leaseGroup(auth, pattern));
       if (auth.access.financials !== 'HIDDEN') groups.push(await this.paymentGroup(auth, pattern), await this.chequeGroup(auth, pattern));
+      if (auth.access.maintenance !== 'HIDDEN') groups.push(await this.workOrderGroup(auth, pattern));
       if (auth.access.owners !== 'HIDDEN') groups.push(await this.ownerGroup(auth, pattern));
       if (auth.access.users !== 'HIDDEN') groups.push(await this.userGroup(auth, pattern));
     }
@@ -127,6 +128,24 @@ export class SearchService {
       type: 'cheques',
       section: 'financials',
       items: rows.map((r) => ({ id: r.id, title: `${r.number} · ${r.bank}`, subtitle: r.tenant, chequeId: r.id, status: r.status })),
+    };
+  }
+
+  /** Work orders by number, title or vendor. */
+  private async workOrderGroup(auth: Extract<AuthContext, { kind: 'user' }>, pattern: string): Promise<ResultGroup> {
+    const all = auth.propertyIds === null;
+    const ids = auth.propertyIds ?? [];
+    const rows = await this.prisma.$queryRaw<{ id: string; number: string; title: string; property: string; status: string }[]>`
+      SELECT w.id, w.number, w.title, p.name AS property, w.status::text AS status
+      FROM "WorkOrder" w JOIN "Property" p ON p.id = w."propertyId" LEFT JOIN "Vendor" v ON v.id = w."vendorId"
+      WHERE w."companyId" = ${auth.companyId} AND (${all} OR w."propertyId" = ANY(${ids}::text[]))
+        AND (${normalizedColumn('w."number"')} LIKE ${pattern} OR ${normalizedColumn('w."title"')} LIKE ${pattern}
+          OR ${normalizedColumn('v."name"')} LIKE ${pattern})
+      ORDER BY w."createdAt" DESC LIMIT ${LIMIT}`;
+    return {
+      type: 'workOrders',
+      section: 'maintenance',
+      items: rows.map((r) => ({ id: r.id, title: `${r.number} · ${r.title}`, subtitle: r.property, workOrderId: r.id, status: r.status })),
     };
   }
 

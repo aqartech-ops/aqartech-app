@@ -17,7 +17,8 @@ export function propertyScope(auth: UserAuth, deleted = false): Prisma.PropertyW
   return {
     companyId: auth.companyId,
     deletedAt: deleted ? { not: null } : null,
-    ...(auth.propertyIds ? { id: { in: auth.propertyIds } } : {}),
+    // inside AND so that callers adding `id` ({ ...propertyScope(auth), id }) cannot replace the restriction
+    ...(auth.propertyIds ? { AND: [{ id: { in: auth.propertyIds } }] } : {}),
   };
 }
 

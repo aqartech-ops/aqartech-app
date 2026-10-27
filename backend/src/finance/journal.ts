@@ -164,3 +164,18 @@ export function nthChequeNumber(first: string, offset: number): string {
   const next = String(Number(m[2]) + offset).padStart(m[2].length, '0');
   return `${m[1]}${next}`;
 }
+
+/** An expense paid out: Dr expenses / Cr cash or bank. */
+export function expenseLines(paidFrom: 'CASH' | 'BANK', amount: number, dims: Dimensions): Line[] {
+  return pair('EXPENSES', paidFrom, amount, dims);
+}
+
+/** Default bearer of a property cost: the owner for a managed property, the company for its own property. */
+export function defaultBearer(ownership: 'OWNED' | 'MANAGED'): 'OWNER' | 'COMPANY' {
+  return ownership === 'MANAGED' ? 'OWNER' : 'COMPANY';
+}
+
+/** Net operating income (صافي الدخل التشغيلي) = operating income − operating expenses. */
+export function netOperatingIncome(income: number, expenses: number): number {
+  return income - expenses;
+}
