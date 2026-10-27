@@ -89,10 +89,10 @@ function SummaryCards({ summary: s }) {
   const { t, row } = useI18n();
   const columns = useColumns();
   const items = [
-    { key: 'income', icon: 'rial', label: t('finance.rentIncomeMonth'), baisa: s.rentIncome.month, extra: s.rentIncome.year },
-    { key: 'receivable', icon: 'cash-clock', label: t('finance.receivable'), baisa: s.receivable, hint: t('finance.receivableHint') },
+    { id: 'income', icon: 'rial', label: t('finance.rentIncomeMonth'), baisa: s.rentIncome.month, extra: s.rentIncome.year },
+    { id: 'receivable', icon: 'cash-clock', label: t('finance.receivable'), baisa: s.receivable, hint: t('finance.receivableHint') },
     {
-      key: 'overdue',
+      id: 'overdue',
       icon: 'alert-octagon-outline',
       label: t('finance.overdue'),
       baisa: s.overdue.total,
@@ -100,14 +100,14 @@ function SummaryCards({ summary: s }) {
       tone: COLORS.danger,
       color: s.overdue.total ? COLORS.danger : undefined,
     },
-    { key: 'upcoming', icon: 'calendar-clock', label: t('finance.upcoming', { days: s.upcoming.days }), baisa: s.upcoming.total, hint: t('finance.upcomingCount', { count: s.upcoming.count }) },
-    { key: 'deposits', icon: 'safe', label: t('finance.depositsHeld'), baisa: s.depositsHeld, hint: t('finance.depositsHint') },
+    { id: 'upcoming', icon: 'calendar-clock', label: t('finance.upcoming', { days: s.upcoming.days }), baisa: s.upcoming.total, hint: t('finance.upcomingCount', { count: s.upcoming.count }) },
+    { id: 'deposits', icon: 'safe', label: t('finance.depositsHeld'), baisa: s.depositsHeld, hint: t('finance.depositsHint') },
   ];
   return (
     <View style={{ flexDirection: row, flexWrap: 'wrap', marginHorizontal: -SPACING.xs }}>
       {items.map((it) => (
-        <View key={it.key} style={{ width: `${100 / columns}%`, padding: SPACING.xs }}>
-          {it.key === 'income' ? (
+        <View key={it.id} style={{ width: `${100 / columns}%`, padding: SPACING.xs }}>
+          {it.id === 'income' ? (
             <Card style={{ gap: SPACING.sm, flexGrow: 1 }}>
               <Row>
                 <View style={styles.statIcon}>
