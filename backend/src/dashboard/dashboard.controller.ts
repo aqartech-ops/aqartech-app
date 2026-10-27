@@ -5,6 +5,8 @@ import { PropertiesService } from '../properties/properties.service.js';
 import { TenantsModule, TenantsService } from '../tenants/tenants.controller.js';
 import { LeasesModule } from '../leases/leases.controller.js';
 import { LeasesService } from '../leases/leases.service.js';
+import { FinanceModule } from '../finance/finance.module.js';
+import { FinanceService } from '../finance/finance.service.js';
 import { Auth, type UserAuth } from '../common/auth-context.js';
 
 /**
@@ -18,6 +20,7 @@ export class DashboardService {
     private readonly plans: PlansService,
     private readonly tenants: TenantsService,
     private readonly leases: LeasesService,
+    private readonly finance: FinanceService,
   ) {}
 
   async get(auth: UserAuth) {
@@ -28,8 +31,11 @@ export class DashboardService {
     const leaseStats = await this.leases.stats(auth);
     if (can('properties')) widgets.portfolio = await this.properties.portfolioStats(auth);
     if (can('tenants')) widgets.tenants = { count: await this.tenants.count(auth), leases: leaseStats };
-    // Financial KPIs (occupancy income, collection, NOI, arrears) arrive with phase 4.
-    if (can('financials')) widgets.financials = { available: false };
+    // Financial KPIs come from the ledger. Collection rate and NOI follow with collections and expenses.
+    if (can('financials')) {
+      const s = await this.finance.summary(auth);
+      widgets.financials = { available: true, receivable: s.receivable, overdue: s.overdue.total, rentIncomeMonth: s.rentIncome.month, upcoming: s.upcoming.total };
+    }
     // Plan usage is for whoever manages the account / the team.
     if (auth.isCompanyAdmin || auth.access.users === 'EDIT') widgets.planUsage = await this.plans.usage(auth.companyId);
 
@@ -49,7 +55,7 @@ export class DashboardController {
 }
 
 @Module({
-  imports: [PropertiesModule, TenantsModule, LeasesModule],
+  imports: [PropertiesModule, TenantsModule, LeasesModule, FinanceModule],
   controllers: [DashboardController],
   providers: [DashboardService],
 })

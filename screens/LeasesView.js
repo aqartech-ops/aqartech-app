@@ -36,6 +36,7 @@ export const LEASE_TONE = { DRAFT: 'neutral', ACTIVE: 'success', ENDED: 'neutral
 const FREQUENCIES = ['MONTHLY', 'QUARTERLY', 'SEMI_ANNUAL', 'ANNUAL'];
 const RENEWAL = ['PENDING', 'RENEW', 'NOT_RENEW', 'NEGOTIATING'];
 const DAY = 86_400_000;
+const CHARGE_TONE = { SCHEDULED: 'neutral', POSTED: 'info', CANCELLED: 'danger' };
 
 const money = (baisa) => (baisa ? formatOMR(baisa, 'en', { withCurrency: false }).replace(/,/g, '') : '');
 const moneyOrNull = (text) => (String(text ?? '').trim() ? parseOMR(text) ?? NaN : null);
@@ -316,7 +317,7 @@ export function LeaseDetail({ id, onBack, onOpen, onOpenTenant, backLabel }) {
           </Card>
         ) : null}
 
-        <ScheduleCard schedule={lease.schedule} total={lease.total} />
+        <ScheduleCard schedule={lease.schedule} total={lease.total} deposit={lease.depositCharge} />
       </View>
 
       <LeaseForm
@@ -353,23 +354,37 @@ export function LeaseDetail({ id, onBack, onOpen, onOpenTenant, backLabel }) {
   );
 }
 
-function ScheduleCard({ schedule, total }) {
+/** Draft: the computed schedule. Active and later: the saved charges with their status in the ledger. */
+function ScheduleCard({ schedule, total, deposit }) {
   const { t, lang } = useI18n();
   if (!schedule) return null;
+  const live = schedule.filter((x) => x.status !== 'CANCELLED');
   return (
     <Card style={{ gap: SPACING.sm }}>
       <Txt weight="weightBold">{t('leases.schedule')}</Txt>
       <Row>
-        <Txt muted>{t('leases.scheduleSummary', { count: schedule.length })}</Txt>
+        <Txt muted>{t('leases.scheduleSummary', { count: live.length })}</Txt>
         <Money baisa={total} weight="weightBold" />
       </Row>
+      {deposit ? (
+        <Row style={{ justifyContent: 'space-between' }}>
+          <Row gap={SPACING.sm}>
+            <Txt muted size="small">{t('finance.depositCharge')}</Txt>
+            <Badge label={t(`finance.chargeStatus.${deposit.status}`)} tone={CHARGE_TONE[deposit.status]} />
+          </Row>
+          <Money baisa={deposit.amount} size={13} />
+        </Row>
+      ) : null}
       <View style={styles.table}>
         {schedule.map((x, i) => (
           <Row key={x.index} style={[styles.scheduleRow, i > 0 && styles.divider]}>
             <View style={{ flex: 1, gap: 2 }}>
-              <Txt size="small" weight="weightMedium">
-                {t('leases.installment', { index: x.index })} {x.partial ? `· ${t('leases.prorated')}` : ''}
-              </Txt>
+              <Row gap={SPACING.sm} style={{ flexWrap: 'wrap' }}>
+                <Txt size="small" weight="weightMedium" style={x.status === 'CANCELLED' ? { textDecorationLine: 'line-through' } : null}>
+                  {t('leases.installment', { index: x.index })} {x.partial ? `· ${t('leases.prorated')}` : ''}
+                </Txt>
+                {x.status ? <Badge label={t(`finance.chargeStatus.${x.status}`)} tone={CHARGE_TONE[x.status]} /> : null}
+              </Row>
               <Txt muted size="small">
                 {formatDate(x.periodStart, lang)} → {formatDate(x.periodEnd, lang)}
               </Txt>
@@ -408,6 +423,7 @@ function TerminateSheet({ visible, onClose, onConfirm }) {
       }
     >
       <Txt muted>{t('leases.terminateConfirm')}</Txt>
+      <Txt muted size="small">{t('leases.terminateFinanceHint')}</Txt>
       <DateField label={t('leases.terminateDate')} value={date} onChangeText={setDate} />
       <Field label={t('leases.terminateReason')} value={reason} onChangeText={setReason} multiline inputStyle={{ minHeight: 60 }} />
     </Sheet>

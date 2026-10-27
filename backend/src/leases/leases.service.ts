@@ -5,17 +5,16 @@ import { ActivityService } from '../common/activity.service.js';
 import { propertyScope } from '../properties/properties.service.js';
 import type { UserAuth } from '../common/auth-context.js';
 import * as v from '../common/validate.js';
+import { today } from '../common/dates.js';
 import { buildSchedule, scheduleTotal, type Frequency } from './schedule.js';
+import { ChargesService } from '../finance/charges.service.js';
 
 export const FREQUENCIES = ['MONTHLY', 'QUARTERLY', 'SEMI_ANNUAL', 'ANNUAL'] as const;
 export const RENEWAL_STATUSES = ['PENDING', 'RENEW', 'NOT_RENEW', 'NEGOTIATING'] as const;
 const OPEN: Lease['status'][] = ['DRAFT', 'ACTIVE'];
 const DAY = 86_400_000;
 
-const todayUtc = () => {
-  const n = new Date();
-  return new Date(Date.UTC(n.getUTCFullYear(), n.getUTCMonth(), n.getUTCDate()));
-};
+const todayUtc = () => today(); // calendar date in Oman
 
 const INCLUDE = {
   tenant: { select: { id: true, name: true, phone: true, civilId: true } },
@@ -33,6 +32,7 @@ export class LeasesService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly activity: ActivityService,
+    private readonly charges: ChargesService,
   ) {}
 
   /** filter: active | expiring | draft | ended | all */
@@ -67,8 +67,29 @@ export class LeasesService {
     });
   }
 
+  /** Draft: the computed schedule. Otherwise: the saved charges with their status (scheduled / due / cancelled). */
   async get(auth: UserAuth, id: string) {
     const lease = await this.find(auth, id);
+    if (lease.status !== 'DRAFT') {
+      await this.charges.sync(auth.companyId);
+      const charges = await this.prisma.rentCharge.findMany({
+        where: { leaseId: id },
+        orderBy: [{ kind: 'asc' }, { index: 'asc' }],
+        select: { id: true, kind: true, index: true, periodStart: true, periodEnd: true, dueDate: true, amount: true, status: true },
+      });
+      const rent = charges.filter((c) => c.kind === 'RENT');
+      const schedule = rent.map((c) => ({
+        index: c.index,
+        periodStart: c.periodStart,
+        periodEnd: c.periodEnd,
+        dueDate: c.dueDate,
+        amount: c.amount,
+        partial: false,
+        status: c.status,
+      }));
+      const total = rent.filter((c) => c.status !== 'CANCELLED').reduce((sum, c) => sum + c.amount, 0);
+      return { ...lease, schedule, total, depositCharge: charges.find((c) => c.kind === 'DEPOSIT') ?? null };
+    }
     const schedule = buildSchedule({ ...lease, paymentFrequency: lease.paymentFrequency as Frequency });
     return { ...lease, schedule, total: scheduleTotal(schedule) };
   }
@@ -170,7 +191,10 @@ export class LeasesService {
       if (lease.renewedFromId) {
         await tx.lease.updateMany({ where: { id: lease.renewedFromId, status: 'ACTIVE' }, data: { status: 'RENEWED', renewalStatus: 'RENEW' } });
       }
+      // the schedule becomes the lease's charges; those already due are posted right after
+      await this.charges.createForLease(tx, lease);
     });
+    await this.charges.sync(auth.companyId);
     await this.refreshUnitStatus(lease.unitId);
     await this.activity.log(auth, { action: 'lease.activate', entity: 'Lease', entityId: id });
     return this.get(auth, id);
@@ -183,12 +207,18 @@ export class LeasesService {
     const src = v.body(input ?? {});
     const terminatedAt = v.optionalDate(src, 'date') ?? todayUtc();
     if (terminatedAt < lease.startDate) throw new BadRequestException({ message: 'validation.endBeforeStart', field: 'date' });
-    await this.prisma.lease.update({
-      where: { id },
-      data: { status: 'TERMINATED', terminatedAt, terminationReason: v.optionalString(src, 'reason', 500) ?? null },
+    if (terminatedAt > lease.endDate) throw new BadRequestException({ message: 'lease.terminateAfterEnd', field: 'date' });
+    await this.charges.sync(auth.companyId); // make sure the schedule exists before cutting it
+    const cut = await this.prisma.$transaction(async (tx) => {
+      await tx.lease.update({
+        where: { id },
+        data: { status: 'TERMINATED', terminatedAt, terminationReason: v.optionalString(src, 'reason', 500) ?? null },
+      });
+      // later periods cancelled, the current one prorated — reversing entries for anything already posted
+      return this.charges.cutForTermination(tx, lease, terminatedAt, auth.userId);
     });
     await this.refreshUnitStatus(lease.unitId, terminatedAt);
-    await this.activity.log(auth, { action: 'lease.terminate', entity: 'Lease', entityId: id, details: { terminatedAt } });
+    await this.activity.log(auth, { action: 'lease.terminate', entity: 'Lease', entityId: id, details: { terminatedAt, ...cut } });
     return this.get(auth, id);
   }
 
