@@ -6,6 +6,8 @@ import {
   openItems,
   paymentLines,
   collectionRate,
+  chequeClearedLines,
+  nthChequeNumber,
   pair,
   reverseLines,
   sumByAccount,
@@ -100,6 +102,37 @@ describe('journal rules', () => {
     ];
     // billed 600, paid 350 → January settled, February 250 open
     expect(openItems(charges, 600000 - 350000).map((c) => c.outstanding)).toEqual([0, 250000]);
+  });
+
+  it('cheque life: credited when under collection, cleared to the bank, fee is other income', () => {
+    const dims = { tenantId: 't', leaseId: 'l' };
+    const lines = [
+      ...chargeLines('RENT', 300000, dims),
+      ...paymentLines('CHEQUE', 300000, dims), // accepted → under collection
+      ...chequeClearedLines(300000, dims), // cleared
+    ];
+    const totals = sumByAccount(lines);
+    expect(totals.CHEQUES_ON_HAND).toBe(0);
+    expect(totals.BANK).toBe(300000);
+    expect(totals.TENANT_RECEIVABLE).toBe(0);
+    const fee = sumByAccount(chargeLines('FEE', 10000, dims));
+    expect(naturalBalance('OTHER_INCOME', fee.OTHER_INCOME)).toBe(10000);
+    expect(fee.RENT_INCOME).toBe(0);
+  });
+
+  it('a bounced cheque restores what the tenant owes', () => {
+    const dims = { tenantId: 't', leaseId: 'l' };
+    const payment = paymentLines('CHEQUE', 300000, dims);
+    const totals = sumByAccount([...chargeLines('RENT', 300000, dims), ...payment, ...reverseLines(payment)]);
+    expect(totals.TENANT_RECEIVABLE).toBe(300000);
+    expect(totals.CHEQUES_ON_HAND).toBe(0);
+  });
+
+  it('sequential cheque numbers keep leading zeros', () => {
+    expect(nthChequeNumber('000123', 0)).toBe('000123');
+    expect(nthChequeNumber('000123', 2)).toBe('000125');
+    expect(nthChequeNumber('CHQ-0099', 1)).toBe('CHQ-0100');
+    expect(nthChequeNumber('ABC', 1)).toBe('ABC-2');
   });
 
   it('collection rate', () => {

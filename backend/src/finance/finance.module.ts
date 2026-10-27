@@ -1,9 +1,10 @@
-import { Body, Controller, Get, Module, Param, Post, Query } from '@nestjs/common';
+import { Body, Controller, Get, Module, Param, Patch, Post, Query } from '@nestjs/common';
 import { Auth, RequirePermission, type UserAuth } from '../common/auth-context.js';
 import { LedgerService } from './ledger.service.js';
 import { ChargesService } from './charges.service.js';
 import { FinanceService } from './finance.service.js';
 import { PaymentsService } from './payments.service.js';
+import { ChequesService } from './cheques.service.js';
 
 /** Ledger + charges: used by leases (activation / termination) and by the finance reports. */
 @Module({
@@ -18,7 +19,70 @@ export class FinanceController {
   constructor(
     private readonly finance: FinanceService,
     private readonly payments: PaymentsService,
+    private readonly cheques: ChequesService,
   ) {}
+
+  // ---------- cheques (الشيكات) ----------
+
+  @RequirePermission('financials', 'VIEW')
+  @Get('cheques')
+  listCheques(@Auth() auth: UserAuth, @Query('filter') filter?: string, @Query('tenantId') tenantId?: string, @Query('leaseId') leaseId?: string) {
+    return this.cheques.list(auth, { filter, tenantId, leaseId });
+  }
+
+  @RequirePermission('financials', 'VIEW')
+  @Get('cheques/stats')
+  chequeStats(@Auth() auth: UserAuth) {
+    return this.cheques.stats(auth);
+  }
+
+  @RequirePermission('financials', 'VIEW')
+  @Get('leases/:id/cheque-plan')
+  chequePlan(@Auth() auth: UserAuth, @Param('id') id: string) {
+    return this.cheques.plan(auth, id);
+  }
+
+  @RequirePermission('financials', 'EDIT')
+  @Post('cheques')
+  createCheque(@Auth() auth: UserAuth, @Body() body: unknown) {
+    return this.cheques.create(auth, body);
+  }
+
+  @RequirePermission('financials', 'EDIT')
+  @Post('cheques/bulk')
+  bulkCheques(@Auth() auth: UserAuth, @Body() body: unknown) {
+    return this.cheques.bulk(auth, body);
+  }
+
+  @RequirePermission('financials', 'EDIT')
+  @Patch('cheques/:id')
+  updateCheque(@Auth() auth: UserAuth, @Param('id') id: string, @Body() body: unknown) {
+    return this.cheques.update(auth, id, body);
+  }
+
+  @RequirePermission('financials', 'EDIT')
+  @Post('cheques/:id/deposit')
+  depositCheque(@Auth() auth: UserAuth, @Param('id') id: string, @Body() body: unknown) {
+    return this.cheques.deposit(auth, id, body);
+  }
+
+  @RequirePermission('financials', 'EDIT')
+  @Post('cheques/:id/clear')
+  clearCheque(@Auth() auth: UserAuth, @Param('id') id: string, @Body() body: unknown) {
+    return this.cheques.clear(auth, id, body);
+  }
+
+  @RequirePermission('financials', 'EDIT')
+  @Post('cheques/:id/bounce')
+  bounceCheque(@Auth() auth: UserAuth, @Param('id') id: string, @Body() body: unknown) {
+    return this.cheques.bounce(auth, id, body);
+  }
+
+  @RequirePermission('financials', 'EDIT')
+  @Post('cheques/:id/cancel')
+  cancelCheque(@Auth() auth: UserAuth, @Param('id') id: string, @Body() body: unknown) {
+    return this.cheques.cancel(auth, id, body);
+  }
 
   @RequirePermission('financials', 'VIEW')
   @Get('payments')
@@ -98,7 +162,7 @@ export class FinanceController {
 @Module({
   imports: [FinanceCoreModule],
   controllers: [FinanceController],
-  providers: [FinanceService, PaymentsService],
-  exports: [FinanceService],
+  providers: [FinanceService, PaymentsService, ChequesService],
+  exports: [FinanceService, ChequesService],
 })
 export class FinanceModule {}

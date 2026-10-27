@@ -158,6 +158,14 @@ function CompanyDashboard({ onNavigate }) {
               tone={COLORS.danger}
               value={<Money baisa={w.financials.overdue} size={FONT.title} weight="weightBold" color={w.financials.overdue ? COLORS.danger : COLORS.textDark} />}
             />
+            {w.financials.chequesToDeposit ? (
+              <Kpi
+                icon="checkbook"
+                label={t('cheques.stats.toDeposit')}
+                tone={w.financials.chequesToDeposit.count ? COLORS.warning : COLORS.primary}
+                value={String(w.financials.chequesToDeposit.count)}
+              />
+            ) : null}
             <Kpi icon="chart-line" label={t('dashboard.noi')} value="—" hint={t('dashboard.kpiNoiLater')} />
           </Grid>
         </>

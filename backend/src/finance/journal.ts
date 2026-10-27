@@ -75,9 +75,11 @@ export function pair(debit: Account, credit: Account, amount: number, dims: Dime
  * A charge becoming due:
  *  - rent:    Dr tenant receivable / Cr rent income
  *  - deposit: Dr tenant receivable / Cr security deposits (a liability — the deposit is NOT income)
+ *  - fee:     Dr tenant receivable / Cr other income (e.g. bounced-cheque fee)
  */
-export function chargeLines(kind: 'RENT' | 'DEPOSIT', amount: number, dims: Dimensions): Line[] {
-  return pair('TENANT_RECEIVABLE', kind === 'RENT' ? 'RENT_INCOME' : 'SECURITY_DEPOSITS', amount, dims);
+export function chargeLines(kind: 'RENT' | 'DEPOSIT' | 'FEE', amount: number, dims: Dimensions): Line[] {
+  const credit: Account = kind === 'RENT' ? 'RENT_INCOME' : kind === 'DEPOSIT' ? 'SECURITY_DEPOSITS' : 'OTHER_INCOME';
+  return pair('TENANT_RECEIVABLE', credit, amount, dims);
 }
 
 /** Balance of an account in its natural direction (e.g. income shown positive). */
@@ -148,4 +150,17 @@ export function paymentLines(method: PaymentMethod, amount: number, dims: Dimens
 export function collectionRate(collected: number, billed: number): number | null {
   if (billed <= 0) return null;
   return Math.round((collected * 1000) / billed) / 10;
+}
+
+/** A cheque under collection clears at the bank: Dr bank / Cr cheques under collection. */
+export function chequeClearedLines(amount: number, dims: Dimensions): Line[] {
+  return pair('BANK', 'CHEQUES_ON_HAND', amount, dims);
+}
+
+/** "000123" + 2 → "000125" (keeps leading zeros); non-numeric numbers get a suffix: "A12" + 2 → "A12-3". */
+export function nthChequeNumber(first: string, offset: number): string {
+  const m = /^(.*?)(\d+)$/.exec(first.trim());
+  if (!m) return offset === 0 ? first.trim() : `${first.trim()}-${offset + 1}`;
+  const next = String(Number(m[2]) + offset).padStart(m[2].length, '0');
+  return `${m[1]}${next}`;
 }

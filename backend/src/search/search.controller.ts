@@ -3,7 +3,7 @@ import { PrismaService } from '../prisma/prisma.service.js';
 import { Auth, AnyAuthenticated, type AuthContext } from '../common/auth-context.js';
 import { likePattern, normalizeSearch, normalizedColumn } from '../common/text.js';
 
-type ResultItem = { id: string; title: string; subtitle: string | null; propertyId?: string; ownerId?: string; tenantId?: string; leaseId?: string; paymentId?: string; status?: string };
+type ResultItem = { id: string; title: string; subtitle: string | null; propertyId?: string; ownerId?: string; tenantId?: string; leaseId?: string; paymentId?: string; chequeId?: string; status?: string };
 type ResultGroup = { type: string; section: string; items: ResultItem[] };
 
 const LIMIT = 20;
@@ -37,7 +37,7 @@ export class SearchService {
     } else {
       if (auth.access.properties !== 'HIDDEN') groups.push(...(await this.propertyGroups(auth, pattern)));
       if (auth.access.tenants !== 'HIDDEN') groups.push(await this.tenantGroup(auth, pattern), await this.leaseGroup(auth, pattern));
-      if (auth.access.financials !== 'HIDDEN') groups.push(await this.paymentGroup(auth, pattern));
+      if (auth.access.financials !== 'HIDDEN') groups.push(await this.paymentGroup(auth, pattern), await this.chequeGroup(auth, pattern));
       if (auth.access.owners !== 'HIDDEN') groups.push(await this.ownerGroup(auth, pattern));
       if (auth.access.users !== 'HIDDEN') groups.push(await this.userGroup(auth, pattern));
     }
@@ -109,6 +109,24 @@ export class SearchService {
       type: 'payments',
       section: 'financials',
       items: rows.map((r) => ({ id: r.id, title: `${r.number} · ${r.tenant}`, subtitle: null, paymentId: r.id, status: r.status })),
+    };
+  }
+
+  /** Cheques by number, bank or tenant name. */
+  private async chequeGroup(auth: Extract<AuthContext, { kind: 'user' }>, pattern: string): Promise<ResultGroup> {
+    const all = auth.propertyIds === null;
+    const ids = auth.propertyIds ?? [];
+    const rows = await this.prisma.$queryRaw<{ id: string; number: string; bank: string; tenant: string; status: string }[]>`
+      SELECT c.id, c.number, c."bankName" AS bank, t.name AS tenant, c.status::text AS status
+      FROM "Cheque" c JOIN "Tenant" t ON t.id = c."tenantId"
+      WHERE c."companyId" = ${auth.companyId} AND (${all} OR c."propertyId" = ANY(${ids}::text[]))
+        AND (${normalizedColumn('c."number"')} LIKE ${pattern} OR ${normalizedColumn('c."bankName"')} LIKE ${pattern}
+          OR ${normalizedColumn('t."name"')} LIKE ${pattern})
+      ORDER BY c."dueDate" DESC LIMIT ${LIMIT}`;
+    return {
+      type: 'cheques',
+      section: 'financials',
+      items: rows.map((r) => ({ id: r.id, title: `${r.number} · ${r.bank}`, subtitle: r.tenant, chequeId: r.id, status: r.status })),
     };
   }
 

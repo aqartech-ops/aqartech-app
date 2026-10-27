@@ -7,6 +7,7 @@ import { LeasesModule } from '../leases/leases.controller.js';
 import { LeasesService } from '../leases/leases.service.js';
 import { FinanceModule } from '../finance/finance.module.js';
 import { FinanceService } from '../finance/finance.service.js';
+import { ChequesService } from '../finance/cheques.service.js';
 import { Auth, type UserAuth } from '../common/auth-context.js';
 
 /**
@@ -21,6 +22,7 @@ export class DashboardService {
     private readonly tenants: TenantsService,
     private readonly leases: LeasesService,
     private readonly finance: FinanceService,
+    private readonly cheques: ChequesService,
   ) {}
 
   async get(auth: UserAuth) {
@@ -33,7 +35,7 @@ export class DashboardService {
     if (can('tenants')) widgets.tenants = { count: await this.tenants.count(auth), leases: leaseStats };
     // Financial KPIs come from the ledger. NOI follows with expenses.
     if (can('financials')) {
-      const s = await this.finance.summary(auth);
+      const [s, cheques] = await Promise.all([this.finance.summary(auth), this.cheques.stats(auth)]);
       widgets.financials = {
         available: true,
         receivable: s.receivable,
@@ -42,6 +44,7 @@ export class DashboardService {
         collectedMonth: s.collected.month,
         collectionRate: s.collectionRate,
         upcoming: s.upcoming.total,
+        chequesToDeposit: cheques.toDeposit,
       };
     }
     // Plan usage is for whoever manages the account / the team.

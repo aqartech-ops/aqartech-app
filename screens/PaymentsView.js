@@ -283,7 +283,7 @@ export function PaymentForm({ preset, onClose, onSaved }) {
   );
 }
 
-function TenantPicker({ visible, onClose, onSelect }) {
+export function TenantPicker({ visible, onClose, onSelect }) {
   const { t } = useI18n();
   const [tenants, setTenants] = useState(null);
   const [balances, setBalances] = useState({});

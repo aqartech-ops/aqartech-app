@@ -6,6 +6,7 @@ import { useI18n } from '../i18n';
 import { financeApi } from '../services/api';
 import { useSession } from '../services/session';
 import { PaymentForm, PaymentsList, ReceiptSheet } from './PaymentsView';
+import { ChequesTab } from './ChequesView';
 import { matches } from '../services/text';
 import { Money, SectionIcon } from '../components/Rial';
 import { formatDate } from '../components/Fields';
@@ -23,7 +24,7 @@ export default function FinancialsScreen({ params }) {
   const editable = canEdit('financials');
   const [summary, setSummary] = useState(null);
   const [error, setError] = useState(null);
-  const [tab, setTab] = useState(params?.paymentId ? 'payments' : 'receivables');
+  const [tab, setTab] = useState(params?.paymentId ? 'payments' : params?.chequeId ? 'cheques' : 'receivables');
   const [statementOf, setStatementOf] = useState(params?.tenantId ?? null);
   const [paying, setPaying] = useState(null); // PaymentForm preset
   const [receiptId, setReceiptId] = useState(params?.paymentId ?? null);
@@ -59,18 +60,22 @@ export default function FinancialsScreen({ params }) {
         {summary ? <SummaryCards summary={summary} /> : null}
         {summary ? <AgingCard overdue={summary.overdue} /> : null}
 
-        <Segmented
+        <ChipSelect
           value={tab}
           onChange={setTab}
-          options={[
-            { value: 'receivables', label: t('finance.tabs.receivables') },
-            { value: 'payments', label: t('finance.tabs.payments') },
-            { value: 'balances', label: t('finance.tabs.balances') },
-            { value: 'journal', label: t('finance.tabs.journal') },
-          ]}
+          options={['receivables', 'payments', 'cheques', 'balances', 'journal'].map((v) => ({ value: v, label: t(`finance.tabs.${v}`) }))}
         />
         {tab === 'receivables' ? <Receivables key={version} onOpenTenant={setStatementOf} onCollect={editable ? collect : null} /> : null}
         {tab === 'payments' ? <PaymentsList version={version} onOpen={setReceiptId} /> : null}
+        {tab === 'cheques' ? (
+          <ChequesTab
+            editable={editable}
+            version={version}
+            focusId={params?.chequeId}
+            onChanged={() => setVersion((v) => v + 1)}
+            onOpenReceipt={setReceiptId}
+          />
+        ) : null}
         {tab === 'balances' ? <Balances key={version} onOpenTenant={setStatementOf} /> : null}
         {tab === 'journal' ? <Journal key={version} /> : null}
       </View>
@@ -210,6 +215,7 @@ function AgingCard({ overdue }) {
 
 function chargeLabel(t, lang, c) {
   if (c.kind === 'DEPOSIT') return t('finance.depositCharge');
+  if (c.kind === 'FEE') return t('finance.feeCharge');
   const period = c.periodStart ? `${formatDate(c.periodStart, lang)} → ${formatDate(c.periodEnd, lang)}` : '';
   return `${t('leases.installment', { index: c.index })} · ${period}`;
 }

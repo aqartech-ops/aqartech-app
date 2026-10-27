@@ -91,6 +91,7 @@ export class PaymentsService {
       if (!details.chequeNo) throw new BadRequestException({ message: 'validation.required', field: 'chequeNo' });
       if (!details.bankName) throw new BadRequestException({ message: 'validation.required', field: 'bankName' });
       if (details.chequeDate && details.chequeDate > today()) {
+        // post-dated: it is kept in the cheques section and credited when it is deposited
         throw new BadRequestException({ message: 'payment.postDatedCheque', field: 'chequeDate' });
       }
     }
@@ -99,32 +100,28 @@ export class PaymentsService {
     await this.charges.sync(auth.companyId);
 
     const payment = await this.prisma.$transaction(async (tx) => {
-      const number = await this.ledger.nextNumber(tx, auth.companyId, 'receipt', date.getUTCFullYear(), 'R', 6);
-      const entry = await this.ledger.post(tx, {
-        companyId: auth.companyId,
-        date,
-        type: 'PAYMENT',
-        memo: `${number} — ${lease.tenant.name} — ${lease.number}`,
-        leaseId: lease.id,
-        createdById: auth.userId,
-        lines: paymentLines(method, amount, { propertyId: lease.propertyId, unitId: lease.unitId, leaseId: lease.id, tenantId: lease.tenantId }),
-      });
-      return tx.payment.create({
-        data: {
-          companyId: auth.companyId,
-          number,
-          tenantId: lease.tenantId,
-          leaseId: lease.id,
-          propertyId: lease.propertyId,
-          unitId: lease.unitId,
-          date,
-          amount,
-          method,
-          ...details,
-          entryId: entry.id,
-          createdById: auth.userId,
-        },
-      });
+      const created = await this.record(tx, auth, lease, { amount, date, method, ...details });
+      if (method === 'CHEQUE') {
+        // a current cheque handed over now: the tenant is credited, the cheque waits for the bank
+        await tx.cheque.create({
+          data: {
+            companyId: auth.companyId,
+            tenantId: lease.tenantId,
+            leaseId: lease.id,
+            propertyId: lease.propertyId,
+            unitId: lease.unitId,
+            number: details.chequeNo!,
+            bankName: details.bankName!,
+            amount,
+            dueDate: details.chequeDate ?? date,
+            status: 'UNDER_COLLECTION',
+            paymentId: created.id,
+            depositedAt: date,
+            createdById: auth.userId,
+          },
+        });
+      }
+      return created;
     });
     await this.activity.log(auth, { action: 'payment.create', entity: 'Payment', entityId: payment.id, details: { number: payment.number, amount, method } });
     return this.get(auth, payment.id);
@@ -137,20 +134,73 @@ export class PaymentsService {
     const payment = await this.prisma.payment.findFirst({ where: { id, companyId: auth.companyId, ...this.scope(auth) } });
     if (!payment) throw new NotFoundException('common.notFound');
     if (payment.status !== 'POSTED' || !payment.entryId) throw new BadRequestException('payment.alreadyVoided');
-    const entryId = payment.entryId;
-    await this.prisma.$transaction(async (tx) => {
-      // claim first so two people voiding at once cannot reverse twice
-      const claimed = await tx.payment.updateMany({ where: { id, status: 'POSTED' }, data: { status: 'VOIDED', voidedAt: new Date(), voidReason: reason } });
-      if (claimed.count === 0) throw new BadRequestException('payment.alreadyVoided');
-      const reversal = await this.ledger.reverse(tx, auth.companyId, entryId, {
-        date: today(),
-        memo: `${payment.number} — void: ${reason}`,
-        createdById: auth.userId,
-      });
-      await tx.payment.update({ where: { id }, data: { voidEntryId: reversal.id } });
-    });
+    // a cheque payment follows its cheque: it is voided by marking the cheque as bounced
+    const cheque = await this.prisma.cheque.findUnique({ where: { paymentId: id }, select: { id: true } });
+    if (cheque) throw new BadRequestException('payment.useChequeActions');
+    await this.prisma.$transaction((tx) => this.voidInTx(tx, auth, payment, reason, today()));
     await this.activity.log(auth, { action: 'payment.void', entity: 'Payment', entityId: id, details: { number: payment.number, reason } });
     return this.get(auth, id);
+  }
+
+  /** Issue a receipt and post it (Dr cash/bank/cheques, Cr receivable). Runs inside the caller's transaction. */
+  async record(
+    tx: Prisma.TransactionClient,
+    auth: UserAuth,
+    lease: { id: string; number: string; tenantId: string; propertyId: string; unitId: string; tenant: { name: string } },
+    data: {
+      amount: number;
+      date: Date;
+      method: (typeof PAYMENT_METHODS)[number];
+      reference?: string | null;
+      bankName?: string | null;
+      chequeNo?: string | null;
+      chequeDate?: Date | null;
+      notes?: string | null;
+    },
+  ) {
+    const number = await this.ledger.nextNumber(tx, auth.companyId, 'receipt', data.date.getUTCFullYear(), 'R', 6);
+    const entry = await this.ledger.post(tx, {
+      companyId: auth.companyId,
+      date: data.date,
+      type: 'PAYMENT',
+      memo: `${number} — ${lease.tenant.name} — ${lease.number}`,
+      leaseId: lease.id,
+      createdById: auth.userId,
+      lines: paymentLines(data.method, data.amount, { propertyId: lease.propertyId, unitId: lease.unitId, leaseId: lease.id, tenantId: lease.tenantId }),
+    });
+    return tx.payment.create({
+      data: {
+        companyId: auth.companyId,
+        number,
+        tenantId: lease.tenantId,
+        leaseId: lease.id,
+        propertyId: lease.propertyId,
+        unitId: lease.unitId,
+        date: data.date,
+        amount: data.amount,
+        method: data.method,
+        reference: data.reference ?? null,
+        bankName: data.bankName ?? null,
+        chequeNo: data.chequeNo ?? null,
+        chequeDate: data.chequeDate ?? null,
+        notes: data.notes ?? null,
+        entryId: entry.id,
+        createdById: auth.userId,
+      },
+    });
+  }
+
+  /** Void inside the caller's transaction: claim the row, then post the reversing entry. */
+  async voidInTx(tx: Prisma.TransactionClient, auth: UserAuth, payment: { id: string; number: string; entryId: string | null }, reason: string, date: Date) {
+    // claim first so two people voiding at once cannot reverse twice
+    const claimed = await tx.payment.updateMany({ where: { id: payment.id, status: 'POSTED' }, data: { status: 'VOIDED', voidedAt: new Date(), voidReason: reason } });
+    if (claimed.count === 0 || !payment.entryId) throw new BadRequestException('payment.alreadyVoided');
+    const reversal = await this.ledger.reverse(tx, auth.companyId, payment.entryId, {
+      date,
+      memo: `${payment.number} — void: ${reason}`,
+      createdById: auth.userId,
+    });
+    await tx.payment.update({ where: { id: payment.id }, data: { voidEntryId: reversal.id } });
   }
 
   private scope(auth: UserAuth): Prisma.PaymentWhereInput {
