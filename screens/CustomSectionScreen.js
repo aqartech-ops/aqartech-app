@@ -11,9 +11,11 @@ import { customApi, sectionName, useCustomSections } from '../services/customSec
 import { optionLabel, toEditable, toPayload, useFieldRules } from '../services/fields';
 import CustomFields, { CustomValues } from '../components/CustomFields';
 import CustomActions from '../components/CustomActions';
+import SectionAnalytics from '../components/SectionAnalytics';
+import { metricsApi } from '../services/api';
 import { Money, SectionIcon } from '../components/Rial';
 import { formatDate } from '../components/Fields';
-import { BackButton, Button, Card, ChipSelect, EmptyState, ErrorBox, Field, IconButton, Loading, Row, Screen, Sheet, Txt } from '../components/ui';
+import { BackButton, Button, Card, ChipSelect, EmptyState, ErrorBox, Field, IconButton, Loading, Row, Screen, Segmented, Sheet, Txt } from '../components/ui';
 
 // A section created by the platform team (قسم مضاف): list, record page with its sub-sections, form, search, trash.
 // Its fields come from the "Fields" admin page (entity "cs:<key>").
@@ -55,11 +57,21 @@ function SummaryLine({ defs, record, skipKey }) {
 }
 
 export default function CustomSectionScreen({ sectionKey, params, onNavigate }) {
-  const { lang } = useI18n();
+  const { t, lang } = useI18n();
   const sections = useCustomSections();
   const section = sections.find((s) => s.key === sectionKey);
   const children = useMemo(() => sections.filter((s) => s.parentId === section?.id), [sections, section]);
   const [openId, setOpenId] = useState(null);
+  // indicators of this section (and its sub-sections) the user may see — the "Analytics" view
+  const [metrics, setMetrics] = useState([]);
+  const [view, setView] = useState(params?.analytics ? 'analytics' : 'records');
+
+  useEffect(() => {
+    metricsApi
+      .list(sectionKey)
+      .then(setMetrics)
+      .catch(() => setMetrics([]));
+  }, [sectionKey]);
 
   // opened from the global search: a record of this section, or of one of its sub-sections (open its parent)
   useEffect(() => {
@@ -77,12 +89,32 @@ export default function CustomSectionScreen({ sectionKey, params, onNavigate }) 
   if (!section) return <Screen><Loading /></Screen>;
   if (openId) return <RecordPage section={section} subSections={children} id={openId} onBack={() => setOpenId(null)} onNavigate={onNavigate} />;
   // params.newRecord: opened by an added button on another record page, with values to copy into the new record
-  return <RecordList section={section} onOpen={setOpenId} title={sectionName(section, lang)} openCreate={!!params?.create} prefill={params?.newRecord} />;
+  const tabs = metrics.length ? (
+    <Segmented
+      value={view}
+      onChange={setView}
+      options={[
+        { value: 'records', label: t('metrics.records') },
+        { value: 'analytics', label: t('metrics.analytics') },
+      ]}
+    />
+  ) : null;
+  if (view === 'analytics' && metrics.length) {
+    return (
+      <Screen title={sectionName(section, lang)}>
+        <View style={{ gap: SPACING.md }}>
+          {tabs}
+          <SectionAnalytics metrics={metrics} filename={`${section.key}-analytics`} />
+        </View>
+      </Screen>
+    );
+  }
+  return <RecordList section={section} onOpen={setOpenId} title={sectionName(section, lang)} openCreate={!!params?.create} prefill={params?.newRecord} tabs={tabs} />;
 }
 
 // ================================================================ list
 
-function RecordList({ section, onOpen, title, openCreate, prefill }) {
+function RecordList({ section, onOpen, title, openCreate, prefill, tabs }) {
   const { t, lang, forwardIcon } = useI18n();
   const { canEdit } = useSession();
   const editable = canEdit(`cs_${section.key}`);
@@ -124,6 +156,7 @@ function RecordList({ section, onOpen, title, openCreate, prefill }) {
   return (
     <Screen title={title} actions={editable && !trash ? <Button id="records.add" icon="plus" title={t('sectionsUser.add')} onPress={() => setEditing({})} /> : null}>
       <View style={{ gap: SPACING.md }}>
+        {tabs}
         <Row style={{ flexWrap: 'wrap' }}>
           <View style={{ flex: 1, minWidth: 200 }}>
             <Field value={text} onChangeText={setText} placeholder={t('search.placeholder')} />

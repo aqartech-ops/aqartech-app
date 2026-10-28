@@ -9,7 +9,7 @@ const root = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..')
 const read = (f) => fs.readFileSync(path.join(root, f), 'utf8');
 
 // Platform-team screens and the building blocks themselves are not subscriber buttons.
-const SKIP_FILES = ['FieldsScreen.js', 'SectionsScreen.js', 'ButtonsScreen.js', 'TemplatesScreen.js', 'PlansScreen.js', 'CompaniesScreen.js', 'LoginScreen.js', 'ui.js', 'AppShell.js', 'SearchModal.js', 'CustomActions.js'];
+const SKIP_FILES = ['FieldsScreen.js', 'SectionsScreen.js', 'ButtonsScreen.js', 'TemplatesScreen.js', 'MetricsScreen.js', 'PlansScreen.js', 'CompaniesScreen.js', 'LoginScreen.js', 'ui.js', 'AppShell.js', 'SearchModal.js', 'CustomActions.js'];
 
 // Buttons that belong to a form or a picker (not actions of their own).
 const FORM_PARTS = [

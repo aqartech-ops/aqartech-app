@@ -20,9 +20,10 @@ import { FieldsModule } from './fields/fields.module.js';
 import { CustomSectionsModule } from './custom/custom-sections.module.js';
 import { ButtonsModule } from './buttons/buttons.module.js';
 import { TemplatesModule } from './templates/templates.module.js';
+import { MetricsModule } from './metrics/metrics.module.js';
 
 @Module({
-  imports: [PrismaModule, CommonModule, FieldsModule, AuthModule, PlansModule, CompanyModule, UserModule, AdminModule, SearchModule, PropertiesModule, DashboardModule, OwnersModule, TenantsModule, LeasesModule, FinanceModule, MaintenanceModule, CustomSectionsModule, ButtonsModule, TemplatesModule],
+  imports: [PrismaModule, CommonModule, FieldsModule, AuthModule, PlansModule, CompanyModule, UserModule, AdminModule, SearchModule, PropertiesModule, DashboardModule, OwnersModule, TenantsModule, LeasesModule, FinanceModule, MaintenanceModule, CustomSectionsModule, ButtonsModule, TemplatesModule, MetricsModule],
   controllers: [AppController],
   providers: [AppService],
 })

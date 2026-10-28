@@ -16,6 +16,7 @@ import FieldsScreen from './screens/FieldsScreen';
 import SectionsScreen from './screens/SectionsScreen';
 import ButtonsScreen from './screens/ButtonsScreen';
 import TemplatesScreen from './screens/TemplatesScreen';
+import MetricsScreen from './screens/MetricsScreen';
 import CustomSectionScreen from './screens/CustomSectionScreen';
 import { sectionName, useCustomSections } from './services/customSections';
 import UsersScreen from './screens/UsersScreen';
@@ -50,6 +51,7 @@ const ADMIN_SECTIONS = [
   { key: 'sections', icon: 'view-grid-plus-outline', Screen: SectionsScreen },
   { key: 'buttons', icon: 'gesture-tap-button', Screen: ButtonsScreen },
   { key: 'templates', icon: 'file-document-edit-outline', Screen: TemplatesScreen },
+  { key: 'metrics', icon: 'chart-box-outline', Screen: MetricsScreen },
   { key: 'settings', icon: 'cog-outline', Screen: SettingsScreen },
 ];
 
