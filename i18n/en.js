@@ -46,6 +46,7 @@ export default {
     sections: 'Sections',
     buttons: 'Buttons',
     templates: 'Print templates',
+    metrics: 'Indicators',
   },
 
   // Short labels for the bottom bar
@@ -65,6 +66,7 @@ export default {
     sections: 'Sections',
     buttons: 'Buttons',
     templates: 'Templates',
+    metrics: 'Indicators',
     more: 'More',
   },
 
@@ -628,6 +630,44 @@ export default {
     sampleCompany: 'Sample Company LLC',
   },
 
+  // Indicators of the added sections (dashboard + section analytics)
+  metrics: {
+    records: 'Records',
+    analytics: 'Analytics',
+    none: 'Not set',
+    recordsCount: '{{count}} records',
+    indicator: 'Indicator',
+    breakdown: 'Breakdown',
+    value: 'Value',
+    from: 'From',
+    to: 'To',
+    periods: { MONTH: 'This month', YEAR: 'This year', ALL: 'All time', CUSTOM: 'Custom period' },
+  },
+
+  // Platform team: indicators
+  metricsAdmin: {
+    title: 'Indicators',
+    subtitle: 'Flexible analytics over the added sections: totals, counts and averages of their amount and number fields.',
+    add: 'New indicator',
+    empty: 'No indicators yet.',
+    howItWorks: 'Each indicator shows on the dashboard (if chosen) and in the "Analytics" view of its section, only to users who may see that section and only over their properties. These figures come from the section records, not from the accounts: the financial statements stay computed from the ledger.',
+    section: 'Section',
+    aggregate: 'Calculation',
+    aggregates: { SUM: 'Total', COUNT: 'Count of records', AVG: 'Average', MIN: 'Lowest', MAX: 'Highest' },
+    valueField: 'Field to calculate',
+    noValueFields: 'This section has no amount or number fields yet — add them from the Fields page.',
+    dateField: 'Date used for the period',
+    createdDate: 'Date the record was added',
+    filter: 'Only records where',
+    noFilter: 'All records',
+    groupBy: 'Break down by',
+    noGroup: 'No breakdown',
+    byMonth: 'Month',
+    byProperty: 'Property',
+    onDashboard: 'On the dashboard',
+    onDashboardHint: 'Shown as a card on the subscribers\' home page, over this period:',
+  },
+
   receipt: {
     title: 'Receipt',
     receivedFrom: 'Received from',
@@ -1178,5 +1218,7 @@ export default {
     'buttons.unknownField': 'This field does not exist (or was removed).',
     'buttons.unknownSection': 'This section does not exist (or was hidden).',
     'templates.badPlaceholder': 'A field in the text is not written correctly — use {{field}} or {{field | money}}:',
+    'metrics.valueField': 'Choose an amount or number field to calculate.',
+    'metrics.noProperty': 'This section is not linked to properties.',
   },
 };

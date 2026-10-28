@@ -235,6 +235,12 @@ export const searchApi = {
   run: (q) => api.get('/search', { q }),
 };
 
+/** Indicators of the sections added by the platform team (only those the user may see). */
+export const metricsApi = {
+  list: (section) => api.get('/metrics', { section }),
+  result: (id, query) => api.get(`/metrics/${id}`, query),
+};
+
 export const adminApi = {
   companies: () => api.get('/admin/companies'),
   updateSubscription: (companyId, data) => api.patch(`/admin/companies/${companyId}/subscription`, data),
@@ -265,4 +271,9 @@ export const adminApi = {
   updateTemplate: (id, data) => api.patch(`/admin/print-templates/${id}`, data),
   moveTemplate: (id, direction) => api.post(`/admin/print-templates/${id}/move`, { direction }),
   removeTemplate: (id, purge = false) => api.delete(`/admin/print-templates/${id}${purge ? '?purge=1' : ''}`),
+  metrics: () => api.get('/admin/metrics'),
+  createMetric: (data) => api.post('/admin/metrics', data),
+  updateMetric: (id, data) => api.patch(`/admin/metrics/${id}`, data),
+  moveMetric: (id, direction) => api.post(`/admin/metrics/${id}/move`, { direction }),
+  removeMetric: (id, purge = false) => api.delete(`/admin/metrics/${id}${purge ? '?purge=1' : ''}`),
 };

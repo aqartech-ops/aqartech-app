@@ -1156,3 +1156,31 @@ model PrintTemplate {
 
   @@index([entity])
 }
+
+// ==========================================
+// Indicators (المؤشرات) — platform level: flexible analytics over the sections added by the platform team
+// ==========================================
+
+/// An indicator computed from the records of an added section (or sub-section): sum / count / average / min / max
+/// of an amount or number field, over a period, optionally filtered and broken down. Shown on the dashboard and in
+/// the section's analytics to users who may see that section. Never mixed into the ledger-based financial statements.
+model Metric {
+  id          String   @id @default(uuid())
+  nameAr      String
+  nameEn      String
+  section     String // CustomSection.key (top-level or sub-section)
+  aggregate   String   @default("SUM") // SUM | COUNT | AVG | MIN | MAX
+  valueField  String? // MONEY / NUMBER extra field (null for COUNT)
+  dateField   String? // DATE extra field used for the period (null = date the record was created)
+  filterField String? // SELECT / MULTISELECT / BOOLEAN extra field
+  filterValue Json?
+  groupBy     String? // null | "month" | "property" | a SELECT / MULTISELECT / BOOLEAN field key
+  onDashboard Boolean  @default(true)
+  period      String   @default("MONTH") // dashboard period: MONTH | YEAR | ALL
+  sortOrder   Int      @default(0)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([section])
+}

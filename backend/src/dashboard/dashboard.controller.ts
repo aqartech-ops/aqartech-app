@@ -11,6 +11,7 @@ import { ChequesService } from '../finance/cheques.service.js';
 import { MunicipalityService } from '../finance/municipality.service.js';
 import { MaintenanceModule, WorkOrdersService } from '../maintenance/maintenance.module.js';
 import { Auth, type UserAuth } from '../common/auth-context.js';
+import { MetricsModule, MetricsService } from '../metrics/metrics.module.js';
 
 /**
  * The dashboard is open to every user, but each widget is included ONLY if the user may see
@@ -27,6 +28,7 @@ export class DashboardService {
     private readonly cheques: ChequesService,
     private readonly workOrders: WorkOrdersService,
     private readonly municipality: MunicipalityService,
+    private readonly metrics: MetricsService,
   ) {}
 
   async get(auth: UserAuth) {
@@ -55,6 +57,9 @@ export class DashboardService {
       };
     }
     if (can('maintenance')) widgets.maintenance = await this.workOrders.stats(auth);
+    // Indicators of the added sections (only those the user may see, over their properties)
+    const metrics = await this.metrics.dashboard(auth);
+    if (metrics.length) widgets.metrics = metrics;
     // Plan usage is for whoever manages the account / the team.
     if (auth.isCompanyAdmin || auth.access.users === 'EDIT') widgets.planUsage = await this.plans.usage(auth.companyId);
 
@@ -74,7 +79,7 @@ export class DashboardController {
 }
 
 @Module({
-  imports: [PropertiesModule, TenantsModule, LeasesModule, FinanceModule, MaintenanceModule],
+  imports: [PropertiesModule, TenantsModule, LeasesModule, FinanceModule, MaintenanceModule, MetricsModule],
   controllers: [DashboardController],
   providers: [DashboardService],
 })

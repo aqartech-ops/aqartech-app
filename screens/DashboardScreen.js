@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { StyleSheet, View, useWindowDimensions } from 'react-native';
+import { Pressable, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { COLORS, FONT, RADIUS, SPACING } from '../theme';
 import { BREAKPOINTS } from '../services/config';
@@ -8,6 +8,7 @@ import { useSession } from '../services/session';
 import { adminApi, dashboardApi } from '../services/api';
 import { Badge, Button, Card, ErrorBox, Loading, Row, STATUS_TONE, Screen, Txt } from '../components/ui';
 import { Money, SectionIcon } from '../components/Rial';
+import { MetricValue } from '../components/SectionAnalytics';
 
 export default function DashboardScreen({ onNavigate }) {
   const { isAdmin } = useSession();
@@ -195,6 +196,24 @@ function CompanyDashboard({ onNavigate }) {
               label={t('finance.noiMonth')}
               value={<Money baisa={w.financials.noiMonth} size={FONT.title} weight="weightBold" color={w.financials.noiMonth < 0 ? COLORS.danger : COLORS.textDark} />}
             />
+          </Grid>
+        </>
+      ) : null}
+
+      {w.metrics ? (
+        <>
+          <View style={{ height: SPACING.sm }} />
+          <Grid columns={columns}>
+            {w.metrics.map((m) => (
+              <Pressable key={m.id} onPress={() => onNavigate?.(`cs_${m.rootKey}`, { analytics: true })} style={{ flexGrow: 1 }}>
+                <Kpi
+                  icon={m.icon || 'chart-box-outline'}
+                  label={lang === 'ar' ? m.nameAr : m.nameEn}
+                  value={<MetricValue value={m.value} format={m.format} />}
+                  hint={t(`metrics.periods.${m.period}`)}
+                />
+              </Pressable>
+            ))}
           </Grid>
         </>
       ) : null}
