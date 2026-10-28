@@ -1,0 +1,21 @@
+import { formatOMR } from './money';
+
+// Pieces shared by every printable document (receipts, statements, reports, print templates).
+// Pure — no React Native imports — so it can be tested with plain Node.
+// Amounts carry the official Omani rial symbol (inline SVG, same artwork as assets/rial-symbol.svg).
+
+export const RIAL_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 500"><path fill="currentColor" fill-rule="evenodd" d="M959,246 L421,245 L406,229 L390,209 L385,201 L379,187 L378,172 L381,163 L385,157 L396,146 L410,138 L434,132 L459,133 L476,137 L489,142 L514,155 L542,175 L557,188 L594,226 L632,79 L614,60 L591,41 L567,25 L541,12 L517,4 L502,1 L495,1 L494,0 L475,0 L460,3 L451,6 L432,17 L413,35 L398,54 L378,86 L361,122 L349,159 L341,201 L340,224 L339,225 L339,245 L338,246 L158,246 L100,344 L375,345 L415,398 L414,399 L57,399 L8,485 L3,492 L1,498 L799,498 L858,399 L671,399 L637,389 L612,379 L578,362 L552,346 L553,345 L897,345 Z"/></svg>`;
+
+export const esc = (value) =>
+  String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+
+export const date = (value, lang) => (value ? new Date(value).toLocaleDateString(lang === 'ar' ? 'ar-OM' : 'en-GB', { timeZone: 'UTC' }) : '');
+
+export function money(baisa, lang) {
+  return `<span class="money"><span class="rial">${RIAL_SVG}</span>${esc(formatOMR(baisa, lang, { withCurrency: false }))}</span>`;
+}
+

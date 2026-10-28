@@ -1131,3 +1131,28 @@ model CustomButton {
 
   @@index([entity])
 }
+
+// ==========================================
+// Print templates (قوالب الطباعة) — platform level, applies to every subscriber
+// ==========================================
+
+/// A printable document (letter, notice, form) for one kind of record. The text holds {{field}} placeholders
+/// filled from the record when printed; the subscriber's company name and contacts head the page.
+model PrintTemplate {
+  id         String   @id @default(uuid())
+  entity     String // tenant | lease | owner | property | cs:<section key>
+  nameAr     String
+  nameEn     String
+  titleAr    String?
+  titleEn    String?
+  bodyAr     String   @default("")
+  bodyEn     String   @default("")
+  signatures Json     @default("[]") // [{ labelAr, labelEn }] signature lines at the bottom
+  paper      String   @default("A4") // A4 | A5
+  sortOrder  Int      @default(0)
+  isActive   Boolean  @default(true) // false = removed from record pages (restorable)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([entity])
+}

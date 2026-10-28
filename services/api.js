@@ -260,4 +260,9 @@ export const adminApi = {
   updateButton: (id, data) => api.patch(`/admin/buttons/custom/${id}`, data),
   moveButton: (id, direction) => api.post(`/admin/buttons/custom/${id}/move`, { direction }),
   removeButton: (id, purge = false) => api.delete(`/admin/buttons/custom/${id}${purge ? '?purge=1' : ''}`),
+  templates: () => api.get('/admin/print-templates'),
+  createTemplate: (data) => api.post('/admin/print-templates', data),
+  updateTemplate: (id, data) => api.patch(`/admin/print-templates/${id}`, data),
+  moveTemplate: (id, direction) => api.post(`/admin/print-templates/${id}/move`, { direction }),
+  removeTemplate: (id, purge = false) => api.delete(`/admin/print-templates/${id}${purge ? '?purge=1' : ''}`),
 };

@@ -45,6 +45,7 @@ export default {
     fields: 'Fields',
     sections: 'Sections',
     buttons: 'Buttons',
+    templates: 'Print templates',
   },
 
   // Short labels for the bottom bar
@@ -63,6 +64,7 @@ export default {
     fields: 'Fields',
     sections: 'Sections',
     buttons: 'Buttons',
+    templates: 'Templates',
     more: 'More',
   },
 
@@ -567,6 +569,7 @@ export default {
       vendors: 'Contractors',
       records: 'Added sections',
       users: 'Users & roles',
+      print: 'Printing',
     },
     entities: { tenant: 'Tenant page', lease: 'Lease page', owner: 'Owner page', property: 'Property page' },
     actions: {
@@ -585,6 +588,44 @@ export default {
       SET_FIELD: 'Writes a value in an extra field in one tap (e.g. "Inspected = Yes"). Needs Edit permission.',
       NEW_RECORD: 'Opens the form of an added section with values copied from this record. Needs Edit permission on that section.',
     },
+  },
+
+  // Printing a template from a record page
+  print: {
+    hint: 'Print it, or share it as a PDF (WhatsApp, email…). Empty fields show dots to fill by hand.',
+    balance: 'Balance due',
+    overdue: 'Overdue amount',
+    tenantCivilId: 'Tenant civil ID',
+    today: "Today's date",
+    companyName: 'Company name',
+    companyPhone: 'Company phone',
+    companyEmail: 'Company email',
+  },
+
+  // Platform team: print templates
+  templatesAdmin: {
+    title: 'Print templates',
+    subtitle: 'Letters, notices and forms for every subscriber, filled from the record when printed.',
+    add: 'New template',
+    empty: 'No templates on {{name}} yet.',
+    howItWorks: 'Each template appears as a print button on its record page. The page is headed with the subscriber\'s company name and contacts, and can be printed or shared as a PDF.',
+    nameAr: 'Button name (Arabic)',
+    nameEn: 'Button name (English)',
+    titleAr: 'Document title (Arabic)',
+    titleEn: 'Document title (English)',
+    body: 'Text',
+    arabic: 'Arabic',
+    english: 'English',
+    bodyPlaceholder: 'Dear {{tenant.name}},\n…',
+    formatHelp: 'Formatting: a line starting with "## " is a heading, "- " a bullet, **text** is bold, an empty line starts a new paragraph. {{field}} is filled from the record.',
+    otherLanguage: 'Write both versions: each user prints in their language. If one is empty, the other is used.',
+    signatures: 'Signature lines',
+    signatureAr: 'Label (Arabic)',
+    signatureEn: 'Label (English)',
+    addSignature: 'Add a signature line',
+    paper: 'Paper size',
+    preview: 'Preview',
+    sampleCompany: 'Sample Company LLC',
   },
 
   receipt: {
@@ -1136,5 +1177,6 @@ export default {
     'buttons.badUrl': 'The link must start with https:// or http://',
     'buttons.unknownField': 'This field does not exist (or was removed).',
     'buttons.unknownSection': 'This section does not exist (or was hidden).',
+    'templates.badPlaceholder': 'A field in the text is not written correctly — use {{field}} or {{field | money}}:',
   },
 };
