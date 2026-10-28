@@ -77,7 +77,7 @@ function Statements({ editable, version, onChanged }) {
 
   return (
     <View style={{ gap: SPACING.md }}>
-      {editable ? <Button icon="file-document-edit-outline" title={t('ownerStatements.new')} onPress={() => setBuilding(true)} style={{ alignSelf: 'flex-start' }} /> : null}
+      {editable ? <Button id="ownerStatements.new" icon="file-document-edit-outline" title={t('ownerStatements.new')} onPress={() => setBuilding(true)} style={{ alignSelf: 'flex-start' }} /> : null}
       <ErrorBox error={error} onRetry={load} />
       {rows === null ? (
         <Loading />
@@ -254,7 +254,7 @@ function StatementBuilder({ visible, onClose, onIssued }) {
       footer={
         <>
           <Button variant="secondary" title={t('common.cancel')} onPress={onClose} />
-          <Button icon="check" title={t('ownerStatements.issue')} onPress={issue} loading={busy} disabled={!preview || !!preview.existing} />
+          <Button id="ownerStatements.issue" icon="check" title={t('ownerStatements.issue')} onPress={issue} loading={busy} disabled={!preview || !!preview.existing} />
         </>
       }
     >
@@ -342,8 +342,8 @@ function StatementSheet({ id, editable, onClose, onChanged }) {
       footer={
         st ? (
           <>
-            <Button variant="secondary" icon="printer-outline" title={t('receipt.print')} onPress={() => run(() => printHtml(ownerStatementHtml(st, t, lang)))} />
-            <Button icon="share-variant-outline" title={t('receipt.share')} onPress={() => run(() => shareHtml(ownerStatementHtml(st, t, lang), st.number))} />
+            <Button id="ownerStatements.print" variant="secondary" icon="printer-outline" title={t('receipt.print')} onPress={() => run(() => printHtml(ownerStatementHtml(st, t, lang)))} />
+            <Button id="ownerStatements.share" icon="share-variant-outline" title={t('receipt.share')} onPress={() => run(() => shareHtml(ownerStatementHtml(st, t, lang), st.number))} />
           </>
         ) : null
       }
@@ -363,11 +363,11 @@ function StatementSheet({ id, editable, onClose, onChanged }) {
                 <Field label={t('payments.voidReason')} value={reason} onChangeText={setReason} />
                 <Row style={{ justifyContent: 'flex-end' }}>
                   <Button small variant="secondary" title={t('common.cancel')} onPress={() => setVoiding(false)} />
-                  <Button small variant="danger" title={t('ownerStatements.void')} loading={busy} disabled={!reason.trim()} onPress={doVoid} />
+                  <Button id="ownerStatements.void" small variant="danger" title={t('ownerStatements.void')} loading={busy} disabled={!reason.trim()} onPress={doVoid} />
                 </Row>
               </View>
             ) : (
-              <Button small variant="danger" icon="cancel" title={t('ownerStatements.void')} onPress={() => setVoiding(true)} style={{ alignSelf: 'flex-start' }} />
+              <Button id="ownerStatements.void" small variant="danger" icon="cancel" title={t('ownerStatements.void')} onPress={() => setVoiding(true)} style={{ alignSelf: 'flex-start' }} />
             )
           ) : null}
         </>
@@ -494,7 +494,7 @@ function OwnerAccountSheet({ ownerId, editable, onClose, onChanged }) {
           </Row>
           {data.owner.accountNumber ? <Txt muted size="small">{[data.owner.bankName, data.owner.accountName, data.owner.accountNumber].filter(Boolean).join(' · ')}</Txt> : null}
 
-          {editable && !paying ? <Button icon="bank-transfer-out" title={t('ownerStatements.payout')} onPress={openPay} style={{ alignSelf: 'flex-start' }} /> : null}
+          {editable && !paying ? <Button id="ownerStatements.payout" icon="bank-transfer-out" title={t('ownerStatements.payout')} onPress={openPay} style={{ alignSelf: 'flex-start' }} /> : null}
           {paying ? (
             <View style={styles.box}>
               <Txt weight="weightBold">{t('ownerStatements.payout')}</Txt>

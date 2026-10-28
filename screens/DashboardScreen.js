@@ -107,10 +107,10 @@ function CompanyDashboard({ onNavigate }) {
       {quick.length ? (
         <Row style={{ flexWrap: 'wrap', marginBottom: SPACING.md }}>
           {quick.includes('tenants') ? (
-            <Button icon="account-plus-outline" title={t('dashboard.newTenant')} onPress={() => onNavigate?.('tenants', { create: true })} style={{ flexGrow: 1 }} />
+            <Button id="dashboard.newTenant" icon="account-plus-outline" title={t('dashboard.newTenant')} onPress={() => onNavigate?.('tenants', { create: true })} style={{ flexGrow: 1 }} />
           ) : null}
           {quick.includes('properties') ? (
-            <Button
+            <Button id="dashboard.addProperty"
               variant="secondary"
               icon="home-plus-outline"
               title={t('properties.add')}
@@ -119,7 +119,7 @@ function CompanyDashboard({ onNavigate }) {
             />
           ) : null}
           {quick.includes('maintenance') ? (
-            <Button
+            <Button id="dashboard.newWorkOrder"
               variant="secondary"
               icon="wrench-outline"
               title={t('maintenance.add')}

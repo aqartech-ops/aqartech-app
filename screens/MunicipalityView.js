@@ -82,7 +82,7 @@ export function MunicipalityTab({ editable, version, onChanged }) {
                 ) : null}
               </View>
               {editable ? (
-                <Button small variant={r.state === 'REGISTERED' ? 'secondary' : 'primary'} icon="file-certificate-outline" title={r.last ? t('municipality.renew') : t('municipality.register')} onPress={() => setRegistering(r)} />
+                <Button id="municipality.register" small variant={r.state === 'REGISTERED' ? 'secondary' : 'primary'} icon="file-certificate-outline" title={r.last ? t('municipality.renew') : t('municipality.register')} onPress={() => setRegistering(r)} />
               ) : null}
             </Row>
           ))}
@@ -185,7 +185,7 @@ export function LeaseMunicipalityCard({ lease, editable, onChanged }) {
       <Row style={{ justifyContent: 'space-between', flexWrap: 'wrap' }}>
         <Txt weight="weightBold">{t('municipality.title')}</Txt>
         {editable ? (
-          <Button small variant={last ? 'secondary' : 'primary'} icon="file-certificate-outline" title={last ? t('municipality.renew') : t('municipality.register')} onPress={() => setRegistering(true)} />
+          <Button id="municipality.register" small variant={last ? 'secondary' : 'primary'} icon="file-certificate-outline" title={last ? t('municipality.renew') : t('municipality.register')} onPress={() => setRegistering(true)} />
         ) : null}
       </Row>
       {records.length === 0 ? (

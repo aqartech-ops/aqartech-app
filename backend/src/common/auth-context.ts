@@ -1,5 +1,5 @@
 import { createParamDecorator, ExecutionContext, SetMetadata } from '@nestjs/common';
-import type { AccessLevel, SectionKey } from './sections.js';
+import type { AccessLevel, AccessMap, SectionKey } from './sections.js';
 
 /** Who is calling. Attached to the request by AuthGuard. */
 export type AuthContext =
@@ -11,7 +11,7 @@ export type AuthContext =
       isCompanyAdmin: boolean;
       userKind: 'STAFF' | 'OWNER';
       /** Effective access per section = plan features ∩ role permissions. */
-      access: Record<SectionKey, AccessLevel>;
+      access: AccessMap;
       /** Properties this user may see; null = all of the company's properties. */
       propertyIds: string[] | null;
     };

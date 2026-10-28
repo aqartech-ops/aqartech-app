@@ -117,8 +117,8 @@ function AgreementCard({ property, editable, onLoaded, linkOwnerId, onLinkHandle
         <Txt weight="weightBold">{t('agreement.title')}</Txt>
         {managed && editable ? (
           <Row>
-            {active ? <Button small variant="danger" title={t('agreement.end')} onPress={end} /> : null}
-            <Button small icon={active ? 'pencil-outline' : 'plus'} title={active ? t('agreement.edit') : t('agreement.add')} onPress={() => setEditing(active ?? {})} />
+            {active ? <Button id="agreement.end" small variant="danger" title={t('agreement.end')} onPress={end} /> : null}
+            <Button id="agreement.manage" small icon={active ? 'pencil-outline' : 'plus'} title={active ? t('agreement.edit') : t('agreement.add')} onPress={() => setEditing(active ?? {})} />
           </Row>
         ) : null}
       </Row>
@@ -321,7 +321,7 @@ function PartnersCard({ property, editable, linkOwnerId, onLinkHandled }) {
     <Card style={{ gap: SPACING.md }}>
       <Row style={{ justifyContent: 'space-between' }}>
         <Txt weight="weightBold">{t('partners.title')}</Txt>
-        {editable ? <Button small variant="secondary" icon="pencil-outline" title={t('partners.edit')} onPress={() => setEditing(true)} /> : null}
+        {editable ? <Button id="partners.edit" small variant="secondary" icon="pencil-outline" title={t('partners.edit')} onPress={() => setEditing(true)} /> : null}
       </Row>
       <ErrorBox error={error} />
       {!partners ? (

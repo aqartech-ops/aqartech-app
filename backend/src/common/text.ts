@@ -27,6 +27,14 @@ export function normalizedColumn(column: string): Prisma.Sql {
   return Prisma.raw(`translate(lower(coalesce(${column}, '')), '${FROM_MAP}${REMOVED}', '${TO_MAP}')`);
 }
 
+/** Same as normalizedColumn for a JSON column searched as text (all its values at once). */
+export function normalizedJsonText(column: string): Prisma.Sql {
+  if (!/^"?[A-Za-z_][A-Za-z0-9_]*"?(\."?[A-Za-z_][A-Za-z0-9_]*"?)?$/.test(column)) {
+    throw new Error(`Unsafe column identifier: ${column}`);
+  }
+  return Prisma.raw(`translate(lower(coalesce((${column})::text, '')), '${FROM_MAP}${REMOVED}', '${TO_MAP}')`);
+}
+
 /** LIKE pattern "%term%" with LIKE wildcards in the user's text escaped. */
 export function likePattern(term: string): string {
   return `%${normalizeSearch(term).replace(/[\\%_]/g, (c) => `\\${c}`)}%`;

@@ -5,6 +5,7 @@ import { COLORS, FONT, RADIUS, SHADOWS, SPACING } from '../theme';
 import { useI18n } from '../i18n';
 import { SectionIcon } from './Rial';
 import { KeyboardScrollView, useKeyboard, useRevealOnFocus } from './keyboard';
+import { useButtonOverride } from '../services/buttons';
 
 // Shared building blocks. All of them respect the current language direction.
 
@@ -40,8 +41,19 @@ export function Card({ style, children, padded = true }) {
   return <View style={[styles.card, padded && { padding: SPACING.lg }, style]}>{children}</View>;
 }
 
-export function Button({ title, onPress, variant = 'primary', icon, loading, disabled, small, style }) {
+/** Override by the platform team (Buttons page) for the button `id`: renamed text / icon, or hidden. */
+function useOverride(id, title, icon) {
+  const { lang } = useI18n();
+  const o = useButtonOverride(id);
+  if (!o) return { hidden: false, title, icon };
+  return { hidden: !!o.hidden, title: (lang === 'ar' ? o.labelAr : o.labelEn) || title, icon: o.icon || icon };
+}
+
+/** `id` = the button's id in the catalog (services/buttons.js) so the platform team can rename, re-icon or hide it. */
+export function Button({ id, title: defaultTitle, onPress, variant = 'primary', icon: defaultIcon, loading, disabled, small, style }) {
   const { row } = useI18n();
+  const { hidden, title, icon } = useOverride(id, defaultTitle, defaultIcon);
+  if (hidden) return null;
   const palette = {
     primary: { bg: COLORS.primary, fg: COLORS.onPrimary, border: COLORS.primary },
     secondary: { bg: COLORS.surface, fg: COLORS.textDark, border: COLORS.borderStrong },
@@ -76,7 +88,9 @@ export function Button({ title, onPress, variant = 'primary', icon, loading, dis
   );
 }
 
-export function IconButton({ icon, onPress, color = COLORS.textDark, size = 22, label, style }) {
+export function IconButton({ id, icon: defaultIcon, onPress, color = COLORS.textDark, size = 22, label: defaultLabel, style }) {
+  const { hidden, title: label, icon } = useOverride(id, defaultLabel, defaultIcon);
+  if (hidden) return null;
   return (
     <Pressable
       accessibilityRole="button"

@@ -135,6 +135,7 @@ model Company {
   ownerPayouts      OwnerPayout[]
   periodCloses      PeriodClose[]
   municipality      MunicipalityRecord[]
+  customRecords     CustomRecord[]
   counters     Counter[]
 }
 
@@ -1051,4 +1052,82 @@ model FieldDefinition {
   updatedAt    DateTime   @updatedAt
 
   @@unique([entity, key])
+}
+
+// ==========================================
+// 14. CUSTOM SECTIONS (الأقسام المضافة — لوحة الأدمن)
+// ==========================================
+// A section made by the platform team: its own menu entry, list, form (its fields are FieldDefinition rows
+// with entity "cs:<key>"), search and trash. A section with a parent is a sub-section: its records live
+// inside a record of the parent (e.g. "Contractor payments" inside a "Project").
+// Access: plans unlock "cs_<key>" and roles grant a level, like the built-in sections; sub-sections follow their parent.
+
+model CustomSection {
+  id           String          @id @default(uuid())
+  key          String          @unique
+  nameAr       String
+  nameEn       String
+  icon         String          @default("folder-outline")
+  parentId     String?
+  parent       CustomSection?  @relation("SubSections", fields: [parentId], references: [id])
+  children     CustomSection[] @relation("SubSections")
+  withProperty Boolean         @default(false) // records can be linked to a property
+  titleKey     String? // field shown as the record title (default: the first field)
+  sortOrder    Int             @default(0)
+  isActive     Boolean         @default(true)
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+
+  records CustomRecord[]
+}
+
+model CustomRecord {
+  id             String         @id @default(uuid())
+  companyId      String
+  company        Company        @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  sectionId      String
+  section        CustomSection  @relation(fields: [sectionId], references: [id])
+  parentRecordId String?
+  parentRecord   CustomRecord?  @relation("SubRecords", fields: [parentRecordId], references: [id])
+  children       CustomRecord[] @relation("SubRecords")
+  propertyId     String?
+  custom         Json           @default("{}") // the field values
+  createdById    String?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  deletedAt      DateTime?
+
+  @@index([companyId, sectionId])
+  @@index([parentRecordId])
+}
+
+// ==========================================
+// Buttons (الأزرار) — platform level, applies to every subscriber
+// ==========================================
+
+/// Rename / re-icon / hide a built-in button of the app. `key` is the button id from the app catalog (e.g. "tenants.add").
+model ButtonOverride {
+  key       String   @id
+  labelAr   String?
+  labelEn   String?
+  icon      String?
+  hidden    Boolean  @default(false)
+  updatedAt DateTime @updatedAt
+}
+
+/// A new button added by the platform team on a record page, from the actions library.
+model CustomButton {
+  id        String   @id @default(uuid())
+  entity    String // property | owner | tenant | lease | cs:<section key>
+  labelAr   String
+  labelEn   String
+  icon      String   @default("gesture-tap-button")
+  action    String // LINK | WHATSAPP | CALL | EMAIL | SET_FIELD | NEW_RECORD
+  config    Json     @default("{}")
+  sortOrder Int      @default(0)
+  isActive  Boolean  @default(true) // false = removed (restorable)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([entity])
 }

@@ -31,6 +31,13 @@ import {
 const AUDIENCES = ['COMPANY', 'INDIVIDUAL', 'ANY'];
 const moneyText = (baisa) => (baisa ? formatOMR(baisa, 'en', { withCurrency: false }).replace(/,/g, '') : '');
 
+/** Label of a plan section: built-in keys from i18n, platform-added sections (cs_<key>) by their own name. */
+function sectionLabel(t, lang, options, key) {
+  const custom = (options?.customSections ?? []).find((c) => c.key === key);
+  if (custom) return lang === 'ar' ? custom.nameAr : custom.nameEn;
+  return t(`sections.${key}`);
+}
+
 export default function PlansScreen() {
   const { t, lang } = useI18n();
   const [plans, setPlans] = useState(null);
@@ -97,6 +104,7 @@ export default function PlansScreen() {
               key={plan.id}
               plan={plan}
               sections={options?.sections ?? []}
+              labelOf={(key) => sectionLabel(t, lang, options, key)}
               onEdit={() => setEditing(plan)}
               onRemove={() => remove(plan)}
               onReactivate={() => reactivate(plan)}
@@ -117,7 +125,7 @@ export default function PlansScreen() {
   );
 }
 
-function PlanCard({ plan, sections, onEdit, onRemove, onReactivate }) {
+function PlanCard({ plan, sections, labelOf, onEdit, onRemove, onReactivate }) {
   const { t, lang, row } = useI18n();
   const limits = Object.entries(plan.limits ?? {});
   return (
@@ -158,7 +166,7 @@ function PlanCard({ plan, sections, onEdit, onRemove, onReactivate }) {
           return (
             <View key={key} style={[styles.chip, on ? styles.chipOn : styles.chipOff]}>
               <Txt size="small" style={{ color: on ? COLORS.primaryDark : COLORS.textMuted, textDecorationLine: on ? 'none' : 'line-through' }}>
-                {t(`sections.${key}`)}
+                {labelOf(key)}
               </Txt>
             </View>
           );
@@ -191,7 +199,7 @@ function ToggleRow({ label, hint, value, onChange, disabled }) {
 }
 
 function PlanForm({ plan, options, onClose, onSaved }) {
-  const { t, row } = useI18n();
+  const { t, lang, row } = useI18n();
   const isNew = plan && !plan.id;
   const [form, setForm] = useState(null);
   const [busy, setBusy] = useState(false);
@@ -334,7 +342,7 @@ function PlanForm({ plan, options, onClose, onSaved }) {
           return (
             <View key={key} style={i > 0 && styles.divider}>
               <ToggleRow
-                label={t(`sections.${key}`)}
+                label={sectionLabel(t, lang, options, key)}
                 hint={locked ? t('plans.alwaysOn') : undefined}
                 value={locked || form.features.has(key)}
                 onChange={() => toggleFeature(key)}

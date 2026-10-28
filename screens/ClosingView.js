@@ -67,8 +67,8 @@ export function ClosingCard() {
       <ErrorBox error={error} />
       {editable ? (
         <Row style={{ flexWrap: 'wrap' }}>
-          {s.nextMonth ? <Button small icon="lock-outline" title={t('closing.closeMonth', { month: monthLabel(s.nextMonth, lang) })} loading={busy && !reopening} onPress={close} /> : <Txt muted size="small">{t('closing.allClosed')}</Txt>}
-          {s.canReopen && !reopening ? <Button small variant="ghost" icon="lock-open-outline" title={t('closing.reopen', { month: monthLabel(latest.month, lang) })} onPress={() => setReopening(true)} /> : null}
+          {s.nextMonth ? <Button id="closing.closeMonth" small icon="lock-outline" title={t('closing.closeMonth', { month: monthLabel(s.nextMonth, lang) })} loading={busy && !reopening} onPress={close} /> : <Txt muted size="small">{t('closing.allClosed')}</Txt>}
+          {s.canReopen && !reopening ? <Button id="closing.reopen" small variant="ghost" icon="lock-open-outline" title={t('closing.reopen', { month: monthLabel(latest.month, lang) })} onPress={() => setReopening(true)} /> : null}
         </Row>
       ) : null}
       {reopening ? (

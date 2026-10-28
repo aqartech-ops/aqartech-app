@@ -163,8 +163,8 @@ function IncomeReport() {
                 ...r.expensesByCategory.map((c) => [c.category ? (lang === 'ar' ? c.category.nameAr : c.category.nameEn) : '', omr(c.amount)]),
               ]}
             />
-            <Button variant="secondary" icon="printer-outline" title={t('receipt.print')} onPress={() => run(() => printHtml(html()))} />
-            <Button icon="share-variant-outline" title={t('receipt.share')} onPress={() => run(() => shareHtml(html(), t('reports.incomeTitle')))} />
+            <Button id="reports.print" variant="secondary" icon="printer-outline" title={t('receipt.print')} onPress={() => run(() => printHtml(html()))} />
+            <Button id="reports.share" icon="share-variant-outline" title={t('receipt.share')} onPress={() => run(() => shareHtml(html(), t('reports.incomeTitle')))} />
           </Row>
         </>
       ) : null}
@@ -308,8 +308,8 @@ function PropertiesReport() {
                   ...r.properties.map((p) => [p.name, p.units, omr(p.rentIncome), omr(p.otherIncome), omr(p.expenses), omr(p.noi), p.noiMargin, p.capRate, p.roi, p.occupancy, p.collectionRate, p.avgVacantDays, p.renewalRate, omr(p.maintenancePerUnit), p.openWorkOrders]),
                 ]}
               />
-              <Button variant="secondary" icon="printer-outline" title={t('receipt.print')} onPress={() => run(() => printHtml(html()))} />
-              <Button icon="share-variant-outline" title={t('receipt.share')} onPress={() => run(() => shareHtml(html(), t('reports.propertiesTitle')))} />
+              <Button id="reports.print" variant="secondary" icon="printer-outline" title={t('receipt.print')} onPress={() => run(() => printHtml(html()))} />
+              <Button id="reports.share" icon="share-variant-outline" title={t('receipt.share')} onPress={() => run(() => shareHtml(html(), t('reports.propertiesTitle')))} />
             </Row>
           </>
         )

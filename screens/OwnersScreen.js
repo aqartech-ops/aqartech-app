@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { toEditable, toPayload, useFieldRules } from '../services/fields';
 import CustomFields, { CustomValues } from '../components/CustomFields';
+import CustomActions from '../components/CustomActions';
 import { Linking, Pressable, StyleSheet, View } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { COLORS, RADIUS, SPACING } from '../theme';
@@ -8,6 +9,7 @@ import { useI18n } from '../i18n';
 import { useSession } from '../services/session';
 import { ownersApi, propertiesApi } from '../services/api';
 import { confirm } from '../services/dialog';
+import { whatsappUrl } from '../services/buttons';
 import { matches } from '../services/text';
 import { formatDate, pctLabel } from '../components/Fields';
 import {
@@ -76,14 +78,14 @@ function OwnerList({ onOpen }) {
   };
 
   return (
-    <Screen title={t('owners.title')} actions={editable && !trash ? <Button icon="plus" title={t('owners.add')} onPress={() => setEditing({})} /> : null}>
+    <Screen title={t('owners.title')} actions={editable && !trash ? <Button id="owners.add" icon="plus" title={t('owners.add')} onPress={() => setEditing({})} /> : null}>
       <View style={{ gap: SPACING.md }}>
         <Row style={{ flexWrap: 'wrap' }}>
           <View style={{ flex: 1, minWidth: 200 }}>
             <Field value={filter} onChangeText={setFilter} placeholder={t('owners.filterPlaceholder')} />
           </View>
           {editable ? (
-            <Button small variant={trash ? 'primary' : 'secondary'} icon="delete-restore" title={t('common.trash')} onPress={() => setTrash((v) => !v)} />
+            <Button id="owners.trash" small variant={trash ? 'primary' : 'secondary'} icon="delete-restore" title={t('common.trash')} onPress={() => setTrash((v) => !v)} />
           ) : null}
         </Row>
         <ErrorBox error={error} onRetry={load} />
@@ -106,7 +108,7 @@ function OwnerList({ onOpen }) {
                     <Txt muted size="small">{[o.phone, o.civilId || o.crNumber].filter(Boolean).join(' · ') || t(`owners.typeValues.${o.type}`)}</Txt>
                   </View>
                   {trash ? (
-                    <Button small variant="secondary" icon="restore" title={t('common.restore')} onPress={() => restore(o)} />
+                    <Button id="owners.restore" small variant="secondary" icon="restore" title={t('common.restore')} onPress={() => restore(o)} />
                   ) : (
                     <>
                       <Badge label={t('owners.propertiesCount', { count: o.propertiesCount })} />
@@ -208,15 +210,15 @@ function OwnerDetail({ id, onBack, onNavigate }) {
       actions={
         editable ? (
           <>
-            <IconButton icon="pencil-outline" label={t('common.edit')} onPress={() => setEditing(owner)} />
-            <IconButton icon="delete-outline" color={COLORS.danger} label={t('common.delete')} onPress={remove} />
+            <IconButton id="owners.edit" icon="pencil-outline" label={t('common.edit')} onPress={() => setEditing(owner)} />
+            <IconButton id="owners.delete" icon="delete-outline" color={COLORS.danger} label={t('common.delete')} onPress={remove} />
           </>
         ) : null
       }
     >
       <View style={{ gap: SPACING.lg }}>
         {levelOf('financials') !== 'HIDDEN' ? (
-          <Button
+          <Button id="owners.account"
             variant="secondary"
             icon="file-document-outline"
             title={t('ownerStatements.account')}
@@ -228,13 +230,13 @@ function OwnerDetail({ id, onBack, onNavigate }) {
 
         {owner.phone ? (
           <Row style={{ flexWrap: 'wrap' }}>
-            <Button small variant="secondary" icon="phone-outline" title={owner.phone} onPress={() => Linking.openURL(`tel:${owner.phone}`)} />
-            <Button
+            <Button id="owners.call" small variant="secondary" icon="phone-outline" title={owner.phone} onPress={() => Linking.openURL(`tel:${owner.phone}`)} />
+            <Button id="owners.whatsapp"
               small
               variant="secondary"
               icon="whatsapp"
-              title="WhatsApp"
-              onPress={() => Linking.openURL(`https://wa.me/${owner.phone.replace(/[^0-9]/g, '')}`)}
+              title={t('buttons.whatsapp')}
+              onPress={() => Linking.openURL(whatsappUrl(owner.phone) ?? `tel:${owner.phone}`)}
             />
           </Row>
         ) : null}
@@ -255,11 +257,21 @@ function OwnerDetail({ id, onBack, onNavigate }) {
           ) : null}
           {owner.notes ? <Txt muted>{owner.notes}</Txt> : null}
           <CustomValues defs={extraFields.custom} values={owner.custom} />
+          <CustomActions
+            entity="owner"
+            record={owner}
+            editable={editable}
+            onNavigate={onNavigate}
+            onUpdate={async (custom) => {
+              await ownersApi.update(id, { custom });
+              await load();
+            }}
+          />
         </Card>
 
         <Row style={{ justifyContent: 'space-between', flexWrap: 'wrap' }}>
           <Txt size="medium" weight="weightBold">{t('owners.properties')}</Txt>
-          {canLink ? <Button small icon="link-variant-plus" title={t('owners.linkProperty')} onPress={() => setLinkOpen(true)} /> : null}
+          {canLink ? <Button id="owners.linkProperty" small icon="link-variant-plus" title={t('owners.linkProperty')} onPress={() => setLinkOpen(true)} /> : null}
         </Row>
         {rows.length === 0 ? (
           <Card>
@@ -333,7 +345,7 @@ function LinkPropertySheet({ visible, canCreate, excludeIds, onClose, onPick, on
   return (
     <Sheet visible={visible} title={t('owners.linkProperty')} onClose={onClose}>
       <Txt muted>{t('owners.linkHint')}</Txt>
-      {canCreate ? <Button icon="home-plus-outline" title={t('owners.newPropertyForOwner')} onPress={onCreate} /> : null}
+      {canCreate ? <Button id="owners.newProperty" icon="home-plus-outline" title={t('owners.newPropertyForOwner')} onPress={onCreate} /> : null}
       <Field value={filter} onChangeText={setFilter} placeholder={t('properties.filterPlaceholder')} />
       {properties === null ? (
         <Loading />

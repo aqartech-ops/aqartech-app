@@ -410,8 +410,8 @@ export function ReceiptSheet({ paymentId, onClose, onChanged }) {
       footer={
         p ? (
           <>
-            <Button variant="secondary" icon="printer-outline" title={t('receipt.print')} onPress={() => run(() => printReceipt(p, t, lang))} />
-            <Button icon="share-variant-outline" title={t('receipt.share')} onPress={() => run(() => shareReceipt(p, t, lang))} />
+            <Button id="payments.print" variant="secondary" icon="printer-outline" title={t('receipt.print')} onPress={() => run(() => printReceipt(p, t, lang))} />
+            <Button id="payments.share" icon="share-variant-outline" title={t('receipt.share')} onPress={() => run(() => shareReceipt(p, t, lang))} />
           </>
         ) : null
       }
@@ -443,11 +443,11 @@ export function ReceiptSheet({ paymentId, onClose, onChanged }) {
                 <Field label={t('payments.voidReason')} value={reason} onChangeText={setReason} multiline inputStyle={{ minHeight: 50 }} />
                 <Row style={{ justifyContent: 'flex-end' }}>
                   <Button small variant="secondary" title={t('common.cancel')} onPress={() => setVoiding(false)} />
-                  <Button small variant="danger" icon="cancel" title={t('payments.void')} loading={busy} disabled={!reason.trim()} onPress={doVoid} />
+                  <Button id="payments.void" small variant="danger" icon="cancel" title={t('payments.void')} loading={busy} disabled={!reason.trim()} onPress={doVoid} />
                 </Row>
               </View>
             ) : (
-              <Button small variant="danger" icon="cancel" title={t('payments.void')} onPress={() => setVoiding(true)} style={{ alignSelf: 'flex-start' }} />
+              <Button id="payments.void" small variant="danger" icon="cancel" title={t('payments.void')} onPress={() => setVoiding(true)} style={{ alignSelf: 'flex-start' }} />
             )
           ) : null}
         </>

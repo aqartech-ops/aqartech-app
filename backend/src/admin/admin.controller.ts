@@ -3,7 +3,7 @@ import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { ActivityService } from '../common/activity.service.js';
 import { AdminOnly, Auth, type AdminAuth } from '../common/auth-context.js';
-import { ALWAYS_ON, SECTIONS, isSectionKey } from '../common/sections.js';
+import { ALWAYS_ON, allSectionKeys, customSectionKey, isSectionKey } from '../common/sections.js';
 import { LIMIT_KEYS, publicPlan } from '../plans/plans.service.js';
 import * as v from '../common/validate.js';
 
@@ -23,8 +23,15 @@ export class AdminController {
 
   /** What a plan can contain: sections (always-on ones cannot be removed) and limit keys. */
   @Get('plan-options')
-  planOptions() {
-    return { sections: SECTIONS, alwaysOn: ALWAYS_ON, limitKeys: LIMIT_KEYS };
+  async planOptions() {
+    // custom sections (added by the platform team) can be switched on per plan like the built-in ones
+    const custom = await this.prisma.customSection.findMany({ where: { parentId: null, isActive: true }, orderBy: { sortOrder: 'asc' }, select: { key: true, nameAr: true, nameEn: true } });
+    return {
+      sections: allSectionKeys(),
+      customSections: custom.map((c) => ({ key: customSectionKey(c.key), nameAr: c.nameAr, nameEn: c.nameEn })),
+      alwaysOn: ALWAYS_ON,
+      limitKeys: LIMIT_KEYS,
+    };
   }
 
   @Get('plans')
