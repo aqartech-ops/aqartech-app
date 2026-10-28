@@ -1,5 +1,8 @@
 import { useEffect, useSyncExternalStore } from 'react';
 import { api } from './api';
+import { readPath } from './recordPath';
+
+export { readPath };
 
 // Buttons (الأزرار), set by the platform team for every subscriber — GET /buttons:
 //  - `overrides`: built-in buttons renamed / re-iconed / hidden, by button id (e.g. "tenants.add");
@@ -161,6 +164,10 @@ export const BUTTON_GROUPS = [
     ['reports.share', 'receipt.share', 'share-variant-outline'],
     ['export.excel', 'export.excel', 'microsoft-excel'],
   ]],
+  ['print', [
+    ['print.print', 'receipt.print', 'printer-outline'],
+    ['print.share', 'receipt.share', 'share-variant-outline'],
+  ]],
   ['closing', [
     ['closing.closeMonth', 'closing.closeMonth', 'lock-outline', FIXED_TEXT],
     ['closing.reopen', 'closing.reopen', 'lock-open-outline', FIXED_TEXT],
@@ -225,15 +232,6 @@ export const RECORD_FIELDS = {
   property: [['name', 'properties.name'], ['governorate', 'properties.governorate'], ['wilayat', 'properties.wilayat'], ['address', 'properties.address'], ['plotNumber', 'properties.plotNumber']],
   lease: [['number', 'buttons.leaseNumber'], ['startDate', 'leases.startDate'], ['endDate', 'leases.endDate'], ['tenant.name', 'buttons.tenantName'], ['tenant.phone', 'buttons.tenantPhone'], ['unit.number', 'buttons.unitNumber'], ['property.name', 'buttons.propertyName']],
 };
-
-/** Value of "phone", "tenant.phone" or an extra field "parking_no" on a record. */
-export function readPath(record, path) {
-  if (!record || typeof record !== 'object') return undefined;
-  let value = record;
-  for (const part of path.split('.')) value = value && typeof value === 'object' ? value[part] : undefined;
-  if (value === undefined && record.custom && typeof record.custom === 'object') value = record.custom[path];
-  return value;
-}
 
 function display(value) {
   if (value === undefined || value === null) return '';

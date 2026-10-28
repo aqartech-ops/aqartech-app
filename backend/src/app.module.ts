@@ -19,9 +19,10 @@ import { MaintenanceModule } from './maintenance/maintenance.module.js';
 import { FieldsModule } from './fields/fields.module.js';
 import { CustomSectionsModule } from './custom/custom-sections.module.js';
 import { ButtonsModule } from './buttons/buttons.module.js';
+import { TemplatesModule } from './templates/templates.module.js';
 
 @Module({
-  imports: [PrismaModule, CommonModule, FieldsModule, AuthModule, PlansModule, CompanyModule, UserModule, AdminModule, SearchModule, PropertiesModule, DashboardModule, OwnersModule, TenantsModule, LeasesModule, FinanceModule, MaintenanceModule, CustomSectionsModule, ButtonsModule],
+  imports: [PrismaModule, CommonModule, FieldsModule, AuthModule, PlansModule, CompanyModule, UserModule, AdminModule, SearchModule, PropertiesModule, DashboardModule, OwnersModule, TenantsModule, LeasesModule, FinanceModule, MaintenanceModule, CustomSectionsModule, ButtonsModule, TemplatesModule],
   controllers: [AppController],
   providers: [AppService],
 })

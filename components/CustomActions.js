@@ -6,10 +6,14 @@ import { useSession } from '../services/session';
 import { confirm, notify } from '../services/dialog';
 import { useCustomSections } from '../services/customSections';
 import { EDIT_ACTIONS, fillTemplate, readPath, useButtonsConfig, whatsappUrl } from '../services/buttons';
+import { useTemplates } from '../services/templates';
+import { pick } from '../services/printTemplate';
+import PrintSheet from './PrintSheet';
 import { Button, ErrorBox } from './ui';
 
 /**
- * Buttons added by the platform team on a record page (Buttons page → "Added buttons").
+ * Buttons added by the platform team on a record page: one print button per print template (Templates page),
+ * then the buttons from the actions library (Buttons page → "Added buttons").
  *  - entity: 'tenant' | 'lease' | 'owner' | 'property' | 'cs:<section key>'
  *  - record: the record as loaded by the page (its fields fill {{…}} in texts and links)
  *  - editable: the user may edit this record (needed by actions that change data)
@@ -23,6 +27,8 @@ export default function CustomActions({ entity, record, editable, onUpdate, onNa
   const sections = useCustomSections();
   const [busy, setBusy] = useState(null);
   const [error, setError] = useState(null);
+  const templates = useTemplates(entity);
+  const [printing, setPrinting] = useState(null);
 
   const label = (b) => (lang === 'ar' ? b.labelAr : b.labelEn);
   const allowed = (b) => {
@@ -34,7 +40,7 @@ export default function CustomActions({ entity, record, editable, onUpdate, onNa
     return true;
   };
   const buttons = (custom ?? []).filter((b) => b.entity === entity && allowed(b));
-  if (!record || !buttons.length) return null;
+  if (!record || (!buttons.length && !templates.length)) return null;
 
   const open = async (url) => {
     try {
@@ -97,10 +103,14 @@ export default function CustomActions({ entity, record, editable, onUpdate, onNa
     <View style={{ gap: SPACING.sm }}>
       <ErrorBox error={error} />
       <View style={[styles.row, { flexDirection: row }]}>
+        {templates.map((tpl) => (
+          <Button key={tpl.id} small variant="secondary" icon="printer-outline" title={pick(tpl, lang, 'name')} onPress={() => setPrinting(tpl)} />
+        ))}
         {buttons.map((b) => (
           <Button key={b.id} small variant="secondary" icon={b.icon} title={label(b)} loading={busy === b.id} onPress={() => run(b)} />
         ))}
       </View>
+      <PrintSheet template={printing} entity={entity} record={record} onClose={() => setPrinting(null)} />
     </View>
   );
 }
