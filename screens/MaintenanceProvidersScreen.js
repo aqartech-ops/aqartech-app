@@ -76,7 +76,7 @@ function WorkOrders({ editable, openCreate, focusId }) {
 
   return (
     <View style={{ gap: SPACING.md }}>
-      {editable ? <Button icon="wrench-outline" title={t('maintenance.add')} onPress={() => setEditing({})} style={{ alignSelf: 'flex-start' }} /> : null}
+      {editable ? <Button id="maintenance.add" icon="wrench-outline" title={t('maintenance.add')} onPress={() => setEditing({})} style={{ alignSelf: 'flex-start' }} /> : null}
       <ChipSelect value={filter} onChange={setFilter} options={['open', 'done', 'cancelled', 'all'].map((f) => ({ value: f, label: t(`maintenance.filters.${f}`) }))} />
       <Field value={text} onChangeText={setText} placeholder={t('maintenance.searchPlaceholder')} />
       <ErrorBox error={error} onRetry={load} />
@@ -323,15 +323,15 @@ function WorkOrderSheet({ id, editable, onClose, onChanged, onEdit }) {
           ) : null}
           {w.cancelReason ? <Txt style={{ color: COLORS.danger }}>{w.cancelReason}</Txt> : null}
           {w.vendor?.phone ? (
-            <Button small variant="secondary" icon="phone-outline" title={w.vendor.phone} onPress={() => Linking.openURL(`tel:${w.vendor.phone}`)} style={{ alignSelf: 'flex-start' }} />
+            <Button id="maintenance.callVendor" small variant="secondary" icon="phone-outline" title={w.vendor.phone} onPress={() => Linking.openURL(`tel:${w.vendor.phone}`)} style={{ alignSelf: 'flex-start' }} />
           ) : null}
 
           {editable && (w.status === 'OPEN' || w.status === 'IN_PROGRESS') && !mode ? (
             <Row style={{ flexWrap: 'wrap' }}>
-              {w.status === 'OPEN' ? <Button small icon="play" title={t('maintenance.start')} loading={busy} onPress={() => act(() => maintenanceApi.start(id))} /> : null}
-              <Button small icon="check" title={t('maintenance.complete')} onPress={openComplete} />
-              <Button small variant="secondary" icon="pencil-outline" title={t('common.edit')} onPress={() => onEdit(w)} />
-              <Button small variant="danger" icon="close" title={t('maintenance.cancel')} onPress={() => (setForm({ reason: '' }), setMode('cancel'))} />
+              {w.status === 'OPEN' ? <Button id="maintenance.start" small icon="play" title={t('maintenance.start')} loading={busy} onPress={() => act(() => maintenanceApi.start(id))} /> : null}
+              <Button id="maintenance.complete" small icon="check" title={t('maintenance.complete')} onPress={openComplete} />
+              <Button id="maintenance.edit" small variant="secondary" icon="pencil-outline" title={t('common.edit')} onPress={() => onEdit(w)} />
+              <Button id="maintenance.cancel" small variant="danger" icon="close" title={t('maintenance.cancel')} onPress={() => (setForm({ reason: '' }), setMode('cancel'))} />
             </Row>
           ) : null}
 
@@ -354,7 +354,7 @@ function WorkOrderSheet({ id, editable, onClose, onChanged, onEdit }) {
               <Field label={t('expenses.invoiceNo')} value={form.invoiceNo} onChangeText={(v) => setForm((f) => ({ ...f, invoiceNo: v }))} />
               <Row style={{ justifyContent: 'flex-end' }}>
                 <Button small variant="secondary" title={t('common.cancel')} onPress={() => setMode(null)} />
-                <Button small icon="check" title={t('maintenance.complete')} loading={busy} onPress={complete} />
+                <Button id="maintenance.complete" small icon="check" title={t('maintenance.complete')} loading={busy} onPress={complete} />
               </Row>
             </View>
           ) : null}
@@ -364,7 +364,7 @@ function WorkOrderSheet({ id, editable, onClose, onChanged, onEdit }) {
               <Field label={t('cheques.cancelReason')} value={form.reason} onChangeText={(v) => setForm({ reason: v })} />
               <Row style={{ justifyContent: 'flex-end' }}>
                 <Button small variant="secondary" title={t('common.back')} onPress={() => setMode(null)} />
-                <Button small variant="danger" title={t('maintenance.cancel')} loading={busy} disabled={!form.reason?.trim()} onPress={() => act(() => maintenanceApi.cancel(id, form.reason.trim()))} />
+                <Button id="maintenance.cancel" small variant="danger" title={t('maintenance.cancel')} loading={busy} disabled={!form.reason?.trim()} onPress={() => act(() => maintenanceApi.cancel(id, form.reason.trim()))} />
               </Row>
             </View>
           ) : null}
@@ -412,7 +412,7 @@ function Vendors({ editable }) {
 
   return (
     <View style={{ gap: SPACING.md }}>
-      {editable ? <Button icon="account-hard-hat" title={t('maintenance.addVendor')} onPress={() => setEditing({})} style={{ alignSelf: 'flex-start' }} /> : null}
+      {editable ? <Button id="vendors.add" icon="account-hard-hat" title={t('maintenance.addVendor')} onPress={() => setEditing({})} style={{ alignSelf: 'flex-start' }} /> : null}
       <Field value={text} onChangeText={setText} placeholder={t('maintenance.vendorSearch')} />
       <ErrorBox error={error} onRetry={load} />
       {rows === null ? (
@@ -429,9 +429,9 @@ function Vendors({ editable }) {
                 <Txt weight="weightMedium">{v.name}</Txt>
                 <Txt muted size="small">{[v.specialty, v.phone, v.email].filter(Boolean).join(' · ')}</Txt>
               </View>
-              {v.phone ? <IconButton icon="phone-outline" label={v.phone} onPress={() => Linking.openURL(`tel:${v.phone}`)} /> : null}
-              {editable ? <IconButton icon="pencil-outline" label={t('common.edit')} onPress={() => setEditing(v)} /> : null}
-              {editable ? <IconButton icon="delete-outline" color={COLORS.danger} label={t('common.delete')} onPress={() => remove(v)} /> : null}
+              {v.phone ? <IconButton id="vendors.call" icon="phone-outline" label={v.phone} onPress={() => Linking.openURL(`tel:${v.phone}`)} /> : null}
+              {editable ? <IconButton id="vendors.edit" icon="pencil-outline" label={t('common.edit')} onPress={() => setEditing(v)} /> : null}
+              {editable ? <IconButton id="vendors.delete" icon="delete-outline" color={COLORS.danger} label={t('common.delete')} onPress={() => remove(v)} /> : null}
             </Row>
           ))}
         </Card>

@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { toEditable, toPayload, useFieldRules } from '../services/fields';
 import CustomFields, { CustomValues } from '../components/CustomFields';
+import CustomActions from '../components/CustomActions';
 import { Linking, Pressable, StyleSheet, View } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { COLORS, RADIUS, SPACING } from '../theme';
@@ -8,6 +9,7 @@ import { useI18n } from '../i18n';
 import { useSession } from '../services/session';
 import { tenantsApi } from '../services/api';
 import { confirm } from '../services/dialog';
+import { whatsappUrl } from '../services/buttons';
 import { matches } from '../services/text';
 import { DateField, dateText, formatDate, isDateText } from '../components/Fields';
 import { LeaseDetail, LeaseForm, LeasesTab, TenantLeases } from './LeasesView';
@@ -56,6 +58,7 @@ export default function TenantsScreen({ params, onNavigate }) {
         onBack={() => setLeaseId(null)}
         backLabel={tenantId ? t('leases.tenant') : t('leases.title')}
         onOpen={setLeaseId}
+        onNavigate={onNavigate}
         onOpenTenant={(id) => {
           setLeaseId(null);
           setTenantId(id);
@@ -151,7 +154,7 @@ function TenantList({ tabs, onOpen, openCreate }) {
   };
 
   return (
-    <Screen title={t('tenants.title')} actions={editable && !trash ? <Button icon="account-plus-outline" title={t('tenants.add')} onPress={() => setEditing({})} /> : null}>
+    <Screen title={t('tenants.title')} actions={editable && !trash ? <Button id="tenants.add" icon="account-plus-outline" title={t('tenants.add')} onPress={() => setEditing({})} /> : null}>
       <View style={{ gap: SPACING.md }}>
         {tabs}
         <Row style={{ flexWrap: 'wrap' }}>
@@ -159,7 +162,7 @@ function TenantList({ tabs, onOpen, openCreate }) {
             <Field value={filter} onChangeText={setFilter} placeholder={t('tenants.filterPlaceholder')} />
           </View>
           {editable ? (
-            <Button small variant={trash ? 'primary' : 'secondary'} icon="delete-restore" title={t('common.trash')} onPress={() => setTrash((v) => !v)} />
+            <Button id="tenants.trash" small variant={trash ? 'primary' : 'secondary'} icon="delete-restore" title={t('common.trash')} onPress={() => setTrash((v) => !v)} />
           ) : null}
         </Row>
         <ErrorBox error={error} onRetry={load} />
@@ -170,7 +173,7 @@ function TenantList({ tabs, onOpen, openCreate }) {
             <EmptyState
               icon="account-group-outline"
               body={trash ? t('tenants.trashEmpty') : t('tenants.empty')}
-              action={editable && !trash && !filter ? <Button icon="account-plus-outline" title={t('tenants.add')} onPress={() => setEditing({})} /> : null}
+              action={editable && !trash && !filter ? <Button id="tenants.add" icon="account-plus-outline" title={t('tenants.add')} onPress={() => setEditing({})} /> : null}
             />
           </Card>
         ) : (
@@ -189,7 +192,7 @@ function TenantList({ tabs, onOpen, openCreate }) {
                     </View>
                     {ids ? <Badge label={t(ids === 'expired' ? 'tenants.idExpired' : 'tenants.idExpiresSoon')} tone={ids === 'expired' ? 'danger' : 'warning'} /> : null}
                     {trash ? (
-                      <Button small variant="secondary" icon="restore" title={t('common.restore')} onPress={() => restore(x)} />
+                      <Button id="tenants.restore" small variant="secondary" icon="restore" title={t('common.restore')} onPress={() => restore(x)} />
                     ) : (
                       <MaterialCommunityIcons name={forwardIcon} size={20} color={COLORS.textMuted} />
                     )}
@@ -284,8 +287,8 @@ function TenantDetail({ id, onBack, onOpenLease, onNavigate }) {
       actions={
         editable ? (
           <>
-            <IconButton icon="pencil-outline" label={t('common.edit')} onPress={() => setEditing(tenant)} />
-            <IconButton icon="delete-outline" color={COLORS.danger} label={t('common.delete')} onPress={remove} />
+            <IconButton id="tenants.edit" icon="pencil-outline" label={t('common.edit')} onPress={() => setEditing(tenant)} />
+            <IconButton id="tenants.delete" icon="delete-outline" color={COLORS.danger} label={t('common.delete')} onPress={remove} />
           </>
         ) : null
       }
@@ -300,7 +303,7 @@ function TenantDetail({ id, onBack, onOpenLease, onNavigate }) {
           </View>
         ) : null}
         {levelOf('financials') !== 'HIDDEN' ? (
-          <Button
+          <Button id="tenants.statement"
             variant="secondary"
             icon="file-document-outline"
             title={t('finance.statement')}
@@ -310,8 +313,8 @@ function TenantDetail({ id, onBack, onOpenLease, onNavigate }) {
         ) : null}
         {tenant.phone ? (
           <Row style={{ flexWrap: 'wrap' }}>
-            <Button small variant="secondary" icon="phone-outline" title={tenant.phone} onPress={() => Linking.openURL(`tel:${tenant.phone}`)} />
-            <Button small variant="secondary" icon="whatsapp" title="WhatsApp" onPress={() => Linking.openURL(`https://wa.me/${tenant.phone.replace(/[^0-9]/g, '')}`)} />
+            <Button id="tenants.call" small variant="secondary" icon="phone-outline" title={tenant.phone} onPress={() => Linking.openURL(`tel:${tenant.phone}`)} />
+            <Button id="tenants.whatsapp" small variant="secondary" icon="whatsapp" title={t('buttons.whatsapp')} onPress={() => Linking.openURL(whatsappUrl(tenant.phone) ?? `tel:${tenant.phone}`)} />
           </Row>
         ) : null}
         <Card style={{ gap: SPACING.sm }}>
@@ -329,6 +332,16 @@ function TenantDetail({ id, onBack, onOpenLease, onNavigate }) {
           ) : null}
           {tenant.notes ? <Txt muted>{tenant.notes}</Txt> : null}
           <CustomValues defs={extraFields.custom} values={tenant.custom} />
+          <CustomActions
+            entity="tenant"
+            record={tenant}
+            editable={editable}
+            onNavigate={onNavigate}
+            onUpdate={async (custom) => {
+              await tenantsApi.update(id, { custom });
+              await load();
+            }}
+          />
         </Card>
         <TenantLeases key={leasesVersion} tenantId={id} editable={editable} onOpen={onOpenLease} onNew={() => setNewLease({ tenantId: id, tenant })} />
       </View>

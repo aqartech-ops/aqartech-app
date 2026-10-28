@@ -24,7 +24,7 @@ import * as v from '../common/validate.js';
 import { FieldsService } from '../fields/fields.module.js';
 import { slugKey } from '../fields/rules.js';
 
-const RESERVED = ['dashboard', 'properties', 'tenants', 'financials', 'maintenance', 'documents', 'owners', 'users', 'settings', 'companies', 'plans', 'fields', 'sections'];
+const RESERVED = ['dashboard', 'properties', 'tenants', 'financials', 'maintenance', 'documents', 'owners', 'users', 'settings', 'companies', 'plans', 'fields', 'sections', 'buttons'];
 
 /**
  * Sections created by the platform team (الأقسام المضافة) — definitions and the in-memory list of

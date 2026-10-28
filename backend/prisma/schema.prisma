@@ -1100,3 +1100,34 @@ model CustomRecord {
   @@index([companyId, sectionId])
   @@index([parentRecordId])
 }
+
+// ==========================================
+// Buttons (الأزرار) — platform level, applies to every subscriber
+// ==========================================
+
+/// Rename / re-icon / hide a built-in button of the app. `key` is the button id from the app catalog (e.g. "tenants.add").
+model ButtonOverride {
+  key       String   @id
+  labelAr   String?
+  labelEn   String?
+  icon      String?
+  hidden    Boolean  @default(false)
+  updatedAt DateTime @updatedAt
+}
+
+/// A new button added by the platform team on a record page, from the actions library.
+model CustomButton {
+  id        String   @id @default(uuid())
+  entity    String // property | owner | tenant | lease | cs:<section key>
+  labelAr   String
+  labelEn   String
+  icon      String   @default("gesture-tap-button")
+  action    String // LINK | WHATSAPP | CALL | EMAIL | SET_FIELD | NEW_RECORD
+  config    Json     @default("{}")
+  sortOrder Int      @default(0)
+  isActive  Boolean  @default(true) // false = removed (restorable)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([entity])
+}

@@ -59,7 +59,7 @@ export default function FinancialsScreen({ params }) {
     <Screen
       title={t('sections.financials')}
       subtitle={summary ? t('finance.asOf', { date: formatDate(summary.asOf, lang) }) : null}
-      actions={editable ? <Button icon="cash-plus" title={t('payments.add')} onPress={() => collect({})} /> : null}
+      actions={editable ? <Button id="payments.add" icon="cash-plus" title={t('payments.add')} onPress={() => collect({})} /> : null}
     >
       <View style={{ gap: SPACING.lg }}>
         <ErrorBox error={error} onRetry={load} />
@@ -320,7 +320,7 @@ function Receivables({ onOpenTenant, onCollect }) {
                     </Row>
                   ) : null}
                   {onCollect && filter !== 'upcoming' ? (
-                    <Button
+                    <Button id="payments.collect"
                       small
                       variant="secondary"
                       icon="cash-plus"
@@ -438,7 +438,7 @@ function StatementSheet({ tenantId, onClose, onCollect }) {
       visible={!!tenantId}
       title={data ? t('finance.statementOf', { name: data.tenant.name }) : t('finance.statement')}
       onClose={onClose}
-      footer={data && onCollect ? <Button icon="cash-plus" title={t('payments.add')} onPress={() => onCollect(data.tenant)} /> : null}
+      footer={data && onCollect ? <Button id="payments.add" icon="cash-plus" title={t('payments.add')} onPress={() => onCollect(data.tenant)} /> : null}
     >
       <ErrorBox error={error} />
       {!data && !error ? <Loading /> : null}

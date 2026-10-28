@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { toEditable, toPayload, useFieldRules } from '../services/fields';
 import CustomFields, { CustomValues } from '../components/CustomFields';
+import CustomActions from '../components/CustomActions';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { COLORS, RADIUS, SPACING } from '../theme';
@@ -91,7 +92,7 @@ export function LeasesTab({ onOpen, onNew, editable }) {
         <View style={{ flex: 1, minWidth: 200 }}>
           <Field value={text} onChangeText={setText} placeholder={t('search.placeholder')} />
         </View>
-        {editable ? <Button icon="file-sign" title={t('leases.add')} onPress={onNew} /> : null}
+        {editable ? <Button id="leases.add" icon="file-sign" title={t('leases.add')} onPress={onNew} /> : null}
       </Row>
       <ChipSelect
         value={filter}
@@ -153,7 +154,7 @@ export function TenantLeases({ tenantId, onOpen, onNew, editable }) {
     <View style={{ gap: SPACING.md }}>
       <Row style={{ justifyContent: 'space-between' }}>
         <Txt size="medium" weight="weightBold">{t('leases.tenantLeases')}</Txt>
-        {editable ? <Button small icon="file-sign" title={t('leases.add')} onPress={onNew} /> : null}
+        {editable ? <Button id="leases.add" small icon="file-sign" title={t('leases.add')} onPress={onNew} /> : null}
       </Row>
       {leases === null ? (
         <Loading />
@@ -174,7 +175,7 @@ export function TenantLeases({ tenantId, onOpen, onNew, editable }) {
 
 // =================================================================== detail
 
-export function LeaseDetail({ id, onBack, onOpen, onOpenTenant, backLabel }) {
+export function LeaseDetail({ id, onBack, onOpen, onOpenTenant, backLabel, onNavigate }) {
   const { t, lang, isRTL, start } = useI18n();
   const extraFields = useFieldRules('lease');
   const { canEdit } = useSession();
@@ -261,15 +262,15 @@ export function LeaseDetail({ id, onBack, onOpen, onOpenTenant, backLabel }) {
 
         {editable ? (
           <Row style={{ flexWrap: 'wrap' }}>
-            {lease.status === 'DRAFT' ? <Button small icon="check-decagram-outline" title={t('leases.activate')} onPress={activate} /> : null}
+            {lease.status === 'DRAFT' ? <Button id="leases.activate" small icon="check-decagram-outline" title={t('leases.activate')} onPress={activate} /> : null}
             {['DRAFT', 'ACTIVE'].includes(lease.status) ? (
-              <Button small variant="secondary" icon="pencil-outline" title={t('common.edit')} onPress={() => setEditing(lease)} />
+              <Button id="leases.edit" small variant="secondary" icon="pencil-outline" title={t('common.edit')} onPress={() => setEditing(lease)} />
             ) : null}
             {['ACTIVE', 'ENDED'].includes(lease.status) ? (
-              <Button small variant="secondary" icon="autorenew" title={t('leases.renew')} onPress={() => setRenewing(true)} />
+              <Button id="leases.renew" small variant="secondary" icon="autorenew" title={t('leases.renew')} onPress={() => setRenewing(true)} />
             ) : null}
-            {lease.status === 'ACTIVE' ? <Button small variant="danger" icon="file-cancel-outline" title={t('leases.terminate')} onPress={() => setTerminating(true)} /> : null}
-            {lease.status === 'DRAFT' ? <Button small variant="danger" icon="delete-outline" title={t('common.delete')} onPress={remove} /> : null}
+            {lease.status === 'ACTIVE' ? <Button id="leases.terminate" small variant="danger" icon="file-cancel-outline" title={t('leases.terminate')} onPress={() => setTerminating(true)} /> : null}
+            {lease.status === 'DRAFT' ? <Button id="leases.delete" small variant="danger" icon="delete-outline" title={t('common.delete')} onPress={remove} /> : null}
           </Row>
         ) : null}
 
@@ -313,6 +314,16 @@ export function LeaseDetail({ id, onBack, onOpen, onOpenTenant, backLabel }) {
           ) : null}
           {lease.notes ? <Txt muted>{lease.notes}</Txt> : null}
           <CustomValues defs={extraFields.custom} values={lease.custom} />
+          <CustomActions
+            entity="lease"
+            record={lease}
+            editable={editable && ['DRAFT', 'ACTIVE'].includes(lease.status)}
+            onNavigate={onNavigate}
+            onUpdate={async (custom) => {
+              await leasesApi.update(id, { custom });
+              await load();
+            }}
+          />
         </Card>
 
         {lease.status === 'ACTIVE' && editable ? (
@@ -424,7 +435,7 @@ function TerminateSheet({ visible, onClose, onConfirm }) {
       footer={
         <>
           <Button variant="secondary" title={t('common.cancel')} onPress={onClose} />
-          <Button variant="danger" title={t('leases.terminate')} onPress={() => onConfirm({ date, reason })} disabled={!isDateText(date)} />
+          <Button id="leases.terminate" variant="danger" title={t('leases.terminate')} onPress={() => onConfirm({ date, reason })} disabled={!isDateText(date)} />
         </>
       }
     >
@@ -455,7 +466,7 @@ function RenewSheet({ visible, currentRent, onClose, onConfirm }) {
       footer={
         <>
           <Button variant="secondary" title={t('common.cancel')} onPress={onClose} />
-          <Button title={t('leases.renew')} onPress={() => onConfirm({ months, monthlyRent: value })} disabled={!value || Number.isNaN(value)} />
+          <Button id="leases.renew" title={t('leases.renew')} onPress={() => onConfirm({ months, monthlyRent: value })} disabled={!value || Number.isNaN(value)} />
         </>
       }
     >
@@ -587,7 +598,7 @@ export function LeaseForm({ lease, onClose, onSaved }) {
       footer={
         <>
           <Button variant="secondary" title={t('common.cancel')} onPress={onClose} />
-          {!locked ? <Button variant="secondary" title={t('leases.saveDraft')} onPress={() => save(false)} loading={busy} /> : null}
+          {!locked ? <Button id="leases.saveDraft" variant="secondary" title={t('leases.saveDraft')} onPress={() => save(false)} loading={busy} /> : null}
           <Button title={locked ? t('common.save') : t('leases.saveActivate')} onPress={() => save(!locked)} loading={busy} />
         </>
       }
@@ -755,7 +766,7 @@ function TenantPicker({ visible, onClose, onSelect }) {
 
   return (
     <Sheet visible={visible} title={t('leases.pickTenant')} onClose={onClose}>
-      <Button small icon="account-plus-outline" title={t('leases.newTenant')} onPress={() => setCreating({})} />
+      <Button id="leases.newTenant" small icon="account-plus-outline" title={t('leases.newTenant')} onPress={() => setCreating({})} />
       <Field value={filter} onChangeText={setFilter} placeholder={t('tenants.filterPlaceholder')} />
       {tenants === null ? (
         <Loading />

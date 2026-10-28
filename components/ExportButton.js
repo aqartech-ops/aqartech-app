@@ -19,5 +19,5 @@ export default function ExportButton({ filename, build, small = true, style }) {
       setBusy(false);
     }
   };
-  return <Button small={small} variant="secondary" icon="microsoft-excel" title={t('export.excel')} onPress={run} loading={busy} style={style} />;
+  return <Button id="export.excel" small={small} variant="secondary" icon="microsoft-excel" title={t('export.excel')} onPress={run} loading={busy} style={style} />;
 }

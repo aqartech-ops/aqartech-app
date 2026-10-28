@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { toEditable, toPayload, useFieldRules } from '../services/fields';
 import CustomFields, { CustomValues } from '../components/CustomFields';
+import CustomActions from '../components/CustomActions';
 import { Pressable, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { COLORS, RADIUS, SPACING } from '../theme';
@@ -77,6 +78,7 @@ export default function PropertiesScreen({ params, onNavigate }) {
         linkOwnerId={linkOwnerId}
         onLinkHandled={() => setLinkOwnerId(null)}
         onBack={() => setSelectedId(null)}
+        onNavigate={onNavigate}
       />
     );
   }
@@ -139,7 +141,7 @@ function PropertyList({ onOpen, openCreate, createAsManaged }) {
   return (
     <Screen
       title={t('properties.title')}
-      actions={editable && !trash ? <Button icon="plus" title={t('properties.add')} onPress={() => setEditing({})} /> : null}
+      actions={editable && !trash ? <Button id="properties.add" icon="plus" title={t('properties.add')} onPress={() => setEditing({})} /> : null}
     >
       <View style={{ gap: SPACING.md }}>
         <Row style={{ flexWrap: 'wrap' }}>
@@ -147,7 +149,7 @@ function PropertyList({ onOpen, openCreate, createAsManaged }) {
             <Field value={filter} onChangeText={setFilter} placeholder={t('properties.filterPlaceholder')} />
           </View>
           {editable ? (
-            <Button small variant={trash ? 'primary' : 'secondary'} icon="delete-restore" title={t('common.trash')} onPress={() => setTrash((v) => !v)} />
+            <Button id="properties.trash" small variant={trash ? 'primary' : 'secondary'} icon="delete-restore" title={t('common.trash')} onPress={() => setTrash((v) => !v)} />
           ) : null}
         </Row>
         <ErrorBox error={error} onRetry={load} />
@@ -159,7 +161,7 @@ function PropertyList({ onOpen, openCreate, createAsManaged }) {
             <EmptyState
               icon={trash ? 'delete-empty-outline' : 'office-building-outline'}
               body={trash ? t('properties.trashEmpty') : t('properties.empty')}
-              action={editable && !trash && !filter ? <Button icon="plus" title={t('properties.add')} onPress={() => setEditing({})} /> : null}
+              action={editable && !trash && !filter ? <Button id="properties.add" icon="plus" title={t('properties.add')} onPress={() => setEditing({})} /> : null}
             />
           </Card>
         ) : (
@@ -169,7 +171,7 @@ function PropertyList({ onOpen, openCreate, createAsManaged }) {
                 key={p.id}
                 property={p}
                 onPress={trash ? undefined : () => onOpen(p.id)}
-                footer={trash ? <Button small variant="secondary" icon="restore" title={t('common.restore')} onPress={() => restore(p)} /> : null}
+                footer={trash ? <Button id="properties.restore" small variant="secondary" icon="restore" title={t('common.restore')} onPress={() => restore(p)} /> : null}
               />
             ))}
           </Grid>
@@ -257,7 +259,7 @@ function OccupancyBar({ stats: s }) {
 
 // =================================================================== detail
 
-function PropertyDetail({ id, onBack, linkOwnerId, onLinkHandled }) {
+function PropertyDetail({ id, onBack, linkOwnerId, onLinkHandled, onNavigate }) {
   const { t, lang, isRTL, start } = useI18n();
   const extraFields = useFieldRules('property');
   const { canEdit } = useSession();
@@ -364,8 +366,8 @@ function PropertyDetail({ id, onBack, linkOwnerId, onLinkHandled }) {
       actions={
         editable ? (
           <>
-            <IconButton icon="pencil-outline" label={t('common.edit')} onPress={() => setEditingProperty(property)} />
-            <IconButton icon="delete-outline" color={COLORS.danger} label={t('common.delete')} onPress={removeProperty} />
+            <IconButton id="properties.edit" icon="pencil-outline" label={t('common.edit')} onPress={() => setEditingProperty(property)} />
+            <IconButton id="properties.delete" icon="delete-outline" color={COLORS.danger} label={t('common.delete')} onPress={removeProperty} />
           </>
         ) : null
       }
@@ -402,6 +404,16 @@ function PropertyDetail({ id, onBack, linkOwnerId, onLinkHandled }) {
           ) : null}
           {property.notes ? <Txt muted>{property.notes}</Txt> : null}
           <CustomValues defs={extraFields.custom} values={property.custom} />
+          <CustomActions
+            entity="property"
+            record={property}
+            editable={editable}
+            onNavigate={onNavigate}
+            onUpdate={async (custom) => {
+              await propertiesApi.update(id, { custom });
+              await load();
+            }}
+          />
         </Card>
 
         <PropertyOwnership property={property} linkOwnerId={linkOwnerId} onLinkHandled={onLinkHandled} />
@@ -410,9 +422,9 @@ function PropertyDetail({ id, onBack, linkOwnerId, onLinkHandled }) {
           <Txt size="medium" weight="weightBold">{t('units.title')}</Txt>
           {editable ? (
             <Row style={{ flexWrap: 'wrap' }}>
-              <Button small variant={deletedUnits ? 'primary' : 'secondary'} icon="delete-restore" title={t('common.trash')} onPress={toggleDeletedUnits} />
-              <Button small variant="secondary" icon="format-list-numbered" title={t('units.addBulk')} onPress={() => setBulkOpen(true)} />
-              <Button small icon="plus" title={t('units.add')} onPress={() => setEditingUnit({})} />
+              <Button id="units.trash" small variant={deletedUnits ? 'primary' : 'secondary'} icon="delete-restore" title={t('common.trash')} onPress={toggleDeletedUnits} />
+              <Button id="units.addBulk" small variant="secondary" icon="format-list-numbered" title={t('units.addBulk')} onPress={() => setBulkOpen(true)} />
+              <Button id="units.add" small icon="plus" title={t('units.add')} onPress={() => setEditingUnit({})} />
             </Row>
           ) : null}
         </Row>
@@ -425,7 +437,7 @@ function PropertyDetail({ id, onBack, linkOwnerId, onLinkHandled }) {
               deletedUnits.map((unit, index) => (
                 <Row key={unit.id} style={[styles.unitRow, index > 0 && styles.divider]}>
                   <Txt weight="weightBold" style={{ flex: 1 }}>{unit.number}</Txt>
-                  <Button small variant="secondary" icon="restore" title={t('common.restore')} onPress={() => restoreUnit(unit)} />
+                  <Button id="units.restore" small variant="secondary" icon="restore" title={t('common.restore')} onPress={() => restoreUnit(unit)} />
                 </Row>
               ))
             )}
@@ -472,7 +484,7 @@ function PropertyDetail({ id, onBack, linkOwnerId, onLinkHandled }) {
                   </View>
                   {unit.askingRent ? <Money baisa={unit.askingRent} size={14} weight="weightMedium" /> : null}
                   {editable ? (
-                    <IconButton icon="delete-outline" color={COLORS.danger} label={t('common.delete')} onPress={() => removeUnit(unit)} />
+                    <IconButton id="units.delete" icon="delete-outline" color={COLORS.danger} label={t('common.delete')} onPress={() => removeUnit(unit)} />
                   ) : null}
                 </Row>
               </Pressable>

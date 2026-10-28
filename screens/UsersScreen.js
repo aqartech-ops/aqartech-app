@@ -130,14 +130,14 @@ function UsersTab({ editable }) {
   return (
     <View style={{ gap: SPACING.md }}>
       <Row style={{ justifyContent: 'space-between', flexWrap: 'wrap' }}>
-        <Button
+        <Button id="users.trash"
           small
           variant={trash ? 'primary' : 'secondary'}
           icon="delete-restore"
           title={t('common.trash')}
           onPress={() => setTrash((v) => !v)}
         />
-        {editable && !trash ? <Button icon="account-plus-outline" title={t('users.addUser')} onPress={() => setEditing({})} /> : null}
+        {editable && !trash ? <Button id="users.add" icon="account-plus-outline" title={t('users.addUser')} onPress={() => setEditing({})} /> : null}
       </Row>
       <ErrorBox error={error} onRetry={load} />
 
@@ -171,19 +171,19 @@ function UsersTab({ editable }) {
               </View>
               {editable ? (
                 trash ? (
-                  <Button small variant="secondary" icon="restore" title={t('common.restore')} onPress={() => restore(user)} />
+                  <Button id="users.restore" small variant="secondary" icon="restore" title={t('common.restore')} onPress={() => restore(user)} />
                 ) : !user.isCompanyAdmin ? (
                   <Row gap={2}>
-                    <IconButton
+                    <IconButton id="users.toggleActive"
                       icon={user.isActive ? 'account-cancel-outline' : 'account-check-outline'}
                       label={user.isActive ? t('users.deactivate') : t('users.activate')}
                       onPress={() => toggleActive(user)}
                     />
-                    <IconButton icon="pencil-outline" label={t('common.edit')} onPress={() => setEditing(user)} />
-                    <IconButton icon="delete-outline" color={COLORS.danger} label={t('common.delete')} onPress={() => remove(user)} />
+                    <IconButton id="users.edit" icon="pencil-outline" label={t('common.edit')} onPress={() => setEditing(user)} />
+                    <IconButton id="users.delete" icon="delete-outline" color={COLORS.danger} label={t('common.delete')} onPress={() => remove(user)} />
                   </Row>
                 ) : (
-                  <IconButton icon="pencil-outline" label={t('common.edit')} onPress={() => setEditing(user)} />
+                  <IconButton id="users.edit" icon="pencil-outline" label={t('common.edit')} onPress={() => setEditing(user)} />
                 )
               ) : null}
             </Row>
@@ -359,7 +359,7 @@ function RolesTab({ editable }) {
     <View style={{ gap: SPACING.md }}>
       {editable ? (
         <Row style={{ justifyContent: 'flex-end' }}>
-          <Button icon="shield-plus-outline" title={t('users.addRole')} onPress={() => setEditing({})} />
+          <Button id="roles.add" icon="shield-plus-outline" title={t('users.addRole')} onPress={() => setEditing({})} />
         </Row>
       ) : null}
       <ErrorBox error={error} onRetry={load} />
@@ -388,8 +388,8 @@ function RolesTab({ editable }) {
               </View>
               {editable ? (
                 <Row gap={2}>
-                  <IconButton icon="pencil-outline" label={t('common.edit')} onPress={() => setEditing(role)} />
-                  <IconButton icon="delete-outline" color={COLORS.danger} label={t('common.delete')} onPress={() => remove(role)} />
+                  <IconButton id="roles.edit" icon="pencil-outline" label={t('common.edit')} onPress={() => setEditing(role)} />
+                  <IconButton id="roles.delete" icon="delete-outline" color={COLORS.danger} label={t('common.delete')} onPress={() => remove(role)} />
                 </Row>
               ) : null}
             </Row>

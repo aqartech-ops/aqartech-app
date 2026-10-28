@@ -122,8 +122,8 @@ export function ExpensesTab({ editable, version, onChanged }) {
     <View style={{ gap: SPACING.md }}>
       {editable ? (
         <Row style={{ flexWrap: 'wrap' }}>
-          <Button small icon="cash-minus" title={t('expenses.add')} onPress={() => setAdding(true)} />
-          <Button small variant="secondary" icon="format-list-bulleted" title={t('expenses.categories')} onPress={() => setManaging(true)} />
+          <Button id="expenses.add" small icon="cash-minus" title={t('expenses.add')} onPress={() => setAdding(true)} />
+          <Button id="expenses.categories" small variant="secondary" icon="format-list-bulleted" title={t('expenses.categories')} onPress={() => setManaging(true)} />
         </Row>
       ) : null}
       <ChipSelect
@@ -372,11 +372,11 @@ function ExpenseSheet({ id, onClose, onChanged }) {
                 <Field label={t('payments.voidReason')} value={reason} onChangeText={setReason} />
                 <Row style={{ justifyContent: 'flex-end' }}>
                   <Button small variant="secondary" title={t('common.cancel')} onPress={() => setVoiding(false)} />
-                  <Button small variant="danger" icon="cancel" title={t('expenses.void')} loading={busy} disabled={!reason.trim()} onPress={doVoid} />
+                  <Button id="expenses.void" small variant="danger" icon="cancel" title={t('expenses.void')} loading={busy} disabled={!reason.trim()} onPress={doVoid} />
                 </Row>
               </View>
             ) : (
-              <Button small variant="danger" icon="cancel" title={t('expenses.void')} onPress={() => setVoiding(true)} style={{ alignSelf: 'flex-start' }} />
+              <Button id="expenses.void" small variant="danger" icon="cancel" title={t('expenses.void')} onPress={() => setVoiding(true)} style={{ alignSelf: 'flex-start' }} />
             )
           ) : null}
         </>
@@ -441,7 +441,7 @@ function CategoriesSheet({ visible, onClose }) {
           </Row>
         </View>
       ) : (
-        <Button small icon="plus" title={t('expenses.addCategory')} onPress={() => open({})} style={{ alignSelf: 'flex-start' }} />
+        <Button id="expenses.addCategory" small icon="plus" title={t('expenses.addCategory')} onPress={() => open({})} style={{ alignSelf: 'flex-start' }} />
       )}
       {list === null ? (
         <Loading />
@@ -450,7 +450,7 @@ function CategoriesSheet({ visible, onClose }) {
           {list.map((c, i) => (
             <Row key={c.id} style={[styles.catRow, i > 0 && styles.divider]}>
               <Txt style={{ flex: 1, opacity: c.isActive ? 1 : 0.5 }}>{categoryName(c, lang)}</Txt>
-              <IconButton icon="pencil-outline" label={t('common.edit')} onPress={() => open(c)} />
+              <IconButton id="expenses.editCategory" icon="pencil-outline" label={t('common.edit')} onPress={() => open(c)} />
               <Switch value={c.isActive} onValueChange={() => toggle(c)} trackColor={{ true: COLORS.primary, false: COLORS.borderStrong }} thumbColor={COLORS.surface} />
             </Row>
           ))}

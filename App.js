@@ -14,6 +14,7 @@ import CompaniesScreen from './screens/CompaniesScreen';
 import PlansScreen from './screens/PlansScreen';
 import FieldsScreen from './screens/FieldsScreen';
 import SectionsScreen from './screens/SectionsScreen';
+import ButtonsScreen from './screens/ButtonsScreen';
 import CustomSectionScreen from './screens/CustomSectionScreen';
 import { sectionName, useCustomSections } from './services/customSections';
 import UsersScreen from './screens/UsersScreen';
@@ -46,6 +47,7 @@ const ADMIN_SECTIONS = [
   { key: 'plans', icon: 'package-variant-closed', Screen: PlansScreen },
   { key: 'fields', icon: 'form-textbox', Screen: FieldsScreen },
   { key: 'sections', icon: 'view-grid-plus-outline', Screen: SectionsScreen },
+  { key: 'buttons', icon: 'gesture-tap-button', Screen: ButtonsScreen },
   { key: 'settings', icon: 'cog-outline', Screen: SettingsScreen },
 ];
 

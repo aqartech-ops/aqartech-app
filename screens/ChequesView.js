@@ -73,8 +73,8 @@ export function ChequesTab({ editable, version, onChanged, onOpenReceipt, focusI
 
       {editable ? (
         <Row style={{ flexWrap: 'wrap' }}>
-          <Button small icon="checkbook" title={t('cheques.bulk')} onPress={() => setBulk(true)} />
-          <Button small variant="secondary" icon="plus" title={t('cheques.add')} onPress={() => setAdding(true)} />
+          <Button id="cheques.bulk" small icon="checkbook" title={t('cheques.bulk')} onPress={() => setBulk(true)} />
+          <Button id="cheques.add" small variant="secondary" icon="plus" title={t('cheques.add')} onPress={() => setAdding(true)} />
         </Row>
       ) : null}
 
@@ -164,19 +164,19 @@ function ChequeActions({ cheque: c, onAction }) {
     return (
       <Row style={styles.actions}>
         {due ? (
-          <Button small icon="bank-transfer-in" title={t('cheques.deposit')} onPress={() => onAction('deposit')} />
+          <Button id="cheques.deposit" small icon="bank-transfer-in" title={t('cheques.deposit')} onPress={() => onAction('deposit')} />
         ) : (
           <Txt muted size="small">{t('cheques.depositOn', { date: formatDate(c.dueDate, lang) })}</Txt>
         )}
-        <Button small variant="ghost" icon="undo-variant" title={t('cheques.cancel')} onPress={() => onAction('cancel')} />
+        <Button id="cheques.cancel" small variant="ghost" icon="undo-variant" title={t('cheques.cancel')} onPress={() => onAction('cancel')} />
       </Row>
     );
   }
   if (c.status === 'UNDER_COLLECTION') {
     return (
       <Row style={styles.actions}>
-        <Button small icon="check-circle-outline" title={t('cheques.clear')} onPress={() => onAction('clear')} />
-        <Button small variant="danger" icon="alert-circle-outline" title={t('cheques.bounce')} onPress={() => onAction('bounce')} />
+        <Button id="cheques.clear" small icon="check-circle-outline" title={t('cheques.clear')} onPress={() => onAction('clear')} />
+        <Button id="cheques.bounce" small variant="danger" icon="alert-circle-outline" title={t('cheques.bounce')} onPress={() => onAction('bounce')} />
       </Row>
     );
   }
@@ -234,7 +234,7 @@ function ActionSheet({ action, onClose, onDone }) {
       footer={
         <>
           <Button variant="secondary" title={t('common.cancel')} onPress={onClose} />
-          <Button variant={kind === 'bounce' ? 'danger' : 'primary'} title={t(`cheques.${kind}`)} onPress={submit} loading={busy} />
+          <Button id={`cheques.${kind}`} variant={kind === 'bounce' ? 'danger' : 'primary'} title={t(`cheques.${kind}`)} onPress={submit} loading={busy} />
         </>
       }
     >

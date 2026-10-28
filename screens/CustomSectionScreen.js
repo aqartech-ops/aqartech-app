@@ -10,6 +10,7 @@ import { matches } from '../services/text';
 import { customApi, sectionName, useCustomSections } from '../services/customSections';
 import { optionLabel, toEditable, toPayload, useFieldRules } from '../services/fields';
 import CustomFields, { CustomValues } from '../components/CustomFields';
+import CustomActions from '../components/CustomActions';
 import { Money, SectionIcon } from '../components/Rial';
 import { formatDate } from '../components/Fields';
 import { BackButton, Button, Card, ChipSelect, EmptyState, ErrorBox, Field, IconButton, Loading, Row, Screen, Sheet, Txt } from '../components/ui';
@@ -53,7 +54,7 @@ function SummaryLine({ defs, record, skipKey }) {
   return parts.length ? <Row gap={SPACING.sm} style={{ flexWrap: 'wrap' }}>{parts}</Row> : null;
 }
 
-export default function CustomSectionScreen({ sectionKey, params }) {
+export default function CustomSectionScreen({ sectionKey, params, onNavigate }) {
   const { lang } = useI18n();
   const sections = useCustomSections();
   const section = sections.find((s) => s.key === sectionKey);
@@ -74,13 +75,14 @@ export default function CustomSectionScreen({ sectionKey, params }) {
   }, [params, sectionKey]);
 
   if (!section) return <Screen><Loading /></Screen>;
-  if (openId) return <RecordPage section={section} subSections={children} id={openId} onBack={() => setOpenId(null)} />;
-  return <RecordList section={section} onOpen={setOpenId} title={sectionName(section, lang)} openCreate={!!params?.create} />;
+  if (openId) return <RecordPage section={section} subSections={children} id={openId} onBack={() => setOpenId(null)} onNavigate={onNavigate} />;
+  // params.newRecord: opened by an added button on another record page, with values to copy into the new record
+  return <RecordList section={section} onOpen={setOpenId} title={sectionName(section, lang)} openCreate={!!params?.create} prefill={params?.newRecord} />;
 }
 
 // ================================================================ list
 
-function RecordList({ section, onOpen, title, openCreate }) {
+function RecordList({ section, onOpen, title, openCreate, prefill }) {
   const { t, lang, forwardIcon } = useI18n();
   const { canEdit } = useSession();
   const editable = canEdit(`cs_${section.key}`);
@@ -89,7 +91,7 @@ function RecordList({ section, onOpen, title, openCreate }) {
   const [text, setText] = useState('');
   const [rows, setRows] = useState(null);
   const [error, setError] = useState(null);
-  const [editing, setEditing] = useState(openCreate && editable ? {} : null);
+  const [editing, setEditing] = useState(editable ? (prefill ? { propertyId: section.withProperty ? prefill.propertyId ?? null : null, custom: prefill.custom ?? {} } : openCreate ? {} : null) : null);
 
   const load = useCallback(async () => {
     setError(null);
@@ -120,13 +122,13 @@ function RecordList({ section, onOpen, title, openCreate }) {
   };
 
   return (
-    <Screen title={title} actions={editable && !trash ? <Button icon="plus" title={t('sectionsUser.add')} onPress={() => setEditing({})} /> : null}>
+    <Screen title={title} actions={editable && !trash ? <Button id="records.add" icon="plus" title={t('sectionsUser.add')} onPress={() => setEditing({})} /> : null}>
       <View style={{ gap: SPACING.md }}>
         <Row style={{ flexWrap: 'wrap' }}>
           <View style={{ flex: 1, minWidth: 200 }}>
             <Field value={text} onChangeText={setText} placeholder={t('search.placeholder')} />
           </View>
-          {editable ? <Button small variant={trash ? 'primary' : 'secondary'} icon="delete-restore" title={t('common.trash')} onPress={() => setTrash((x) => !x)} /> : null}
+          {editable ? <Button id="records.trash" small variant={trash ? 'primary' : 'secondary'} icon="delete-restore" title={t('common.trash')} onPress={() => setTrash((x) => !x)} /> : null}
         </Row>
         <ErrorBox error={error} onRetry={load} />
         {rows === null ? (
@@ -152,7 +154,7 @@ function RecordList({ section, onOpen, title, openCreate }) {
                     <SummaryLine defs={rules.custom} record={r} skipKey={section.titleKey ?? rules.custom[0]?.key} />
                   </View>
                   {trash ? (
-                    <Button small variant="secondary" icon="restore" title={t('common.restore')} onPress={() => restore(r)} />
+                    <Button id="records.restore" small variant="secondary" icon="restore" title={t('common.restore')} onPress={() => restore(r)} />
                   ) : (
                     <MaterialCommunityIcons name={forwardIcon} size={20} color={COLORS.textMuted} />
                   )}
@@ -178,7 +180,7 @@ function RecordList({ section, onOpen, title, openCreate }) {
 
 // ================================================================ record page
 
-function RecordPage({ section, subSections, id, onBack }) {
+function RecordPage({ section, subSections, id, onBack, onNavigate }) {
   const { t, lang } = useI18n();
   const { canEdit } = useSession();
   const editable = canEdit(`cs_${section.key}`);
@@ -234,8 +236,8 @@ function RecordPage({ section, subSections, id, onBack }) {
       actions={
         editable ? (
           <>
-            <IconButton icon="pencil-outline" label={t('common.edit')} onPress={() => setEditing(record)} />
-            <IconButton icon="delete-outline" color={COLORS.danger} label={t('common.delete')} onPress={remove} />
+            <IconButton id="records.edit" icon="pencil-outline" label={t('common.edit')} onPress={() => setEditing(record)} />
+            <IconButton id="records.delete" icon="delete-outline" color={COLORS.danger} label={t('common.delete')} onPress={remove} />
           </>
         ) : null
       }
@@ -250,6 +252,16 @@ function RecordPage({ section, subSections, id, onBack }) {
             </Row>
           ) : null}
           <CustomValues defs={rules.custom} values={record.custom} />
+          <CustomActions
+            entity={`cs:${section.key}`}
+            record={record}
+            editable={editable}
+            onNavigate={onNavigate}
+            onUpdate={async (custom) => {
+              await customApi.update(section.key, record.id, { custom });
+              await load();
+            }}
+          />
           <Txt muted size="small">{t('sectionsUser.updated', { date: formatDate(record.updatedAt, lang) })}</Txt>
         </Card>
         {subSections.map((sub) => (
@@ -304,7 +316,7 @@ function SubRecords({ section, parentId, editable }) {
           <Txt weight="weightBold">{sectionName(section, lang)}</Txt>
           {rows ? <Txt muted size="small">{`(${rows.length})`}</Txt> : null}
         </Row>
-        {editable ? <Button small icon="plus" title={t('sectionsUser.add')} onPress={() => setEditing({ parentRecordId: parentId })} /> : null}
+        {editable ? <Button id="records.addSub" small icon="plus" title={t('sectionsUser.add')} onPress={() => setEditing({ parentRecordId: parentId })} /> : null}
       </Row>
       <ErrorBox error={error} />
       {rows === null ? (
@@ -320,7 +332,7 @@ function SubRecords({ section, parentId, editable }) {
                   <Txt size="small" weight="weightMedium">{titleOf(section, rules.custom, r, lang, t)}</Txt>
                   <SummaryLine defs={rules.custom} record={r} skipKey={section.titleKey ?? rules.custom[0]?.key} />
                 </View>
-                {editable ? <IconButton icon="delete-outline" size={18} color={COLORS.danger} label={t('common.delete')} onPress={() => remove(r)} /> : null}
+                {editable ? <IconButton id="records.deleteSub" icon="delete-outline" size={18} color={COLORS.danger} label={t('common.delete')} onPress={() => remove(r)} /> : null}
               </Row>
             </Pressable>
           ))}

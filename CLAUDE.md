@@ -24,6 +24,7 @@ New decisions go into `docs/PROJECT.md` before they go into code.
 - **Secrets** live in `.env` (never committed). Keep `.env.example` up to date.
 - Prefer soft delete (trash, restorable) for normal records.
 - **Keyboard must never cover a field:** build screens and forms with `Screen`, `Sheet`, `Field`, `MoneyField`; any other scrolling form uses `KeyboardScrollView` from `components/keyboard.js`, and any raw `TextInput` uses `useRevealOnFocus`.
+- **Every action button is configurable:** give each `<Button>`/`<IconButton>` that performs an action an `id` and add it to the catalog in `services/buttons.js` (form parts like Save/Cancel/Back excepted). `node scripts/check-buttons.mjs` must pass.
 
 ## Workflow
 - Work on a branch, open a PR per step, describe the change in Arabic for the owner.

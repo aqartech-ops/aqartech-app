@@ -4,6 +4,7 @@ import storage from './storage';
 import { authApi, setAuthToken, setUnauthorizedHandler } from './api';
 import { clearFields } from './fields';
 import { clearCustomSections } from './customSections';
+import { clearButtons } from './buttons';
 
 // Who is signed in: a company user (staff / owner) or a platform admin.
 // `me` is the /auth/me payload: { kind: 'user', user, company, subscription, access } | { kind: 'admin', admin }
@@ -19,6 +20,7 @@ export function SessionProvider({ children }) {
     setAuthToken(null);
     clearFields();
     clearCustomSections();
+    clearButtons();
     await storage.remove(TOKEN_KEY);
     setMe(null);
     setStatus('signedOut');

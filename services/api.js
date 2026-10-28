@@ -73,6 +73,7 @@ export const api = {
   get: (path, query) => request(path, { query }),
   post: (path, body) => request(path, { method: 'POST', body: body ?? {} }),
   patch: (path, body) => request(path, { method: 'PATCH', body: body ?? {} }),
+  put: (path, body) => request(path, { method: 'PUT', body: body ?? {} }),
   delete: (path) => request(path, { method: 'DELETE' }),
 };
 
@@ -253,4 +254,10 @@ export const adminApi = {
   updateSection: (id, data) => api.patch(`/admin/custom-sections/${id}`, data),
   moveSection: (id, direction) => api.post(`/admin/custom-sections/${id}/move`, { direction }),
   removeSection: (id, purge = false) => api.delete(`/admin/custom-sections/${id}${purge ? '?purge=1' : ''}`),
+  buttons: () => api.get('/admin/buttons'),
+  setButtonOverride: (key, data) => api.put(`/admin/buttons/overrides/${key}`, data),
+  createButton: (data) => api.post('/admin/buttons/custom', data),
+  updateButton: (id, data) => api.patch(`/admin/buttons/custom/${id}`, data),
+  moveButton: (id, direction) => api.post(`/admin/buttons/custom/${id}/move`, { direction }),
+  removeButton: (id, purge = false) => api.delete(`/admin/buttons/custom/${id}${purge ? '?purge=1' : ''}`),
 };
