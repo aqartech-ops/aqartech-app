@@ -649,6 +649,8 @@ export default {
     title: 'Indicators',
     subtitle: 'Flexible analytics over the added sections: totals, counts and averages of their amount and number fields.',
     add: 'New indicator',
+    needSectionTitle: 'Before adding an indicator, add a section',
+    needSection: 'Indicators are calculated from the records of sections you add. Create a section on the Sections page, give it an amount or number field on the Fields page, then come back here.',
     empty: 'No indicators yet.',
     howItWorks: 'Each indicator shows on the dashboard (if chosen) and in the "Analytics" view of its section, only to users who may see that section and only over their properties. These figures come from the section records, not from the accounts: the financial statements stay computed from the ledger.',
     section: 'Section',

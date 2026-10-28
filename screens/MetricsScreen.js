@@ -15,24 +15,23 @@ const AGGREGATES = ['SUM', 'COUNT', 'AVG', 'MIN', 'MAX'];
 const PERIODS = ['MONTH', 'YEAR', 'ALL'];
 const CHOICE = ['SELECT', 'MULTISELECT', 'BOOLEAN'];
 
-export default function MetricsScreen() {
+export default function MetricsScreen({ onNavigate }) {
   const { t, lang } = useI18n();
   const [rows, setRows] = useState(null);
-  const [sections, setSections] = useState([]);
+  const [sections, setSections] = useState(null); // null = loading
   const [editing, setEditing] = useState(null);
   const [error, setError] = useState(null);
 
   const load = useCallback(async () => {
     setError(null);
-    try {
-      const [metrics, list] = await Promise.all([adminApi.metrics(), adminApi.sections()]);
-      setRows(metrics);
-      setSections(list.filter((s) => s.isActive));
-    } catch (e) {
-      setError(e);
-      setRows([]);
-    }
+    // loaded separately: the "New indicator" button only needs the sections
+    const [metrics, list] = await Promise.allSettled([adminApi.metrics(), adminApi.sections()]);
+    setSections(list.status === 'fulfilled' ? list.value.filter((s) => s.isActive) : []);
+    setRows(metrics.status === 'fulfilled' ? metrics.value : []);
+    const failed = [metrics, list].find((r) => r.status === 'rejected');
+    if (failed) setError(failed.reason);
   }, []);
+  const noSections = sections !== null && sections.length === 0;
 
   useEffect(() => {
     load();
@@ -50,25 +49,32 @@ export default function MetricsScreen() {
 
   const sectionLabel = useCallback(
     (key) => {
-      const s = sections.find((x) => x.key === key);
+      const s = (sections ?? []).find((x) => x.key === key);
       if (!s) return key;
       const name = (x) => (lang === 'ar' ? x.nameAr : x.nameEn);
-      const parent = s.parentId ? sections.find((x) => x.id === s.parentId) : null;
+      const parent = s.parentId ? (sections ?? []).find((x) => x.id === s.parentId) : null;
       return parent ? `${name(parent)} › ${name(s)}` : name(s);
     },
     [sections, lang],
   );
 
   return (
-    <Screen title={t('metricsAdmin.title')} subtitle={t('metricsAdmin.subtitle')} actions={<Button icon="plus" title={t('metricsAdmin.add')} onPress={() => setEditing({})} disabled={!sections.length} />}>
+    <Screen title={t('metricsAdmin.title')} subtitle={t('metricsAdmin.subtitle')} actions={<Button icon="plus" title={t('metricsAdmin.add')} onPress={() => setEditing({})} disabled={sections === null || noSections} />}>
       <View style={{ gap: SPACING.md }}>
         <ErrorBox error={error} onRetry={load} />
+        {noSections ? (
+          <Card style={{ gap: SPACING.sm }}>
+            <Txt weight="weightMedium">{t('metricsAdmin.needSectionTitle')}</Txt>
+            <Txt muted>{t('metricsAdmin.needSection')}</Txt>
+            <Button small variant="secondary" icon="view-grid-plus-outline" title={t('sections.sections')} onPress={() => onNavigate?.('sections')} style={{ alignSelf: 'flex-start' }} />
+          </Card>
+        ) : null}
         {rows === null ? (
           <Loading />
         ) : (
           <Card padded={false}>
             {rows.length === 0 ? (
-              <EmptyState icon="chart-box-outline" body={sections.length ? t('metricsAdmin.empty') : t('buttonsAdmin.noSections')} />
+              <EmptyState icon="chart-box-outline" body={t('metricsAdmin.empty')} />
             ) : (
               rows.map((m, i) => (
                 <Row key={m.id} style={[styles.row, i > 0 && styles.divider, !m.isActive && { opacity: 0.55 }]}>
@@ -105,7 +111,7 @@ export default function MetricsScreen() {
       </View>
       <MetricForm
         metric={editing}
-        sections={sections}
+        sections={sections ?? []}
         sectionLabel={sectionLabel}
         onClose={() => setEditing(null)}
         onSaved={() => {
