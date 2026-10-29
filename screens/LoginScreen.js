@@ -436,7 +436,7 @@ function TypeOption({ icon, title, hint, selected, onPress }) {
 }
 
 function PlanOption({ plan, lang, yearly, selected, onPress }) {
-  const { t, row, isRTL } = useI18n();
+  const { t, row, end } = useI18n();
   const name = lang === 'ar' ? plan.nameAr : plan.nameEn;
   const price = yearly ? plan.priceYearly : plan.priceMonthly;
   const limitText = ['properties', 'users']
@@ -453,7 +453,7 @@ function PlanOption({ plan, lang, yearly, selected, onPress }) {
         <Txt weight="weightBold">{name}</Txt>
         <Txt muted size="small">{limitText}</Txt>
       </View>
-      <View style={{ alignItems: isRTL ? 'flex-start' : 'flex-end' }}>
+      <View style={{ alignItems: end }}>
         <Money baisa={price} weight="weightBold" color={COLORS.primaryDark} size={16} />
         <Txt muted size="small">{yearly ? t('auth.perYear') : t('auth.perMonth')}</Txt>
       </View>

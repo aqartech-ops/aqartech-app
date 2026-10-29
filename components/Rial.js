@@ -31,7 +31,7 @@ export function RialSymbol({ size = 16, color = COLORS.textDark, style }) {
 export function Money({ baisa, size = FONT.body, color = COLORS.textDark, weight, style }) {
   const { lang } = useI18n();
   return (
-    <View style={[{ flexDirection: 'row', alignItems: 'center', gap: Math.max(3, size * 0.25) }, style]}>
+    <View style={[{ flexDirection: 'row', direction: 'ltr', alignItems: 'center', gap: Math.max(3, size * 0.25) }, style]}>
       <RialSymbol size={size * 0.72} color={color} />
       <Text style={{ fontSize: size, color, fontWeight: weight ? FONT[weight] ?? weight : undefined, fontVariant: ['tabular-nums'] }}>
         {formatOMR(baisa, lang, { withCurrency: false })}

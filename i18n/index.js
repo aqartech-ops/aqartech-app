@@ -4,10 +4,14 @@ import en from './en';
 import ar from './ar';
 import storage from '../services/storage';
 
-// We control layout direction ourselves (row / row-reverse, text alignment) so switching
-// language is instant on phone, tablet and web — no app restart. Native auto-RTL is turned
-// off to avoid double flipping on devices whose system language is Arabic.
-if (Platform.OS !== 'web') {
+// Switching language is instant on every platform — no app restart:
+//  - phone & tablet: native auto-RTL is turned OFF (no double flipping on Arabic devices) and the
+//    layout helpers below (row / start / end) flip the layout themselves;
+//  - web: the page itself turns right-to-left (<html dir="rtl">), so the browser flips every row,
+//    margin and alignment — there the helpers stay "row" / "flex-start" (flipping them too would
+//    flip the layout back to left-to-right, which is what kept the web sidebar on the left).
+const IS_WEB = Platform.OS === 'web';
+if (!IS_WEB) {
   I18nManager.allowRTL(false);
   I18nManager.forceRTL(false);
 }
@@ -62,9 +66,10 @@ export function I18nProvider({ children }) {
   }, []);
 
   const isRTL = LANGUAGES.find((l) => l.code === lang)?.rtl ?? false;
+  const flip = isRTL && !IS_WEB; // the app flips the layout itself only where the platform does not
 
   useEffect(() => {
-    if (Platform.OS === 'web' && typeof document !== 'undefined') {
+    if (IS_WEB && typeof document !== 'undefined') {
       document.documentElement.lang = lang;
       document.documentElement.dir = isRTL ? 'rtl' : 'ltr';
     }
@@ -82,14 +87,15 @@ export function I18nProvider({ children }) {
       setLang,
       isRTL,
       t: (key, vars) => translate(lang, key, vars),
-      // Layout helpers — use these instead of hard-coded 'row' / 'left'.
-      row: isRTL ? 'row-reverse' : 'row',
+      // Layout helpers — use these instead of hard-coded 'row' / 'row-reverse' / 'flex-end' / 'left'.
+      row: flip ? 'row-reverse' : 'row',
       align: isRTL ? 'right' : 'left',
-      start: isRTL ? 'flex-end' : 'flex-start',
+      start: flip ? 'flex-end' : 'flex-start',
+      end: flip ? 'flex-start' : 'flex-end',
       // Chevron/arrow icons that point "forward" in reading direction
       forwardIcon: isRTL ? 'chevron-left' : 'chevron-right',
     }),
-    [lang, setLang, isRTL],
+    [lang, setLang, isRTL, flip],
   );
 
   if (!ready) return null;
