@@ -21,7 +21,7 @@ const IS_APP = Platform.OS !== 'web';
  */
 export default function AppShell({ items, active, onNavigate, children }) {
   const { width } = useWindowDimensions();
-  const { t, isRTL } = useI18n();
+  const { t, row } = useI18n();
   const [menuOpen, setMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const insets = useSafeAreaInsets();
@@ -36,7 +36,7 @@ export default function AppShell({ items, active, onNavigate, children }) {
 
   return (
     <SafeAreaView style={styles.root} edges={IS_APP ? ['top'] : ['top', 'bottom']}>
-      <View style={[styles.body, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
+      <View style={[styles.body, { flexDirection: row }]}>
         {fixedSidebar ? (
           <View style={{ width: 260 }}>
             <Sidebar items={items} active={active} onSelect={go} onSearch={() => setSearchOpen(true)} />
@@ -73,7 +73,7 @@ export default function AppShell({ items, active, onNavigate, children }) {
         statusBarTranslucent
         onRequestClose={() => setMenuOpen(false)}
       >
-        <View style={[styles.drawerLayer, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
+        <View style={[styles.drawerLayer, { flexDirection: row }]}>
           <View style={[styles.drawer, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
             <Sidebar
               items={items}

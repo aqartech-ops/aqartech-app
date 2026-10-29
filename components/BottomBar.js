@@ -14,7 +14,7 @@ const CENTER = 'dashboard';
  * `items` = visible sections ({ key, icon }); `onMore` opens the full side menu.
  */
 export default function BottomBar({ items, active, onSelect, onMore, bottomInset = 0 }) {
-  const { t, isRTL } = useI18n();
+  const { t, row } = useI18n();
   const keyboardOpen = useKeyboardOpen();
 
   const { left, right, center } = useMemo(() => {
@@ -49,7 +49,7 @@ export default function BottomBar({ items, active, onSelect, onMore, bottomInset
 
   return (
     <View style={[styles.wrap, { paddingBottom: Math.max(bottomInset, SPACING.sm) }]} pointerEvents="box-none">
-      <View style={[styles.bar, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
+      <View style={[styles.bar, { flexDirection: row }]}>
         {left.map(sideTab)}
 
         {center ? (
