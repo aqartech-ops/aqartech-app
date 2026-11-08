@@ -4,7 +4,8 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { COLORS, FONT, RADIUS, SPACING } from '../theme';
 import { BREAKPOINTS } from '../services/config';
-import { useI18n } from '../i18n';
+import { WEB_SKIN } from '../services/skin';
+import { LANGUAGES, useI18n } from '../i18n';
 import { useSession } from '../services/session';
 import { IconButton, Row, Txt } from './ui';
 import BottomBar from './BottomBar';
@@ -33,6 +34,20 @@ export default function AppShell({ items, active, onNavigate, children }) {
   };
 
   const title = useMemo(() => items.find((i) => i.key === active)?.label ?? '', [items, active]);
+
+  // Web look (trial): dark side menu + top bar on wide screens. Same items, same navigation.
+  if (WEB_SKIN && fixedSidebar) {
+    return (
+      <View style={[styles.root, { flexDirection: row }]}>
+        <WebNav items={items} active={active} onSelect={go} />
+        <View style={{ flex: 1 }}>
+          <WebTopBar title={title} onSearch={() => setSearchOpen(true)} />
+          <View style={{ flex: 1 }}>{children}</View>
+        </View>
+        <SearchModal visible={searchOpen} onClose={() => setSearchOpen(false)} items={items} onNavigate={onNavigate} />
+      </View>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.root} edges={IS_APP ? ['top'] : ['top', 'bottom']}>
@@ -105,6 +120,110 @@ function Brand({ compact }) {
     </Row>
   );
 }
+
+// ------------------------------------------------------------------ web look (trial)
+
+/** Dark side menu of the web look: brand, sections, signed-in person. */
+function WebNav({ items, active, onSelect }) {
+  const { t, row } = useI18n();
+  const { me, signOut } = useSession();
+  const displayName = me?.kind === 'admin' ? me.admin.name : me?.user?.name;
+  const subtitle = me?.kind === 'admin' ? t('auth.adminSignInTitle') : me?.company?.name;
+  const initials = (displayName ?? '?').trim().slice(0, 1).toUpperCase();
+
+  return (
+    <View style={web.nav}>
+      <Row style={web.brand} gap={SPACING.sm}>
+        <View style={web.logo}>
+          <MaterialCommunityIcons name="home-city" size={18} color={COLORS.onPrimary} />
+        </View>
+        <Txt size="medium" weight="weightBold" style={{ color: COLORS.navText }}>{t('app.name')}</Txt>
+      </Row>
+
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingHorizontal: SPACING.sm, paddingVertical: SPACING.sm, gap: 2 }}>
+        {items.map((item) => {
+          const selected = item.key === active;
+          return (
+            <Pressable
+              key={item.key}
+              onPress={() => onSelect(item.key)}
+              accessibilityRole="button"
+              accessibilityState={{ selected }}
+              style={({ pressed, hovered }) => [
+                web.item,
+                { flexDirection: row },
+                selected ? web.itemActive : (hovered || pressed) && web.itemHover,
+              ]}
+            >
+              <SectionIcon name={item.icon} size={19} color={selected ? COLORS.navActiveText : COLORS.navMuted} />
+              <Txt style={[web.itemText, selected && { color: COLORS.navActiveText, fontWeight: FONT.weightMedium }]} numberOfLines={1}>
+                {item.label}
+              </Txt>
+            </Pressable>
+          );
+        })}
+      </ScrollView>
+
+      <Row style={web.person} gap={SPACING.sm}>
+        <View style={web.avatar}>
+          <Txt weight="weightBold" style={{ color: COLORS.navText }}>{initials}</Txt>
+        </View>
+        <View style={{ flex: 1, gap: 1 }}>
+          <Txt weight="weightMedium" numberOfLines={1} style={{ color: COLORS.navText }}>{displayName}</Txt>
+          {subtitle ? <Txt size="small" numberOfLines={1} style={{ color: COLORS.navMuted }}>{subtitle}</Txt> : null}
+        </View>
+        <IconButton icon="logout" size={19} color={COLORS.navMuted} label={t('auth.signOut')} onPress={signOut} />
+      </Row>
+    </View>
+  );
+}
+
+/** Top bar of the web look: section name, search, language. */
+function WebTopBar({ title, onSearch }) {
+  const { t, row, lang, setLang } = useI18n();
+  const other = LANGUAGES.find((l) => l.code !== lang);
+  return (
+    <Row style={web.topBar} gap={SPACING.md}>
+      <Txt size="medium" weight="weightBold" style={{ flex: 1 }} numberOfLines={1}>{title}</Txt>
+      <Pressable onPress={onSearch} style={({ hovered }) => [web.search, { flexDirection: row }, hovered && { borderColor: COLORS.borderStrong }]} accessibilityRole="search">
+        <MaterialCommunityIcons name="magnify" size={18} color={COLORS.textMuted} />
+        <Txt muted style={{ flex: 1 }} numberOfLines={1}>{t('search.placeholder')}</Txt>
+      </Pressable>
+      {other ? (
+        <Pressable onPress={() => setLang(other.code)} style={({ hovered }) => [web.lang, { flexDirection: row }, hovered && { backgroundColor: COLORS.surfaceSoft }]}>
+          <MaterialCommunityIcons name="translate" size={18} color={COLORS.textMuted} />
+          <Txt weight="weightMedium">{other.label}</Txt>
+        </Pressable>
+      ) : null}
+    </Row>
+  );
+}
+
+const web = StyleSheet.create({
+  nav: { width: 248, height: '100%', backgroundColor: COLORS.nav },
+  brand: { paddingHorizontal: SPACING.lg, height: 60, borderBottomWidth: 1, borderBottomColor: COLORS.navBorder },
+  logo: { width: 30, height: 30, borderRadius: RADIUS.sm, backgroundColor: COLORS.primary, alignItems: 'center', justifyContent: 'center' },
+  item: { alignItems: 'center', gap: SPACING.md, paddingHorizontal: SPACING.md, paddingVertical: 10, borderRadius: RADIUS.md },
+  itemHover: { backgroundColor: 'rgba(255, 255, 255, 0.05)' },
+  itemActive: { backgroundColor: COLORS.navActive },
+  itemText: { color: COLORS.navText, fontSize: FONT.body, flex: 1 },
+  person: { padding: SPACING.md, borderTopWidth: 1, borderTopColor: COLORS.navBorder },
+  avatar: { width: 34, height: 34, borderRadius: 17, backgroundColor: 'rgba(255, 255, 255, 0.1)', alignItems: 'center', justifyContent: 'center' },
+  topBar: { height: 60, paddingHorizontal: SPACING.xl, backgroundColor: COLORS.surface, borderBottomWidth: 1, borderBottomColor: COLORS.border },
+  search: {
+    alignItems: 'center',
+    gap: SPACING.sm,
+    width: 320,
+    maxWidth: '40%',
+    paddingHorizontal: SPACING.md,
+    paddingVertical: 8,
+    borderRadius: RADIUS.md,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    backgroundColor: COLORS.surfaceSoft,
+  },
+  lang: { alignItems: 'center', gap: 6, paddingHorizontal: SPACING.md, paddingVertical: 8, borderRadius: RADIUS.md },
+});
 
 function Sidebar({ items, active, onSelect, onSearch }) {
   const { t, row, lang, setLang } = useI18n();
