@@ -925,6 +925,7 @@ export default {
   },
 
   tenants: {
+    columns: { name: 'الاسم', phone: 'الهاتف', id: 'الرقم المدني / السجل', type: 'النوع', status: 'الحالة' },
     title: 'المستأجرون',
     add: 'إضافة مستأجر',
     edit: 'تعديل المستأجر',
@@ -1060,6 +1061,10 @@ export default {
   },
 
   settings: {
+    webLook: 'شكل الموقع',
+    webLookHint: 'تجريبي: للموقع تصميم خاص به — بنفس النظام والبيانات تماماً. يُحفظ اختيارك في هذا المتصفح.',
+    webLookNew: 'الجديد (تجريبي)',
+    webLookClassic: 'الكلاسيكي',
     title: 'الإعدادات',
     language: 'اللغة',
     profile: 'ملفي الشخصي',

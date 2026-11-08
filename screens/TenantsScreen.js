@@ -11,6 +11,7 @@ import { tenantsApi } from '../services/api';
 import { confirm } from '../services/dialog';
 import { whatsappUrl } from '../services/buttons';
 import { matches } from '../services/text';
+import DataTable, { useTableLayout } from '../components/DataTable';
 import { DateField, dateText, formatDate, isDateText } from '../components/Fields';
 import { LeaseDetail, LeaseForm, LeasesTab, TenantLeases } from './LeasesView';
 import {
@@ -113,6 +114,7 @@ function LeasesList({ tabs, onOpen }) {
 
 function TenantList({ tabs, onOpen, openCreate }) {
   const { t, forwardIcon } = useI18n();
+  const asTable = useTableLayout(); // web look: the list is a table
   const { canEdit } = useSession();
   const editable = canEdit('tenants');
   const [trash, setTrash] = useState(false);
@@ -176,6 +178,49 @@ function TenantList({ tabs, onOpen, openCreate }) {
               action={editable && !trash && !filter ? <Button id="tenants.add" icon="account-plus-outline" title={t('tenants.add')} onPress={() => setEditing({})} /> : null}
             />
           </Card>
+        ) : asTable ? (
+          <DataTable
+            rows={visible}
+            onRowPress={trash ? undefined : (x) => onOpen(x.id)}
+            columns={[
+              {
+                key: 'name',
+                label: t('tenants.columns.name'),
+                flex: 2.4,
+                render: (x) => (
+                  <Row gap={SPACING.sm}>
+                    <View style={styles.avatar}>
+                      <MaterialCommunityIcons name={x.type === 'COMPANY' ? 'domain' : 'account-outline'} size={18} color={COLORS.primaryDark} />
+                    </View>
+                    <Txt weight="weightMedium" numberOfLines={1} style={{ flex: 1 }}>{x.name}</Txt>
+                  </Row>
+                ),
+              },
+              { key: 'phone', label: t('tenants.columns.phone'), flex: 1.3, render: (x) => <Txt numberOfLines={1}>{x.phone || '—'}</Txt> },
+              { key: 'id', label: t('tenants.columns.id'), flex: 1.3, render: (x) => <Txt numberOfLines={1}>{x.civilId || x.crNumber || '—'}</Txt> },
+              { key: 'type', label: t('tenants.columns.type'), flex: 1, render: (x) => <Txt muted numberOfLines={1}>{t(`tenants.typeValues.${x.type}`)}</Txt> },
+              {
+                key: 'status',
+                label: t('tenants.columns.status'),
+                flex: 1.2,
+                render: (x) => {
+                  const ids = idState(x.idExpiry);
+                  return ids ? <Badge label={t(ids === 'expired' ? 'tenants.idExpired' : 'tenants.idExpiresSoon')} tone={ids === 'expired' ? 'danger' : 'warning'} /> : <Txt muted>—</Txt>;
+                },
+              },
+              {
+                key: 'open',
+                width: trash ? 140 : 48,
+                align: 'end',
+                render: (x) =>
+                  trash ? (
+                    <Button id="tenants.restore" small variant="secondary" icon="restore" title={t('common.restore')} onPress={() => restore(x)} />
+                  ) : (
+                    <MaterialCommunityIcons name={forwardIcon} size={20} color={COLORS.textMuted} />
+                  ),
+              },
+            ]}
+          />
         ) : (
           <Card padded={false}>
             {visible.map((x, i) => {

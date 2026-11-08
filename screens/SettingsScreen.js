@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { View } from 'react-native';
+import { Platform, View } from 'react-native';
 import { COLORS, SPACING } from '../theme';
 import { LANGUAGES, useI18n } from '../i18n';
 import { useSession } from '../services/session';
 import { companyApi } from '../services/api';
 import { API_URL } from '../services/config';
+import { WEB_SKIN, setWebSkin } from '../services/skin';
 import { Money } from '../components/Rial';
 import { Badge, Button, Card, ErrorBox, Field, Row, STATUS_TONE, Screen, Segmented, Txt, errorText } from '../components/ui';
 
@@ -16,6 +17,7 @@ export default function SettingsScreen() {
     <Screen title={t('settings.title')}>
       <View style={{ gap: SPACING.lg, maxWidth: 720 }}>
         <LanguageCard />
+        {Platform.OS === 'web' ? <WebLookCard /> : null}
         <ProfileCard me={me} isAdmin={isAdmin} />
         {!isAdmin ? <ChangePasswordCard /> : null}
         {!isAdmin && me.user.isCompanyAdmin ? <CompanyCard /> : null}
@@ -36,6 +38,25 @@ function LanguageCard() {
     <Card style={{ gap: SPACING.md }}>
       <Txt weight="weightBold">{t('settings.language')}</Txt>
       <Segmented value={lang} onChange={setLang} options={LANGUAGES.map((l) => ({ value: l.code, label: l.label }))} />
+    </Card>
+  );
+}
+
+/** Web only: the new web look (trial) or the classic one. Remembered per browser; switching reloads the page. */
+function WebLookCard() {
+  const { t } = useI18n();
+  return (
+    <Card style={{ gap: SPACING.md }}>
+      <Txt weight="weightBold">{t('settings.webLook')}</Txt>
+      <Txt muted size="small">{t('settings.webLookHint')}</Txt>
+      <Segmented
+        value={WEB_SKIN ? 'new' : 'classic'}
+        onChange={(v) => setWebSkin(v === 'new')}
+        options={[
+          { value: 'new', label: t('settings.webLookNew') },
+          { value: 'classic', label: t('settings.webLookClassic') },
+        ]}
+      />
     </Card>
   );
 }

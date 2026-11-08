@@ -925,6 +925,7 @@ export default {
   },
 
   tenants: {
+    columns: { name: 'Name', phone: 'Phone', id: 'ID / CR no.', type: 'Type', status: 'Status' },
     title: 'Tenants',
     add: 'Add tenant',
     edit: 'Edit tenant',
@@ -1060,6 +1061,10 @@ export default {
   },
 
   settings: {
+    webLook: 'Web look',
+    webLookHint: 'Trial: the website has its own design — same system and data as the app. Your choice is kept in this browser.',
+    webLookNew: 'New (trial)',
+    webLookClassic: 'Classic',
     title: 'Settings',
     language: 'Language',
     profile: 'My profile',
