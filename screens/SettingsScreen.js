@@ -6,6 +6,7 @@ import { useSession } from '../services/session';
 import { companyApi } from '../services/api';
 import { API_URL } from '../services/config';
 import { WEB_SKIN, setWebSkin } from '../services/skin';
+import { AdminPasswordCard, TwoFactorCard } from '../components/AdminSecurity';
 import { Money } from '../components/Rial';
 import { Badge, Button, Card, ErrorBox, Field, Row, STATUS_TONE, Screen, Segmented, Txt, errorText } from '../components/ui';
 
@@ -20,6 +21,8 @@ export default function SettingsScreen() {
         {Platform.OS === 'web' ? <WebLookCard /> : null}
         <ProfileCard me={me} isAdmin={isAdmin} />
         {!isAdmin ? <ChangePasswordCard /> : null}
+        {isAdmin ? <AdminPasswordCard /> : null}
+        {isAdmin ? <TwoFactorCard /> : null}
         {!isAdmin && me.user.isCompanyAdmin ? <CompanyCard /> : null}
         {!isAdmin && me.subscription ? <SubscriptionCard subscription={me.subscription} /> : null}
         <Card style={{ gap: SPACING.sm }}>

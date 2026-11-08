@@ -100,18 +100,36 @@ export class AuthService {
     const ok = await bcrypt.compare(password, admin?.passwordHash ?? DUMMY_HASH);
     if (!admin || !ok || !admin.isActive) throw new UnauthorizedException('auth.wrongCredentials');
 
-    await this.prisma.platformAdmin.update({ where: { id: admin.id }, data: { lastLoginAt: new Date() } });
-    await this.activity.log({ kind: 'admin', adminId: admin.id }, { action: 'admin.login' });
-    return { token: this.tokens.sign({ sub: admin.id, kind: 'admin' }), me: await this.adminMe(admin.id) };
+    // Two-step sign-in: the password alone only earns a 5-minute ticket for the code step.
+    if (admin.totpEnabled) return { twoFactor: true as const, ticket: this.tokens.signTicket(admin.id) };
+    return this.adminSession(admin.id);
+  }
+
+  /** Session for an admin who passed every step of the sign-in. */
+  async adminSession(adminId: string) {
+    await this.prisma.platformAdmin.update({ where: { id: adminId }, data: { lastLoginAt: new Date() } });
+    await this.activity.log({ kind: 'admin', adminId }, { action: 'admin.login' });
+    return { token: this.tokens.sign({ sub: adminId, kind: 'admin' }), me: await this.adminMe(adminId) };
   }
 
   me(auth: AuthContext) {
     return auth.kind === 'admin' ? this.adminMe(auth.adminId) : this.userMe(auth.userId);
   }
 
-  private async adminMe(adminId: string) {
+  async adminMe(adminId: string) {
     const admin = await this.prisma.platformAdmin.findUniqueOrThrow({ where: { id: adminId } });
-    return { kind: 'admin' as const, admin: { id: admin.id, name: admin.name, email: admin.email } };
+    return {
+      kind: 'admin' as const,
+      admin: {
+        id: admin.id,
+        name: admin.name,
+        email: admin.email,
+        role: admin.role,
+        totpEnabled: admin.totpEnabled,
+        mustChangePassword: admin.mustChangePassword,
+        recoveryCodesLeft: Array.isArray(admin.recoveryCodes) ? admin.recoveryCodes.length : 0,
+      },
+    };
   }
 
   private async userMe(userId: string) {

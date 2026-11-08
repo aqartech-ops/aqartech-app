@@ -17,6 +17,9 @@ import SectionsScreen from './screens/SectionsScreen';
 import ButtonsScreen from './screens/ButtonsScreen';
 import TemplatesScreen from './screens/TemplatesScreen';
 import MetricsScreen from './screens/MetricsScreen';
+import TeamScreen from './screens/TeamScreen';
+import { AdminPasswordCard } from './components/AdminSecurity';
+import { Screen } from './components/ui';
 import CustomSectionScreen from './screens/CustomSectionScreen';
 import { sectionName, useCustomSections } from './services/customSections';
 import UsersScreen from './screens/UsersScreen';
@@ -52,8 +55,16 @@ const ADMIN_SECTIONS = [
   { key: 'buttons', icon: 'gesture-tap-button', Screen: ButtonsScreen },
   { key: 'templates', icon: 'file-document-edit-outline', Screen: TemplatesScreen },
   { key: 'metrics', icon: 'chart-box-outline', Screen: MetricsScreen },
+  { key: 'team', icon: 'account-key-outline', Screen: TeamScreen, roles: ['OWNER'] },
   { key: 'settings', icon: 'cog-outline', Screen: SettingsScreen },
 ];
+
+/** Admin pages per team role (the server enforces the same rules — this only keeps the menu tidy). */
+const SUPPORT_SECTIONS = ['dashboard', 'companies', 'settings'];
+function adminSectionAllowed(section, role) {
+  if (section.roles) return section.roles.includes(role);
+  return role !== 'SUPPORT' || SUPPORT_SECTIONS.includes(section.key);
+}
 
 function Root() {
   const { status, me, isAdmin, levelOf } = useSession();
@@ -65,7 +76,7 @@ function Root() {
 
   const sections = useMemo(() => {
     if (!me) return [];
-    if (isAdmin) return ADMIN_SECTIONS.map((s) => ({ ...s, label: t(`sections.${s.key}`) }));
+    if (isAdmin) return ADMIN_SECTIONS.filter((s) => adminSectionAllowed(s, me.admin.role ?? 'OWNER')).map((s) => ({ ...s, label: t(`sections.${s.key}`) }));
     const builtIn = USER_SECTIONS.filter((s) => levelOf(s.key) !== 'HIDDEN').map((s) => ({ ...s, label: t(`sections.${s.key}`) }));
     // sections created by the platform team, shown before "Users" and "Settings" when the plan and role allow them
     const extra = custom
@@ -89,6 +100,17 @@ function Root() {
   }
 
   if (status !== 'signedIn') return <LoginScreen />;
+
+  // A team member whose password was set by an owner changes it before anything else (the server enforces it too).
+  if (isAdmin && me.admin.mustChangePassword) {
+    return (
+      <Screen title={t('team.mustChangeTitle')}>
+        <View style={{ maxWidth: 520, width: '100%' }}>
+          <AdminPasswordCard forced />
+        </View>
+      </Screen>
+    );
+  }
 
   const current = sections.find((s) => s.key === active) ?? sections[0];
   const ActiveScreen = current?.Screen ?? DashboardScreen;

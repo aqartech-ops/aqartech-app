@@ -110,9 +110,11 @@ function BrandPanel() {
 
 function SignInForm({ admin, onSwitch, onForgot, initialEmail = '', notice }) {
   const { t, start } = useI18n();
-  const { signIn, adminSignIn } = useSession();
+  const { signIn, adminSignIn, adminVerify2fa } = useSession();
   const [email, setEmail] = useState(initialEmail);
   const [password, setPassword] = useState('');
+  const [ticket, setTicket] = useState(null); // platform team: password OK, waiting for the 2FA code
+  const [code, setCode] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
 
@@ -120,12 +122,62 @@ function SignInForm({ admin, onSwitch, onForgot, initialEmail = '', notice }) {
     setError(null);
     setBusy(true);
     try {
-      await (admin ? adminSignIn : signIn)(email.trim(), password);
+      const res = await (admin ? adminSignIn : signIn)(email.trim(), password);
+      if (res?.twoFactor) {
+        setTicket(res.ticket);
+        setBusy(false);
+      }
     } catch (e) {
       setError(e);
       setBusy(false);
     }
   };
+
+  const verify = async () => {
+    setError(null);
+    setBusy(true);
+    try {
+      await adminVerify2fa(ticket, code.trim());
+    } catch (e) {
+      // an expired ticket (5 minutes) starts the sign-in again
+      if (e.code === 'auth.twoFactorExpired') setTicket(null);
+      setError(e);
+      setBusy(false);
+    }
+  };
+
+  if (admin && ticket) {
+    return (
+      <View style={{ gap: SPACING.lg }}>
+        <View style={{ gap: 4 }}>
+          <Txt size="title" weight="weightBold">{t('twoFactor.signInTitle')}</Txt>
+          <Txt muted>{t('twoFactor.signInHint')}</Txt>
+        </View>
+        <ErrorBox error={error} />
+        <Field
+          label={t('twoFactor.code')}
+          value={code}
+          onChangeText={setCode}
+          autoFocus
+          autoComplete="one-time-code"
+          textContentType="oneTimeCode"
+          inputMode="numeric"
+          onSubmitEditing={verify}
+          hint={t('twoFactor.recoveryHint')}
+        />
+        <Button title={t('twoFactor.verify')} onPress={verify} loading={busy} disabled={code.trim().length < 6} />
+        <Button
+          variant="ghost"
+          title={t('common.back')}
+          onPress={() => {
+            setTicket(null);
+            setCode('');
+            setError(null);
+          }}
+        />
+      </View>
+    );
+  }
 
   return (
     <View style={{ gap: SPACING.lg }}>

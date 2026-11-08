@@ -1,9 +1,10 @@
 import { createParamDecorator, ExecutionContext, SetMetadata } from '@nestjs/common';
 import type { AccessLevel, AccessMap, SectionKey } from './sections.js';
+import type { AdminRole } from '../admin/roles.js';
 
 /** Who is calling. Attached to the request by AuthGuard. */
 export type AuthContext =
-  | { kind: 'admin'; adminId: string }
+  | { kind: 'admin'; adminId: string; adminRole?: AdminRole }
   | {
       kind: 'user';
       userId: string;
