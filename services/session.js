@@ -72,7 +72,22 @@ export function SessionProvider({ children }) {
       me,
       isAdmin: me?.kind === 'admin',
       signIn: async (email, password) => applyAuth(await authApi.login(email, password)),
-      adminSignIn: async (email, password) => applyAuth(await authApi.adminLogin(email, password)),
+      /** Platform team. With two-step sign-in on, returns { twoFactor: true, ticket } and the code step follows. */
+      adminSignIn: async (email, password) => {
+        const res = await authApi.adminLogin(email, password);
+        if (res?.twoFactor) return res;
+        return applyAuth(res);
+      },
+      adminVerify2fa: async (ticket, code) => applyAuth(await authApi.adminVerify2fa(ticket, code)),
+      /** Platform team: change own password; this device keeps its session. */
+      adminChangePassword: async (currentPassword, password) => {
+        const { token, me: next } = await authApi.adminChangePassword(currentPassword, password);
+        setAuthToken(token);
+        await storage.set(TOKEN_KEY, token);
+        if (next) setMe(next);
+      },
+      /** Replace the signed-in profile with one returned by the server (e.g. after turning 2FA on). */
+      setProfile: (next) => next && setMe(next),
       register: async (payload) => applyAuth(await authApi.register(payload)),
       refresh: async () => setMe(await authApi.me()),
       /** Change own password; this device keeps its session (others are signed out). */

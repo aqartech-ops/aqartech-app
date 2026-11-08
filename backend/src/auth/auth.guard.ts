@@ -11,6 +11,7 @@ import {
   type AuthContext,
 } from '../common/auth-context.js';
 import { LEVEL_RANK, type AccessLevel, type SectionKey } from '../common/sections.js';
+import { adminCan, asRole } from '../admin/roles.js';
 
 /** Global guard: every route needs a valid token unless marked @Public(). */
 @Injectable()
@@ -43,7 +44,14 @@ export class AuthGuard implements CanActivate {
       if (!admin || !admin.isActive || issuedBeforePasswordChange(payload.iat, admin.passwordChangedAt)) {
         throw new UnauthorizedException('auth.invalidToken');
       }
-      req.auth = { kind: 'admin', adminId: admin.id } satisfies AuthContext;
+      const role = asRole(admin.role);
+      const path = String(req.path ?? req.url ?? '').split('?')[0];
+      // An admin whose password was set by another admin must change it first.
+      if (admin.mustChangePassword && !path.startsWith('/admin/auth/') && path !== '/auth/me') {
+        throw new ForbiddenException('auth.mustChangePassword');
+      }
+      if (!adminCan(role, String(req.method ?? 'GET'), path)) throw new ForbiddenException('auth.noPermission');
+      req.auth = { kind: 'admin', adminId: admin.id, adminRole: role } satisfies AuthContext;
       return true;
     }
 

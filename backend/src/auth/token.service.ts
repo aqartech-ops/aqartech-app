@@ -22,6 +22,21 @@ export class TokenService {
     return jwt.sign(payload, this.secret, { expiresIn: this.expiresIn } as jwt.SignOptions);
   }
 
+  /** Short ticket between "password OK" and "2FA code OK" — not a session (verify() rejects it). */
+  signTicket(adminId: string): string {
+    return jwt.sign({ sub: adminId, kind: 'admin-2fa' }, this.secret, { expiresIn: '5m' } as jwt.SignOptions);
+  }
+
+  verifyTicket(ticket: string): string {
+    try {
+      const decoded = jwt.verify(ticket, this.secret);
+      if (typeof decoded !== 'object' || decoded.kind !== 'admin-2fa' || !decoded.sub) throw new Error('bad ticket');
+      return String(decoded.sub);
+    } catch {
+      throw new UnauthorizedException('auth.twoFactorExpired');
+    }
+  }
+
   verify(token: string): VerifiedToken {
     try {
       const decoded = jwt.verify(token, this.secret);

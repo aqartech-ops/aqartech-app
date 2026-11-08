@@ -25,6 +25,13 @@ model PlatformAdmin {
   passwordChangedAt DateTime? // sessions issued before this are rejected
   isActive     Boolean   @default(true)
   lastLoginAt  DateTime?
+  /// OWNER = everything + the team · MANAGER = everything but the team · SUPPORT = subscribers only (rest read-only)
+  role         String    @default("OWNER")
+  mustChangePassword Boolean @default(false) // set when the password was given by another admin
+  /// Two-step sign-in (TOTP, an authenticator app). The secret is stored encrypted (ADMIN_2FA_KEY).
+  totpSecret    String?
+  totpEnabled   Boolean  @default(false)
+  recoveryCodes Json     @default("[]") // SHA-256 of the unused one-time recovery codes
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
 }

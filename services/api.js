@@ -86,6 +86,22 @@ export const authApi = {
   forgotPassword: (email, locale) => api.post('/auth/forgot-password', { email, locale }),
   resetPassword: (email, code, password) => api.post('/auth/reset-password', { email, code, password }),
   changePassword: (currentPassword, password) => api.post('/auth/change-password', { currentPassword, password }),
+  // platform team: own security
+  adminVerify2fa: (ticket, code) => api.post('/admin/auth/2fa/verify', { ticket, code }),
+  adminChangePassword: (currentPassword, password) => api.post('/admin/auth/change-password', { currentPassword, password }),
+  admin2faSetup: () => api.post('/admin/auth/2fa/setup', {}),
+  admin2faEnable: (code) => api.post('/admin/auth/2fa/enable', { code }),
+  admin2faDisable: (password, code) => api.post('/admin/auth/2fa/disable', { password, code }),
+  admin2faRecoveryCodes: (code) => api.post('/admin/auth/2fa/recovery-codes', { code }),
+};
+
+/** The platform team (owners only). */
+export const teamApi = {
+  list: () => api.get('/admin/team'),
+  create: (data) => api.post('/admin/team', data),
+  update: (id, data) => api.patch(`/admin/team/${id}`, data),
+  resetPassword: (id) => api.post(`/admin/team/${id}/reset-password`, {}),
+  reset2fa: (id) => api.post(`/admin/team/${id}/reset-2fa`, {}),
 };
 
 export const plansApi = {
