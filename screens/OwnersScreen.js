@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import DataTable, { useTableLayout } from '../components/DataTable';
 import { toEditable, toPayload, useFieldRules } from '../services/fields';
 import CustomFields, { CustomValues } from '../components/CustomFields';
 import CustomActions from '../components/CustomActions';
@@ -40,6 +41,7 @@ export default function OwnersScreen({ params, onNavigate }) {
 
 function OwnerList({ onOpen }) {
   const { t, forwardIcon } = useI18n();
+  const asTable = useTableLayout(); // web look: the list is a table
   const { canEdit } = useSession();
   const editable = canEdit('owners');
   const [trash, setTrash] = useState(false);
@@ -96,6 +98,42 @@ function OwnerList({ onOpen }) {
             <EmptyState icon="account-tie-outline" body={trash ? t('owners.trashEmpty') : t('owners.empty')} />
           </Card>
         ) : (
+          asTable ? (
+            <DataTable
+              rows={visible}
+              onRowPress={trash ? undefined : (o) => onOpen(o.id)}
+              columns={[
+                {
+                  key: 'name',
+                  label: t('table.name'),
+                  flex: 2.4,
+                  render: (o) => (
+                    <Row gap={SPACING.sm}>
+                      <View style={styles.avatar}>
+                        <MaterialCommunityIcons name={o.type === 'COMPANY' ? 'domain' : 'account-tie-outline'} size={18} color={COLORS.primaryDark} />
+                      </View>
+                      <Txt weight="weightMedium" numberOfLines={1} style={{ flex: 1 }}>{o.name}</Txt>
+                    </Row>
+                  ),
+                },
+                { key: 'phone', label: t('table.phone'), flex: 1.3, render: (o) => <Txt numberOfLines={1}>{o.phone || '—'}</Txt> },
+                { key: 'id', label: t('table.idNumber'), flex: 1.3, render: (o) => <Txt numberOfLines={1}>{o.civilId || o.crNumber || '—'}</Txt> },
+                { key: 'type', label: t('table.type'), flex: 1, render: (o) => <Txt muted numberOfLines={1}>{t(`owners.typeValues.${o.type}`)}</Txt> },
+                { key: 'properties', label: t('table.properties'), flex: 1, render: (o) => <Badge label={t('owners.propertiesCount', { count: o.propertiesCount })} /> },
+                {
+                  key: 'open',
+                  width: trash ? 140 : 48,
+                  align: 'end',
+                  render: (o) =>
+                    trash ? (
+                      <Button id="owners.restore" small variant="secondary" icon="restore" title={t('common.restore')} onPress={() => restore(o)} />
+                    ) : (
+                      <MaterialCommunityIcons name={forwardIcon} size={20} color={COLORS.textMuted} />
+                    ),
+                },
+              ]}
+            />
+          ) : (
           <Card padded={false}>
             {visible.map((o, i) => (
               <Pressable key={o.id} onPress={trash ? undefined : () => onOpen(o.id)} style={({ pressed }) => [pressed && { backgroundColor: COLORS.surfaceSoft }]}>
@@ -119,6 +157,7 @@ function OwnerList({ onOpen }) {
               </Pressable>
             ))}
           </Card>
+          )
         )}
       </View>
       <OwnerForm

@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
+import DataTable, { useTableLayout } from '../components/DataTable';
 import { toEditable, toPayload, useFieldRules } from '../services/fields';
 import CustomFields from '../components/CustomFields';
 import { Pressable, StyleSheet, Switch, View } from 'react-native';
@@ -81,6 +82,7 @@ export function PropertyUnitPicker({ value, onChange, onProperty, allowNone, uni
 
 export function ExpensesTab({ editable, version, onChanged }) {
   const { t, lang } = useI18n();
+  const asTable = useTableLayout(); // web look: the list is a table
   const [bearer, setBearer] = useState('all');
   const [text, setText] = useState('');
   const [data, setData] = useState(null);
@@ -159,6 +161,31 @@ export function ExpensesTab({ editable, version, onChanged }) {
         <Card>
           <EmptyState icon="cash-minus" body={t('expenses.empty')} />
         </Card>
+      ) : asTable ? (
+        <DataTable
+          rows={visible}
+          onRowPress={(x) => setOpenId(x.id)}
+          columns={[
+            { key: 'number', label: t('table.number'), flex: 0.9, render: (x) => <Txt weight="weightMedium" numberOfLines={1}>{x.number}</Txt> },
+            { key: 'date', label: t('table.date'), flex: 1, render: (x) => <Txt numberOfLines={1}>{formatDate(x.date, lang)}</Txt> },
+            {
+              key: 'description',
+              label: t('table.description'),
+              flex: 2.2,
+              render: (x) => (
+                <Row gap={SPACING.xs}>
+                  <Txt numberOfLines={1} style={{ flexShrink: 1 }}>{x.description}</Txt>
+                  {x.status === 'VOIDED' ? <Badge label={t('payments.voided')} tone="danger" /> : null}
+                  {x.workOrder ? <Badge label={x.workOrder.number} tone="neutral" /> : null}
+                </Row>
+              ),
+            },
+            { key: 'category', label: t('table.category'), flex: 1.2, render: (x) => <Txt muted numberOfLines={1}>{categoryName(x.category, lang)}</Txt> },
+            { key: 'property', label: t('table.propertyUnit'), flex: 1.6, render: (x) => <Txt muted numberOfLines={1}>{x.property ? `${x.property.name}${x.unit ? ` · ${x.unit.number}` : ''}` : t('expenses.noProperty')}</Txt> },
+            { key: 'bearer', label: t('table.bearer'), flex: 1.1, render: (x) => <Badge label={t(`expenses.bearers.${x.bearer}`)} tone={BEARER_TONE[x.bearer]} /> },
+            { key: 'amount', label: t('table.amount'), flex: 1.1, align: 'end', render: (x) => <Money baisa={x.amount} weight="weightBold" color={x.status === 'VOIDED' ? COLORS.textMuted : COLORS.danger} /> },
+          ]}
+        />
       ) : (
         <Card padded={false}>
           {visible.map((x, i) => (

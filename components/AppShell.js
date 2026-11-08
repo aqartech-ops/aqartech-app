@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Modal, Platform, Pressable, ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -34,6 +34,11 @@ export default function AppShell({ items, active, onNavigate, children }) {
   };
 
   const title = useMemo(() => items.find((i) => i.key === active)?.label ?? '', [items, active]);
+
+  // Web: the browser tab shows the current section ("Tenants · AqarTech")
+  useEffect(() => {
+    if (!IS_APP && typeof document !== 'undefined') document.title = title ? `${title} · ${t('app.name')}` : t('app.name');
+  }, [title, t]);
 
   // Web look (trial): dark side menu + top bar on wide screens. Same items, same navigation.
   if (WEB_SKIN && fixedSidebar) {

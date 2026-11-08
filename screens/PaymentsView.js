@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import DataTable, { useTableLayout } from '../components/DataTable';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { COLORS, FONT, RADIUS, SPACING } from '../theme';
@@ -24,6 +25,7 @@ const moneyText = (baisa) => (baisa > 0 ? formatOMR(baisa, 'en', { withCurrency:
 
 export function PaymentsList({ onOpen, version }) {
   const { t, lang, forwardIcon } = useI18n();
+  const asTable = useTableLayout(); // web look: the list is a table
   const [method, setMethod] = useState('all');
   const [text, setText] = useState('');
   const [data, setData] = useState(null);
@@ -85,6 +87,46 @@ export function PaymentsList({ onOpen, version }) {
         <Card>
           <EmptyState icon="receipt" body={t('payments.empty')} />
         </Card>
+      ) : asTable ? (
+        <DataTable
+          rows={visible}
+          onRowPress={(p) => onOpen(p.id)}
+          columns={[
+            { key: 'number', label: t('table.receiptNo'), flex: 1, render: (p) => <Txt weight="weightMedium" numberOfLines={1}>{p.number}</Txt> },
+            { key: 'date', label: t('table.date'), flex: 1, render: (p) => <Txt numberOfLines={1}>{formatDate(p.date, lang)}</Txt> },
+            {
+              key: 'tenant',
+              label: t('table.tenant'),
+              flex: 2,
+              render: (p) => (
+                <Row gap={SPACING.xs}>
+                  <Txt numberOfLines={1} style={{ flexShrink: 1 }}>{p.tenant.name}</Txt>
+                  {p.status === 'VOIDED' ? <Badge label={t('payments.voided')} tone="danger" /> : null}
+                </Row>
+              ),
+            },
+            { key: 'lease', label: t('table.lease'), flex: 1, render: (p) => <Txt muted numberOfLines={1}>{p.lease.number}</Txt> },
+            {
+              key: 'method',
+              label: t('table.method'),
+              flex: 1.2,
+              render: (p) => (
+                <Row gap={6}>
+                  <MaterialCommunityIcons name={METHOD_ICON[p.method]} size={16} color={COLORS.textMuted} />
+                  <Txt muted numberOfLines={1}>{t(`payments.methods.${p.method}`)}</Txt>
+                </Row>
+              ),
+            },
+            {
+              key: 'amount',
+              label: t('table.amount'),
+              flex: 1.2,
+              align: 'end',
+              render: (p) => <Money baisa={p.amount} weight="weightBold" color={p.status === 'VOIDED' ? COLORS.textMuted : COLORS.success} style={p.status === 'VOIDED' ? { opacity: 0.6 } : null} />,
+            },
+            { key: 'open', width: 40, align: 'end', render: () => <MaterialCommunityIcons name={forwardIcon} size={20} color={COLORS.textMuted} /> },
+          ]}
+        />
       ) : (
         <Card padded={false}>
           {visible.map((p, i) => (

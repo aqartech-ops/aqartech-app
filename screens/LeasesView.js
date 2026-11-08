@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import DataTable, { useTableLayout } from '../components/DataTable';
 import { toEditable, toPayload, useFieldRules } from '../services/fields';
 import CustomFields, { CustomValues } from '../components/CustomFields';
 import CustomActions from '../components/CustomActions';
@@ -107,13 +108,53 @@ export function LeasesTab({ onOpen, onNew, editable }) {
           <EmptyState icon="file-sign" body={t('leases.empty')} />
         </Card>
       ) : (
-        <Card padded={false}>
-          {visible.map((l, i) => (
-            <LeaseRow key={l.id} lease={l} first={i === 0} onPress={() => onOpen(l.id)} />
-          ))}
-        </Card>
+        <LeaseList leases={visible} onOpen={onOpen} />
       )}
     </View>
+  );
+}
+
+/** Leases as rows (app) or as a table (web look). */
+function LeaseList({ leases, onOpen, hideTenant }) {
+  const { t, lang, forwardIcon } = useI18n();
+  const asTable = useTableLayout();
+  if (!asTable) {
+    return (
+      <Card padded={false}>
+        {leases.map((l, i) => (
+          <LeaseRow key={l.id} lease={l} first={i === 0} hideTenant={hideTenant} onPress={() => onOpen(l.id)} />
+        ))}
+      </Card>
+    );
+  }
+  return (
+    <DataTable
+      rows={leases}
+      onRowPress={(l) => onOpen(l.id)}
+      columns={[
+        { key: 'number', label: t('table.number'), flex: 1, render: (l) => <Txt weight={hideTenant ? 'weightMedium' : undefined} numberOfLines={1}>{l.number}</Txt> },
+        ...(hideTenant ? [] : [{ key: 'tenant', label: t('table.tenant'), flex: 2, render: (l) => <Txt weight="weightMedium" numberOfLines={1}>{l.tenant.name}</Txt> }]),
+        { key: 'unit', label: t('table.propertyUnit'), flex: 1.8, render: (l) => <Txt numberOfLines={1}>{`${l.property.name} · ${l.unit.number}`}</Txt> },
+        { key: 'period', label: t('table.period'), flex: 1.8, render: (l) => <Txt muted numberOfLines={1}>{`${formatDate(l.startDate, lang)} → ${formatDate(l.endDate, lang)}`}</Txt> },
+        {
+          key: 'status',
+          label: t('table.status'),
+          flex: 1.5,
+          render: (l) => {
+            const left = daysLeft(l.endDate);
+            const soon = l.status === 'ACTIVE' && left <= 90;
+            return (
+              <Row gap={SPACING.xs} style={{ flexWrap: 'wrap' }}>
+                <Badge label={t(`leases.statusValues.${l.status}`)} tone={LEASE_TONE[l.status]} />
+                {soon ? <Badge label={t('leases.daysLeft', { count: Math.max(left, 0) })} tone={left <= 30 ? 'danger' : 'warning'} /> : null}
+              </Row>
+            );
+          },
+        },
+        { key: 'rent', label: t('table.rent'), flex: 1.1, align: 'end', render: (l) => <Money baisa={l.monthlyRent} size={14} weight="weightMedium" /> },
+        { key: 'open', width: 40, align: 'end', render: () => <MaterialCommunityIcons name={forwardIcon} size={20} color={COLORS.textMuted} /> },
+      ]}
+    />
   );
 }
 
@@ -163,11 +204,7 @@ export function TenantLeases({ tenantId, onOpen, onNew, editable }) {
           <EmptyState icon="file-sign" body={t('leases.noLeases')} />
         </Card>
       ) : (
-        <Card padded={false}>
-          {leases.map((l, i) => (
-            <LeaseRow key={l.id} lease={l} first={i === 0} hideTenant onPress={() => onOpen(l.id)} />
-          ))}
-        </Card>
+        <LeaseList leases={leases} onOpen={onOpen} hideTenant />
       )}
     </View>
   );
