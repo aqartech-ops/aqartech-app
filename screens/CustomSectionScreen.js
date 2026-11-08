@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import DataTable, { useTableLayout } from '../components/DataTable';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { COLORS, RADIUS, SPACING } from '../theme';
@@ -116,6 +117,7 @@ export default function CustomSectionScreen({ sectionKey, params, onNavigate }) 
 
 function RecordList({ section, onOpen, title, openCreate, prefill, tabs }) {
   const { t, lang, forwardIcon } = useI18n();
+  const asTable = useTableLayout(); // web look: the list is a table
   const { canEdit } = useSession();
   const editable = canEdit(`cs_${section.key}`);
   const rules = useFieldRules(`cs:${section.key}`);
@@ -175,6 +177,39 @@ function RecordList({ section, onOpen, title, openCreate, prefill, tabs }) {
             <EmptyState icon={section.icon} body={trash ? t('tenants.trashEmpty') : t('sectionsUser.empty')} />
           </Card>
         ) : (
+          asTable ? (
+            <DataTable
+              rows={visible}
+              onRowPress={trash ? undefined : (r) => onOpen(r.id)}
+              columns={[
+                {
+                  key: 'title',
+                  label: t('table.name'),
+                  flex: 2.2,
+                  render: (r) => (
+                    <Row gap={SPACING.sm}>
+                      <View style={styles.icon}>
+                        <SectionIcon name={section.icon} size={16} color={COLORS.primaryDark} />
+                      </View>
+                      <Txt weight="weightMedium" numberOfLines={1} style={{ flex: 1 }}>{titleOf(section, rules.custom, r, lang, t)}</Txt>
+                    </Row>
+                  ),
+                },
+                { key: 'summary', label: t('table.details'), flex: 3, render: (r) => <SummaryLine defs={rules.custom} record={r} skipKey={section.titleKey ?? rules.custom[0]?.key} /> },
+                {
+                  key: 'open',
+                  width: trash ? 140 : 48,
+                  align: 'end',
+                  render: (r) =>
+                    trash ? (
+                      <Button id="records.restore" small variant="secondary" icon="restore" title={t('common.restore')} onPress={() => restore(r)} />
+                    ) : (
+                      <MaterialCommunityIcons name={forwardIcon} size={20} color={COLORS.textMuted} />
+                    ),
+                },
+              ]}
+            />
+          ) : (
           <Card padded={false}>
             {visible.map((r, i) => (
               <Pressable key={r.id} onPress={trash ? undefined : () => onOpen(r.id)} style={({ pressed }) => [pressed && { backgroundColor: COLORS.surfaceSoft }]}>
@@ -195,6 +230,7 @@ function RecordList({ section, onOpen, title, openCreate, prefill, tabs }) {
               </Pressable>
             ))}
           </Card>
+          )
         )}
       </View>
       <RecordForm

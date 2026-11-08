@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
+import DataTable, { useTableLayout } from '../components/DataTable';
 import { toEditable, toPayload, useFieldRules } from '../services/fields';
 import CustomFields from '../components/CustomFields';
 import { Linking, Pressable, StyleSheet, View } from 'react-native';
@@ -48,6 +49,7 @@ export default function MaintenanceProvidersScreen({ params }) {
 
 function WorkOrders({ editable, openCreate, focusId }) {
   const { t, lang, forwardIcon } = useI18n();
+  const asTable = useTableLayout(); // web look: the list is a table
   const [filter, setFilter] = useState(focusId ? 'all' : 'open');
   const [text, setText] = useState('');
   const [rows, setRows] = useState(null);
@@ -86,6 +88,22 @@ function WorkOrders({ editable, openCreate, focusId }) {
         <Card>
           <EmptyState icon="wrench-outline" body={t(`maintenance.empty.${filter}`)} />
         </Card>
+      ) : asTable ? (
+        <DataTable
+          rows={visible}
+          onRowPress={(w) => setOpenId(w.id)}
+          columns={[
+            { key: 'number', label: t('table.number'), flex: 0.9, render: (w) => <Txt weight="weightMedium" numberOfLines={1}>{w.number}</Txt> },
+            { key: 'title', label: t('table.request'), flex: 2.2, render: (w) => <Txt numberOfLines={1}>{w.title}</Txt> },
+            { key: 'unit', label: t('table.propertyUnit'), flex: 1.8, render: (w) => <Txt muted numberOfLines={1}>{`${w.property.name} · ${w.unit ? w.unit.number : t('expenses.commonArea')}`}</Txt> },
+            { key: 'vendor', label: t('table.vendor'), flex: 1.3, render: (w) => <Txt muted numberOfLines={1}>{w.vendor?.name ?? '—'}</Txt> },
+            { key: 'priority', label: t('table.priority'), flex: 1, render: (w) => <Badge label={t(`maintenance.priorities.${w.priority}`)} tone={PRIORITY_TONE[w.priority]} /> },
+            { key: 'status', label: t('table.status'), flex: 1.1, render: (w) => <Badge label={t(`maintenance.statuses.${w.status}`)} tone={STATUS_TONE[w.status]} /> },
+            { key: 'date', label: t('table.date'), flex: 1, render: (w) => <Txt muted numberOfLines={1}>{formatDate(w.createdAt, lang)}</Txt> },
+            { key: 'cost', label: t('table.cost'), flex: 1, align: 'end', render: (w) => (w.expense ? <Money baisa={w.expense.amount} size={13} /> : <Txt muted>—</Txt>) },
+            { key: 'open', width: 40, align: 'end', render: () => <MaterialCommunityIcons name={forwardIcon} size={20} color={COLORS.textMuted} /> },
+          ]}
+        />
       ) : (
         <Card padded={false}>
           {visible.map((w, i) => (
@@ -378,6 +396,7 @@ function WorkOrderSheet({ id, editable, onClose, onChanged, onEdit }) {
 
 function Vendors({ editable }) {
   const { t } = useI18n();
+  const asTable = useTableLayout(); // web look: the list is a table
   const [rows, setRows] = useState(null);
   const [text, setText] = useState('');
   const [error, setError] = useState(null);
@@ -421,6 +440,28 @@ function Vendors({ editable }) {
         <Card>
           <EmptyState icon="account-hard-hat" body={t('maintenance.noVendors')} />
         </Card>
+      ) : asTable ? (
+        <DataTable
+          rows={visible}
+          columns={[
+            { key: 'name', label: t('table.name'), flex: 2, render: (v) => <Txt weight="weightMedium" numberOfLines={1}>{v.name}</Txt> },
+            { key: 'specialty', label: t('table.specialty'), flex: 1.4, render: (v) => <Txt muted numberOfLines={1}>{v.specialty || '—'}</Txt> },
+            { key: 'phone', label: t('table.phone'), flex: 1.3, render: (v) => <Txt numberOfLines={1}>{v.phone || '—'}</Txt> },
+            { key: 'email', label: t('table.email'), flex: 1.6, render: (v) => <Txt muted numberOfLines={1}>{v.email || '—'}</Txt> },
+            {
+              key: 'actions',
+              width: 140,
+              align: 'end',
+              render: (v) => (
+                <Row gap={2}>
+                  {v.phone ? <IconButton id="vendors.call" icon="phone-outline" label={v.phone} onPress={() => Linking.openURL(`tel:${v.phone}`)} /> : null}
+                  {editable ? <IconButton id="vendors.edit" icon="pencil-outline" label={t('common.edit')} onPress={() => setEditing(v)} /> : null}
+                  {editable ? <IconButton id="vendors.delete" icon="delete-outline" color={COLORS.danger} label={t('common.delete')} onPress={() => remove(v)} /> : null}
+                </Row>
+              ),
+            },
+          ]}
+        />
       ) : (
         <Card padded={false}>
           {visible.map((v, i) => (

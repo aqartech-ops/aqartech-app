@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
+import DataTable, { useTableLayout } from '../components/DataTable';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { COLORS, FONT, RADIUS, SPACING } from '../theme';
@@ -25,6 +26,7 @@ const isDue = (c) => new Date(c.dueDate).toISOString().slice(0, 10) <= todayText
 
 export function ChequesTab({ editable, version, onChanged, onOpenReceipt, focusId }) {
   const { t, lang, row } = useI18n();
+  const asTable = useTableLayout(); // web look: the list is a table
   const [filter, setFilter] = useState(focusId ? 'all' : 'toDeposit');
   const [text, setText] = useState('');
   const [rows, setRows] = useState(null);
@@ -99,6 +101,44 @@ export function ChequesTab({ editable, version, onChanged, onOpenReceipt, focusI
         <Card>
           <EmptyState icon="checkbook" body={t(`cheques.empty.${filter}`)} />
         </Card>
+      ) : asTable ? (
+        <DataTable
+          rows={visible}
+          columns={[
+            {
+              key: 'number',
+              label: t('table.chequeNo'),
+              flex: 1.6,
+              render: (c) => (
+                <View style={{ gap: 2 }}>
+                  <Txt weight="weightMedium" numberOfLines={1}>{`${c.number} · ${c.bankName}`}</Txt>
+                  {c.payment ? (
+                    <Pressable onPress={() => onOpenReceipt(c.payment.id)}>
+                      <Txt size="small" style={{ color: COLORS.primaryDark }}>{t('cheques.receipt', { number: c.payment.number })}</Txt>
+                    </Pressable>
+                  ) : null}
+                </View>
+              ),
+            },
+            { key: 'tenant', label: t('table.tenant'), flex: 1.6, render: (c) => <Txt numberOfLines={1}>{c.tenant.name}</Txt> },
+            { key: 'lease', label: t('table.lease'), flex: 1.8, render: (c) => <Txt muted numberOfLines={1}>{`${c.lease.number} · ${c.lease.property.name} · ${c.lease.unit.number}`}</Txt> },
+            { key: 'due', label: t('table.dueDate'), flex: 1, render: (c) => <Txt numberOfLines={1}>{formatDate(c.dueDate, lang)}</Txt> },
+            {
+              key: 'status',
+              label: t('table.status'),
+              flex: 1.3,
+              render: (c) => (
+                <View style={{ gap: 2 }}>
+                  <Badge label={t(`cheques.status.${c.status}`)} tone={CHEQUE_TONE[c.status]} />
+                  {c.status === 'BOUNCED' && c.bounceReason ? <Txt size="small" numberOfLines={1} style={{ color: COLORS.danger }}>{c.bounceReason}</Txt> : null}
+                  {c.status === 'CANCELLED' && c.cancelReason ? <Txt muted size="small" numberOfLines={1}>{c.cancelReason}</Txt> : null}
+                </View>
+              ),
+            },
+            { key: 'amount', label: t('table.amount'), flex: 1.1, align: 'end', render: (c) => <Money baisa={c.amount} weight="weightBold" /> },
+            ...(editable ? [{ key: 'actions', label: '', flex: 2, align: 'end', render: (c) => <ChequeActions cheque={c} onAction={(kind) => setAction({ kind, cheque: c })} /> }] : []),
+          ]}
+        />
       ) : (
         <Card padded={false}>
           {visible.map((c, i) => (
