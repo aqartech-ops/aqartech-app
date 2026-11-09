@@ -23,3 +23,10 @@ export function parseOMR(text) {
   const baisa = Number(whole) * BAISA_PER_OMR + Number(frac.padEnd(3, '0'));
   return negative ? -baisa : baisa;
 }
+
+/** 450500 → "450.500" — the text a MoneyField takes (integer maths, no floats). */
+export function omrInput(baisa) {
+  if (baisa === null || baisa === undefined || !Number.isFinite(baisa)) return '';
+  const abs = Math.abs(Math.trunc(baisa));
+  return `${baisa < 0 ? '-' : ''}${Math.floor(abs / BAISA_PER_OMR)}.${String(abs % BAISA_PER_OMR).padStart(3, '0')}`;
+}

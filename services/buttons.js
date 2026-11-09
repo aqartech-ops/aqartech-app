@@ -106,6 +106,7 @@ export const BUTTON_GROUPS = [
     ['tenants.statement', 'finance.statement', 'file-document-outline'],
     ['tenants.call', 'buttons.call', 'phone-outline', FIXED_TEXT],
     ['tenants.whatsapp', 'buttons.whatsapp', 'whatsapp'],
+    ['tenants.scanId', 'scan.scanId', 'text-recognition'],
   ]],
   ['leases', [
     ['leases.add', 'leases.add', 'file-sign'],
@@ -132,6 +133,7 @@ export const BUTTON_GROUPS = [
     ['owners.portalReset', 'portalAccess.resetPassword', 'lock-reset'],
     ['owners.portalDisable', 'portalAccess.disable', 'account-cancel-outline'],
     ['owners.portalEnable', 'portalAccess.enable', 'account-check-outline'],
+    ['owners.scanId', 'scan.scanId', 'text-recognition'],
   ]],
   ['payments', [
     ['payments.add', 'payments.add', 'cash-plus'],
@@ -147,6 +149,27 @@ export const BUTTON_GROUPS = [
     ['cheques.clear', 'cheques.clear', 'check-circle-outline'],
     ['cheques.bounce', 'cheques.bounce', 'alert-circle-outline'],
     ['cheques.cancel', 'cheques.cancel', 'undo-variant'],
+    ['cheques.scan', 'scan.scanCheque', 'text-recognition'],
+  ]],
+  ['documents', [
+    ['documents.scanAny', 'documents.scanAny', 'text-recognition'],
+    ['documents.scan', 'documents.scan', 'text-recognition'],
+    ['documents.photo', 'documents.photo', 'camera-outline'],
+    ['documents.upload', 'documents.upload', 'paperclip'],
+    ['documents.edit', 'common.edit', 'pencil-outline'],
+    ['documents.delete', 'common.delete', 'trash-can-outline'],
+    ['documents.restore', 'common.restore', 'restore'],
+    ['documents.open', 'documents.openFull', 'open-in-new'],
+    ['documents.openRecord', 'documents.openRecord', 'arrow-top-right'],
+    ['documents.attach', 'documents.attach', 'paperclip'],
+  ]],
+  ['scan', [
+    ['scan.camera', 'scan.camera', 'camera-outline'],
+    ['scan.library', 'scan.library', 'image-outline'],
+    ['scan.read', 'scan.read', 'text-recognition'],
+    ['scan.again', 'scan.again', 'camera-retake-outline'],
+    ['scan.apply', 'scan.apply', 'check'],
+    ['scan.showText', 'scan.showText', 'text-long'],
   ]],
   ['expenses', [
     ['expenses.add', 'expenses.add', 'cash-minus'],

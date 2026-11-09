@@ -7,6 +7,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { COLORS, RADIUS, SPACING } from '../theme';
 import { BREAKPOINTS } from '../services/config';
 import { useI18n } from '../i18n';
+import DocumentsPanel from '../components/DocumentsPanel';
 import { useSession } from '../services/session';
 import { propertiesApi } from '../services/api';
 import { confirm, notify } from '../services/dialog';
@@ -417,6 +418,7 @@ function PropertyDetail({ id, onBack, linkOwnerId, onLinkHandled, onNavigate }) 
         </Card>
 
         <PropertyOwnership property={property} linkOwnerId={linkOwnerId} onLinkHandled={onLinkHandled} />
+        <DocumentsPanel entity="property" entityId={id} editable={editable} />
 
         <Row style={{ justifyContent: 'space-between', flexWrap: 'wrap' }}>
           <Txt size="medium" weight="weightBold">{t('units.title')}</Txt>

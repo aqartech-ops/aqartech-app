@@ -112,6 +112,20 @@ export const portalApi = {
   account: () => api.get('/portal/account'),
 };
 
+/** Documents (المستندات) and our own document reading engine (قراءة المستندات). */
+export const documentsApi = {
+  list: (query) => api.get('/documents', query),
+  status: () => api.get('/documents/status'),
+  file: (id) => api.get(`/documents/${id}/file`),
+  create: (data) => api.post('/documents', data),
+  update: (id, data) => api.patch(`/documents/${id}`, data),
+  remove: (id) => api.delete(`/documents/${id}`),
+  restore: (id) => api.post(`/documents/${id}/restore`),
+  /** images: [{ data (base64), mimeType }] (1–2, e.g. ID front + back); hint: CIVIL_ID | CHEQUE | … */
+  recognize: (images, hint) => api.post('/documents/recognize', { images, hint }),
+  feedback: (recognitionId, fields) => api.patch(`/documents/recognitions/${recognitionId}`, { fields }),
+};
+
 /** The company gives an owner a sign-in to the owner portal. */
 export const ownerPortalApi = {
   get: (ownerId) => api.get(`/owners/${ownerId}/portal`),

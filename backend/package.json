@@ -25,7 +25,9 @@
     "db:seed": "node prisma/seed.mjs",
     "db:studio": "prisma studio",
     "prisma:generate": "prisma generate",
-    "admin:reset-password": "node prisma/reset-admin-password.mjs"
+    "admin:reset-password": "node prisma/reset-admin-password.mjs",
+    "ocr:setup": "node scripts/ocr-setup.mjs",
+    "postinstall": "node scripts/ocr-setup.mjs --quiet"
   },
   "dependencies": {
     "@nestjs/common": "^12.0.1",
@@ -37,7 +39,9 @@
     "jsonwebtoken": "^9.0.2",
     "nodemailer": "^6.10.1",
     "reflect-metadata": "^0.2.2",
-    "rxjs": "^7.8.1"
+    "rxjs": "^7.8.1",
+    "sharp": "^0.34.3",
+    "tesseract.js": "^6.0.1"
   },
   "devDependencies": {
     "@nestjs/cli": "^12.0.0",
