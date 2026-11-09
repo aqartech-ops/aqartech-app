@@ -1,6 +1,7 @@
 import { BadRequestException, Body, ConflictException, Controller, Delete, Get, Global, Injectable, Module, NotFoundException, Param, Patch, Post, Query } from '@nestjs/common';
 import { Prisma, type FieldDefinition } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service.js';
+import { ConfigService } from '../config-versions/config.module.js';
 import { ActivityService } from '../common/activity.service.js';
 import { AdminOnly, AnyAuthenticated, Auth, type AdminAuth } from '../common/auth-context.js';
 import * as v from '../common/validate.js';
@@ -29,8 +30,17 @@ const CACHE_MS = 30_000;
 export class FieldsService {
   private cache: { at: number; rows: FieldDefinition[] } | null = null;
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly versions: ConfigService,
+  ) {}
 
+  /** What subscribers use: the field rules of the published configuration (see Draft & publish). */
+  async published(): Promise<FieldDefinition[]> {
+    return (await this.versions.published()).fields;
+  }
+
+  /** The draft (live tables) — for the platform team's pages and checks. */
   async all(): Promise<FieldDefinition[]> {
     if (this.cache && Date.now() - this.cache.at < CACHE_MS) return this.cache.rows;
     const rows = await this.prisma.fieldDefinition.findMany({ orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }] });
@@ -48,7 +58,7 @@ export class FieldsService {
    * (so quick actions like changing a status are not blocked by a field made required later).
    */
   async apply(entity: Entity | `cs:${string}`, src: Record<string, unknown>, saved: { custom?: unknown; type?: unknown } | null): Promise<Prisma.InputJsonValue | undefined> {
-    const rows = (await this.all()).filter((r) => r.entity === entity);
+    const rows = (await this.published()).filter((r) => r.entity === entity);
     const creating = !saved;
     const recordType = src.type ?? saved?.type;
 
@@ -74,8 +84,9 @@ export class FieldsService {
 
   /** What the app needs to draw forms: per entity, built-in field rules and active extra fields. */
   async config() {
-    const rows = await this.all();
-    const sections = await this.prisma.customSection.findMany({ where: { isActive: true }, select: { key: true } });
+    const published = await this.versions.published();
+    const rows = published.fields;
+    const sections = published.sections.filter((s) => s.isActive);
     return Object.fromEntries(
       [...ENTITIES, ...sections.map((c) => `cs:${c.key}`)].map((entity) => [
         entity,

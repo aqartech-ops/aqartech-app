@@ -18,6 +18,7 @@ import ButtonsScreen from './screens/ButtonsScreen';
 import TemplatesScreen from './screens/TemplatesScreen';
 import MetricsScreen from './screens/MetricsScreen';
 import TeamScreen from './screens/TeamScreen';
+import PublishScreen from './screens/PublishScreen';
 import { AdminPasswordCard } from './components/AdminSecurity';
 import { Screen } from './components/ui';
 import CustomSectionScreen from './screens/CustomSectionScreen';
@@ -55,6 +56,7 @@ const ADMIN_SECTIONS = [
   { key: 'buttons', icon: 'gesture-tap-button', Screen: ButtonsScreen },
   { key: 'templates', icon: 'file-document-edit-outline', Screen: TemplatesScreen },
   { key: 'metrics', icon: 'chart-box-outline', Screen: MetricsScreen },
+  { key: 'publish', icon: 'publish', Screen: PublishScreen },
   { key: 'team', icon: 'account-key-outline', Screen: TeamScreen, roles: ['OWNER'] },
   { key: 'settings', icon: 'cog-outline', Screen: SettingsScreen },
 ];

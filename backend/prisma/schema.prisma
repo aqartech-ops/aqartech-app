@@ -1191,3 +1191,20 @@ model Metric {
 
   @@index([section])
 }
+
+// ==========================================
+// Draft & publish (المسودة والنشر) — platform configuration
+// ==========================================
+
+/// A published version of the platform configuration (fields, sections, buttons, print templates, indicators).
+/// The platform team edits a draft (the live tables); subscribers use the latest version until the next publish.
+model ConfigVersion {
+  id              Int      @id @default(autoincrement())
+  number          Int      @unique
+  note            String?
+  snapshot        Json // { fields, sections, buttonOverrides, customButtons, templates, metrics }
+  changes         Json     @default("[]") // what changed since the previous version (for the history)
+  publishedById   String?
+  publishedByName String?
+  createdAt       DateTime @default(now())
+}

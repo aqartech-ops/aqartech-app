@@ -6,6 +6,7 @@ import { AdminOnly, AnyAuthenticated, Auth, type AdminAuth, type AuthContext, ty
 import { LEVEL_RANK, customSectionKey } from '../common/sections.js';
 import * as v from '../common/validate.js';
 import { FieldsService } from '../fields/fields.module.js';
+import { ConfigService } from '../config-versions/config.module.js';
 import { PERIODS, checkDefinition, compute, formatOf, omanDay, periodRange, type FieldInfo, type MetricDef, type Period } from './rules.js';
 
 const DAY = /^\d{4}-\d{2}-\d{2}$/;
@@ -22,21 +23,22 @@ export class MetricsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly fields: FieldsService,
+    private readonly versions: ConfigService,
   ) {}
 
-  /** Extra fields of a section ("cs:<key>"), as the rules need them. */
-  async fieldInfos(sectionKey: string): Promise<FieldInfo[]> {
-    return (await this.fields.all())
+  /** Extra fields of a section ("cs:<key>"), as the rules need them. `draft`: the platform team's checks. */
+  async fieldInfos(sectionKey: string, draft = false): Promise<FieldInfo[]> {
+    return (draft ? await this.fields.all() : await this.fields.published())
       .filter((r) => r.entity === `cs:${sectionKey}` && !r.isCore && r.isActive)
       .map((r) => ({ key: r.key, type: r.type, options: (r.options as { value: string }[]) ?? [] }));
   }
 
   /** Active indicators the user may see, with their section and its top-level section. */
   async visible(auth: UserAuth) {
-    const [metrics, sections] = await Promise.all([
-      this.prisma.metric.findMany({ where: { isActive: true }, orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }] }),
-      this.prisma.customSection.findMany({ where: { isActive: true } }),
-    ]);
+    // the published configuration (see Draft & publish)
+    const published = await this.versions.published();
+    const metrics = published.metrics.filter((m) => m.isActive);
+    const sections = published.sections.filter((s) => s.isActive);
     const byKey = new Map(sections.map((s) => [s.key, s]));
     const byId = new Map(sections.map((s) => [s.id, s]));
     const out: { metric: Metric; section: CustomSection; root: CustomSection }[] = [];
@@ -244,7 +246,7 @@ export class AdminMetricsController {
   }
 
   private async definition(section: CustomSection, src: Record<string, unknown>): Promise<MetricDef> {
-    const checked = checkDefinition(src, await this.metrics.fieldInfos(section.key), section.withProperty);
+    const checked = checkDefinition(src, await this.metrics.fieldInfos(section.key, true), section.withProperty);
     if (!checked.ok) throw new BadRequestException({ message: checked.code, field: checked.field });
     return checked.value;
   }

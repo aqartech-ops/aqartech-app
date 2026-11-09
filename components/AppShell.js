@@ -7,6 +7,7 @@ import { BREAKPOINTS } from '../services/config';
 import { WEB_SKIN } from '../services/skin';
 import { LANGUAGES, useI18n } from '../i18n';
 import { useSession } from '../services/session';
+import DraftBanner, { DRAFT_PAGES } from './DraftBanner';
 import { IconButton, Row, Txt } from './ui';
 import BottomBar from './BottomBar';
 import { SectionIcon } from './Rial';
@@ -34,6 +35,9 @@ export default function AppShell({ items, active, onNavigate, children }) {
   };
 
   const title = useMemo(() => items.find((i) => i.key === active)?.label ?? '', [items, active]);
+  const { isAdmin } = useSession();
+  // Platform team, on a page whose changes wait for "Publish": a reminder above the page.
+  const banner = isAdmin && DRAFT_PAGES.includes(active) && items.some((i) => i.key === 'publish') ? <DraftBanner onOpen={() => go('publish')} /> : null;
 
   // Web: the browser tab shows the current section ("Tenants · AqarTech")
   useEffect(() => {
@@ -47,7 +51,10 @@ export default function AppShell({ items, active, onNavigate, children }) {
         <WebNav items={items} active={active} onSelect={go} />
         <View style={{ flex: 1 }}>
           <WebTopBar title={title} onSearch={() => setSearchOpen(true)} />
-          <View style={{ flex: 1 }}>{children}</View>
+          <View style={{ flex: 1 }}>
+            {banner}
+            {children}
+          </View>
         </View>
         <SearchModal visible={searchOpen} onClose={() => setSearchOpen(false)} items={items} onNavigate={onNavigate} />
       </View>
@@ -72,7 +79,10 @@ export default function AppShell({ items, active, onNavigate, children }) {
               <Brand compact />
             </Row>
           ) : null}
-          <View style={{ flex: 1 }}>{children}</View>
+          <View style={{ flex: 1 }}>
+            {banner}
+            {children}
+          </View>
           {IS_APP ? (
             <BottomBar
               items={items}
