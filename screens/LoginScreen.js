@@ -12,10 +12,15 @@ import { Button, Card, ErrorBox, Field, Row, Segmented, Txt, errorText } from '.
 import { Money } from '../components/Rial';
 
 // Three modes: customer sign in, customer registration, platform-team sign in.
-export default function LoginScreen() {
+export default function LoginScreen({ initialMode = 'signIn', onModeChange, onHome }) {
   const { t, lang, setLang } = useI18n();
   const { width } = useWindowDimensions();
-  const [mode, setMode] = useState('signIn'); // signIn | register | admin | forgot
+  const [mode, setModeState] = useState(initialMode); // signIn | register | admin | forgot
+  // web: the address follows the mode (/login, /register, /admin)
+  const setMode = (m) => {
+    setModeState(m);
+    onModeChange?.(m);
+  };
   const [notice, setNotice] = useState(null);
   const [prefillEmail, setPrefillEmail] = useState('');
   const wide = width >= BREAKPOINTS.desktop;
@@ -27,7 +32,13 @@ export default function LoginScreen() {
           {wide ? <BrandPanel /> : null}
           <KeyboardScrollView contentContainerStyle={styles.scroll}>
             <Row style={{ justifyContent: 'space-between', width: '100%', maxWidth: 520 }}>
-              {!wide ? <BrandMark /> : <View />}
+              {onHome ? (
+                <Pressable onPress={onHome} accessibilityRole="link">{wide ? <Txt style={{ color: COLORS.primaryDark }}>{t('landing.backHome')}</Txt> : <BrandMark />}</Pressable>
+              ) : !wide ? (
+                <BrandMark />
+              ) : (
+                <View />
+              )}
               <Button
                 small
                 variant="ghost"

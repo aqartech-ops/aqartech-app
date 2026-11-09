@@ -21,6 +21,8 @@ import TeamScreen from './screens/TeamScreen';
 import PublishScreen from './screens/PublishScreen';
 import { AdminPasswordCard } from './components/AdminSecurity';
 import { Screen } from './components/ui';
+import LandingScreen from './screens/LandingScreen';
+import { PUBLIC_PAGES, URL_ROUTING, onLocationChange, readLocation, writeLocation } from './services/webRoute';
 import CustomSectionScreen from './screens/CustomSectionScreen';
 import { sectionName, useCustomSections } from './services/customSections';
 import UsersScreen from './screens/UsersScreen';
@@ -72,9 +74,36 @@ function Root() {
   const { status, me, isAdmin, levelOf } = useSession();
   const { t, lang } = useI18n();
   const custom = useCustomSections(status === 'signedIn' && !isAdmin);
-  const [route, setRoute] = useState({ key: 'dashboard', params: null });
+  // Web: the page comes from the address (refresh, links, Back / Forward); elsewhere it starts on the dashboard.
+  const [route, setRoute] = useState(() => {
+    const loc = readLocation();
+    return loc.key && !PUBLIC_PAGES.includes(loc.key) ? loc : { key: 'dashboard', params: null };
+  });
+  // before signing in (web): '' = home page, 'login' | 'register' | 'admin'
+  const [publicPage, setPublicPage] = useState(() => {
+    const loc = readLocation();
+    return URL_ROUTING ? (PUBLIC_PAGES.includes(loc.key) ? loc.key : 'login') : 'login';
+  });
   const active = route.key;
-  const navigate = (key, params = null) => setRoute({ key, params });
+  const navigate = (key, params = null) => {
+    setRoute({ key, params });
+    writeLocation(key, params);
+  };
+
+  useEffect(
+    () =>
+      onLocationChange((loc) => {
+        if (PUBLIC_PAGES.includes(loc.key)) setPublicPage(loc.key);
+        else setRoute({ key: loc.key, params: loc.params });
+      }),
+    [],
+  );
+
+  // Signed in: show the page's address (e.g. after signing in from /login); signed out: the public page's.
+  useEffect(() => {
+    if (status === 'signedIn') writeLocation(route.key, route.params, { replace: true });
+    else if (status === 'signedOut') writeLocation(publicPage, null, { replace: true });
+  }, [status]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const sections = useMemo(() => {
     if (!me) return [];
@@ -90,7 +119,10 @@ function Root() {
 
   // If the current section disappears (e.g. permissions changed), fall back to the dashboard.
   useEffect(() => {
-    if (sections.length && !sections.some((s) => s.key === active)) setRoute({ key: 'dashboard', params: null });
+    if (sections.length && !sections.some((s) => s.key === active)) {
+      setRoute({ key: 'dashboard', params: null });
+      writeLocation('dashboard', null, { replace: true });
+    }
   }, [sections, active]);
 
   if (status === 'loading') {
@@ -101,7 +133,15 @@ function Root() {
     );
   }
 
-  if (status !== 'signedIn') return <LoginScreen />;
+  if (status !== 'signedIn') {
+    const openPublic = (page) => {
+      setPublicPage(page);
+      writeLocation(page);
+    };
+    // web: a home page that presents the service, then sign in / create an account
+    if (URL_ROUTING && publicPage === '') return <LandingScreen onStart={openPublic} />;
+    return <LoginScreen initialMode={{ register: 'register', admin: 'admin' }[publicPage] ?? 'signIn'} onModeChange={URL_ROUTING ? (m) => writeLocation({ register: 'register', admin: 'admin' }[m] ?? 'login', null, { replace: true }) : undefined} onHome={URL_ROUTING ? () => openPublic('') : undefined} />;
+  }
 
   // A team member whose password was set by an owner changes it before anything else (the server enforces it too).
   if (isAdmin && me.admin.mustChangePassword) {
