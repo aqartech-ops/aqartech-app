@@ -7,6 +7,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { COLORS, RADIUS, SPACING } from '../theme';
 import { useI18n } from '../i18n';
+import DocumentsPanel from '../components/DocumentsPanel';
 import { useSession } from '../services/session';
 import { leasesApi, propertiesApi, tenantsApi } from '../services/api';
 import { confirm } from '../services/dialog';
@@ -372,6 +373,7 @@ export function LeaseDetail({ id, onBack, onOpen, onOpenTenant, backLabel, onNav
 
         <LeaseMunicipalityCard lease={lease} editable={canEdit('financials')} onChanged={load} />
         <ScheduleCard schedule={lease.schedule} total={lease.total} deposit={lease.depositCharge} />
+        <DocumentsPanel entity="lease" entityId={id} editable={editable} />
       </View>
 
       <LeaseForm

@@ -4,6 +4,8 @@ import { toEditable, toPayload, useFieldRules } from '../services/fields';
 import CustomFields, { CustomValues } from '../components/CustomFields';
 import CustomActions from '../components/CustomActions';
 import OwnerPortalAccess from '../components/OwnerPortalAccess';
+import DocumentsPanel from '../components/DocumentsPanel';
+import { scannedName, useScanFill } from '../components/ScanFill';
 import { Linking, Pressable, StyleSheet, View } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { COLORS, RADIUS, SPACING } from '../theme';
@@ -310,6 +312,7 @@ function OwnerDetail({ id, onBack, onNavigate }) {
         </Card>
 
         <OwnerPortalAccess owner={owner} editable={editable} />
+        <DocumentsPanel entity="owner" entityId={id} editable={editable} />
 
         <Row style={{ justifyContent: 'space-between', flexWrap: 'wrap' }}>
           <Txt size="medium" weight="weightBold">{t('owners.properties')}</Txt>
@@ -415,16 +418,25 @@ function LinkPropertySheet({ visible, canCreate, excludeIds, onClose, onPick, on
 }
 
 export function OwnerForm({ owner, onClose, onSaved }) {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const isNew = owner && !owner.id;
   const [form, setForm] = useState({});
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
   const fieldError = (name) => (error?.field === name ? errorText(t, error) : undefined);
   const rules = useFieldRules('owner', error);
+  // scan the civil ID: fills the form; the images become the owner's documents once saved
+  const scan = useScanFill({
+    hint: 'CIVIL_ID',
+    buttonId: 'owners.scanId',
+    label: t('scan.scanId'),
+    onFill: (v) =>
+      setForm((f) => ({ ...f, name: scannedName(v, lang) || f.name, civilId: v.civilId || f.civilId, nationality: v.nationality || v.nationalityCode || f.nationality })),
+  });
 
   useEffect(() => {
     if (!owner) return;
+    scan.reset();
     setForm({
       type: owner.type ?? 'INDIVIDUAL',
       name: owner.name ?? '',
@@ -452,6 +464,7 @@ export function OwnerForm({ owner, onClose, onSaved }) {
     try {
       const payload = { ...form, email: form.email.trim(), custom: toPayload(rules.custom, form.custom) };
       const saved = isNew ? await ownersApi.create(payload) : await ownersApi.update(owner.id, payload);
+      await scan.attach('owner', isNew ? saved?.id : owner.id);
       onSaved(isNew ? saved : null);
     } catch (e) {
       setError(e);
@@ -473,6 +486,7 @@ export function OwnerForm({ owner, onClose, onSaved }) {
     >
       {error && !error.field ? <ErrorBox error={error} /> : null}
       <Segmented value={form.type} onChange={set('type')} options={['INDIVIDUAL', 'COMPANY'].map((v) => ({ value: v, label: t(`owners.typeValues.${v}`) }))} />
+      {!company ? scan.element : null}
       <Field label={t('owners.name')} value={form.name} onChangeText={set('name')} error={fieldError('name')} />
       <FieldRow>
         {company ? (

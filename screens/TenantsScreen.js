@@ -14,6 +14,8 @@ import { matches } from '../services/text';
 import DataTable, { useTableLayout } from '../components/DataTable';
 import { DateField, dateText, formatDate, isDateText } from '../components/Fields';
 import { LeaseDetail, LeaseForm, LeasesTab, TenantLeases } from './LeasesView';
+import DocumentsPanel from '../components/DocumentsPanel';
+import { scannedName, useScanFill } from '../components/ScanFill';
 import {
   Badge,
   BackButton,
@@ -389,6 +391,7 @@ function TenantDetail({ id, onBack, onOpenLease, onNavigate }) {
           />
         </Card>
         <TenantLeases key={leasesVersion} tenantId={id} editable={editable} onOpen={onOpenLease} onNew={() => setNewLease({ tenantId: id, tenant })} />
+        <DocumentsPanel entity="tenant" entityId={id} editable={editable} />
       </View>
       <LeaseForm
         lease={newLease}
@@ -412,16 +415,31 @@ function TenantDetail({ id, onBack, onOpenLease, onNavigate }) {
 }
 
 export function TenantForm({ tenant, onClose, onSaved }) {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const isNew = tenant && !tenant.id;
   const [form, setForm] = useState({});
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
   const fieldError = (name) => (error?.field === name ? errorText(t, error) : undefined);
   const rules = useFieldRules('tenant', error);
+  // scan the civil ID: fills the form; the images become the tenant's documents once saved
+  const scan = useScanFill({
+    hint: 'CIVIL_ID',
+    buttonId: 'tenants.scanId',
+    label: t('scan.scanId'),
+    onFill: (v) =>
+      setForm((f) => ({
+        ...f,
+        name: scannedName(v, lang) || f.name,
+        civilId: v.civilId || f.civilId,
+        idExpiry: v.expiryDate || f.idExpiry,
+        nationality: v.nationality || v.nationalityCode || f.nationality,
+      })),
+  });
 
   useEffect(() => {
     if (!tenant) return;
+    scan.reset();
     setForm({
       type: tenant.type ?? 'INDIVIDUAL',
       name: tenant.name ?? '',
@@ -453,6 +471,7 @@ export function TenantForm({ tenant, onClose, onSaved }) {
     try {
       const payload = { ...form, email: form.email.trim(), idExpiry: form.idExpiry || null, custom: toPayload(rules.custom, form.custom) };
       const saved = isNew ? await tenantsApi.create(payload) : await tenantsApi.update(tenant.id, payload);
+      await scan.attach('tenant', isNew ? saved?.id : tenant.id);
       onSaved(isNew ? saved : null);
     } catch (e) {
       setError(e);
@@ -474,6 +493,7 @@ export function TenantForm({ tenant, onClose, onSaved }) {
     >
       {error && !error.field ? <ErrorBox error={error} /> : null}
       <Segmented value={form.type} onChange={set('type')} options={['INDIVIDUAL', 'COMPANY'].map((v) => ({ value: v, label: t(`tenants.typeValues.${v}`) }))} />
+      {!company ? scan.element : null}
       <Field label={t('tenants.name')} value={form.name} onChangeText={set('name')} error={fieldError('name')} />
       {company ? (
         <Field {...rules.props('crNumber', t('tenants.crNumber'))} value={form.crNumber} onChangeText={set('crNumber')} />

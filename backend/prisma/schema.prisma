@@ -166,6 +166,8 @@ model Company {
   periodCloses      PeriodClose[]
   municipality      MunicipalityRecord[]
   customRecords     CustomRecord[]
+  documents         Document[]
+  ocrRecognitions   OcrRecognition[]
   counters     Counter[]
 }
 
@@ -1235,4 +1237,60 @@ model ConfigVersion {
   publishedById   String?
   publishedByName String?
   createdAt       DateTime @default(now())
+}
+
+// ==========================================
+// DOCUMENTS & RECOGNITION (المستندات وقراءة المستندات) — phase 6
+// Files live on our server (UPLOAD_DIR/<companyId>/<id>), opened only through the API.
+// ==========================================
+
+enum DocumentKind {
+  CIVIL_ID // البطاقة المدنية / الإقامة
+  PASSPORT
+  CHEQUE
+  CONTRACT
+  INVOICE
+  PHOTO
+  OTHER
+}
+
+model Document {
+  id            String       @id @default(uuid())
+  companyId     String
+  company       Company      @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  entity        String // tenant | owner | property | unit | lease | cheque
+  entityId      String
+  propertyId    String? // for property-scoped roles (property, unit, lease, cheque documents)
+  kind          DocumentKind @default(OTHER)
+  side          String? // FRONT | BACK (ID cards)
+  name          String
+  mimeType      String
+  size          Int // bytes
+  storageKey    String // path inside UPLOAD_DIR — never sent to the app
+  expiryDate    DateTime?
+  extracted     Json? // fields the engine read and the staff member kept
+  recognitionId String?
+  createdById   String?
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  deletedAt     DateTime? // trash (restorable)
+
+  @@index([companyId, entity, entityId])
+  @@index([companyId, expiryDate])
+}
+
+/// One reading by our OCR engine and what the staff member finally kept — material to improve the engine.
+model OcrRecognition {
+  id          String       @id @default(uuid())
+  companyId   String
+  company     Company      @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  kind        DocumentKind
+  hint        DocumentKind?
+  result      Json // { fields, text }
+  corrected   Json?
+  correctedAt DateTime?
+  createdById String?
+  createdAt   DateTime     @default(now())
+
+  @@index([companyId, kind])
 }

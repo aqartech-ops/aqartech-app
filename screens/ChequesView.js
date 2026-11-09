@@ -4,8 +4,9 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { COLORS, FONT, RADIUS, SPACING } from '../theme';
 import { useI18n } from '../i18n';
+import { useScanFill } from '../components/ScanFill';
 import { financeApi } from '../services/api';
-import { parseOMR } from '../services/money';
+import { omrInput, parseOMR } from '../services/money';
 import { matches } from '../services/text';
 import { Money, MoneyField } from '../components/Rial';
 import { DateField, PickerButton, formatDate, isDateText, today } from '../components/Fields';
@@ -345,15 +346,30 @@ function LeaseChooser({ value, onChange, error }) {
 // ================================================================ single cheque
 
 function ChequeForm({ visible, onClose, onSaved }) {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const [lease, setLease] = useState(null);
   const [form, setForm] = useState({});
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
   const fieldError = (name) => (error?.field === name ? errorText(t, error) : undefined);
+  // scan the cheque: our engine suggests number / bank / amount / date; the photo is kept with the cheque
+  const scan = useScanFill({
+    hint: 'CHEQUE',
+    buttonId: 'cheques.scan',
+    label: t('scan.scanCheque'),
+    onFill: (v) =>
+      setForm((f) => ({
+        ...f,
+        number: v.number || f.number,
+        bankName: (lang === 'ar' ? v.bankNameAr || v.bankName : v.bankName || v.bankNameAr) || f.bankName,
+        amount: v.amount ? omrInput(v.amount) : f.amount,
+        dueDate: v.date || f.dueDate,
+      })),
+  });
 
   useEffect(() => {
     if (!visible) return;
+    scan.reset();
     setLease(null);
     setForm({ number: '', bankName: '', amount: '', dueDate: '', drawer: '', notes: '' });
     setBusy(false);
@@ -373,7 +389,8 @@ function ChequeForm({ visible, onClose, onSaved }) {
     setBusy(true);
     setError(null);
     try {
-      await financeApi.createCheque({ leaseId: lease.id, ...form, amount });
+      const saved = await financeApi.createCheque({ leaseId: lease.id, ...form, amount });
+      await scan.attach('cheque', saved?.id);
       onSaved();
     } catch (e) {
       setError(e);
@@ -395,6 +412,7 @@ function ChequeForm({ visible, onClose, onSaved }) {
     >
       {error && !error.field ? <ErrorBox error={error} /> : null}
       <LeaseChooser value={lease} onChange={setLease} error={fieldError('leaseId')} />
+      {scan.element}
       <FieldRow>
         <Field label={t('payments.chequeNo')} value={form.number} onChangeText={set('number')} error={fieldError('number')} />
         <Field label={t('payments.bankName')} value={form.bankName} onChangeText={set('bankName')} error={fieldError('bankName')} />

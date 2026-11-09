@@ -35,6 +35,7 @@ for (const file of files) {
     const line = src.slice(0, m.index).split('\n').length;
     const id = tag.match(/ id="([^"]+)"/)?.[1];
     const dynamic = tag.match(/ id=\{`([a-zA-Z.]+)\$\{\w+\}`\}/)?.[1];
+    if (/ id=\{buttonId\}/.test(tag)) continue; // a shared block whose id is given by each caller (`buttonId: '…'`, checked below)
     if (id) {
       used.add(id);
       if (!catalog.has(id)) problems.push(`${file}:${line} id "${id}" is not in the catalog`);
@@ -43,6 +44,10 @@ for (const file of files) {
     } else if (!FORM_PARTS.some((re) => re.test(tag))) {
       problems.push(`${file}:${line} button without id: ${tag.slice(0, 120)}`);
     }
+  }
+  for (const m of src.matchAll(/buttonId: '([^']+)'/g)) {
+    used.add(m[1]);
+    if (!catalog.has(m[1])) problems.push(`${file}:${src.slice(0, m.index).split('\n').length} id "${m[1]}" is not in the catalog`);
   }
 }
 for (const id of catalog) if (!used.has(id)) problems.push(`catalog id "${id}" is not used by any screen`);
