@@ -122,7 +122,7 @@ export const documentsApi = {
   remove: (id) => api.delete(`/documents/${id}`),
   restore: (id) => api.post(`/documents/${id}/restore`),
   /** images: [{ data (base64), mimeType }] (1–2, e.g. ID front + back); hint: CIVIL_ID | CHEQUE | … */
-  recognize: (images, hint) => api.post('/documents/recognize', { images, hint }),
+  recognize: (images, hint) => api.post('/documents/recognize', hint ? { images, hint } : { images }),
   feedback: (recognitionId, fields) => api.patch(`/documents/recognitions/${recognitionId}`, { fields }),
 };
 
