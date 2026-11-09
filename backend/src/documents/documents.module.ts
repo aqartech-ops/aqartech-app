@@ -235,7 +235,8 @@ export class DocumentsService {
     const src = v.body(input);
     const images = Array.isArray(src.images) ? src.images : [];
     if (!images.length || images.length > MAX_SCAN_IMAGES) throw new BadRequestException({ message: 'documents.scanImages', field: 'images' });
-    const hint = v.optionalEnum(src, 'hint', ['CIVIL_ID', 'CHEQUE', 'CONTRACT', 'INVOICE', 'OTHER'] as const satisfies readonly DocKind[]);
+    // no hint (null / missing) = the engine decides what the document is
+    const hint = src.hint === null || src.hint === '' ? undefined : v.optionalEnum(src, 'hint', ['CIVIL_ID', 'CHEQUE', 'CONTRACT', 'INVOICE', 'OTHER'] as const satisfies readonly DocKind[]);
     const files = images.map((img, i) => {
       const f = decodeFile(v.body(img), 'data');
       if (!f.mimeType.startsWith('image/')) throw new BadRequestException({ message: 'documents.scanImagesOnly', field: `images.${i}` });
