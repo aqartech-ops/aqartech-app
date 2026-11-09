@@ -849,6 +849,38 @@ export default {
     eventNote: 'Note (optional)',
   },
 
+  // Web home page (before signing in)
+  landing: {
+    backHome: '← Home',
+    badge: 'Made for Oman',
+    title: 'Run your properties, leases and owners in one place',
+    subtitle: 'AqarTech handles rent schedules, collections and cheques, owner statements, maintenance and reports. It works in Arabic and English on your phone, tablet and computer.',
+    start: 'Create an account',
+    featuresTitle: 'Everything a property manager needs',
+    features: {
+      properties: { title: 'Properties & units', body: 'Buildings, villas and units with occupancy, documents and municipality registrations.' },
+      leases: { title: 'Leases', body: 'Drafts, activation, renewals and early termination. The rent schedule is generated automatically.' },
+      collections: { title: 'Collections & cheques', body: 'Receipts, overdue amounts and post-dated cheques, from deposit to clearing or bounce.' },
+      owners: { title: 'Owner statements', body: 'Management fees, partners\' exact shares and payouts, plus a read-only portal for owners.' },
+      maintenance: { title: 'Maintenance', body: 'Work orders, contractors and who bears the cost: owner, company or tenant.' },
+      reports: { title: 'Reports', body: 'Income statement, property comparison, occupancy and returns, all computed from the books.' },
+    },
+    omanTitle: 'Built for the way you work in Oman',
+    oman: {
+      currency: 'Amounts in Omani rials, exact to the baisa',
+      language: 'Full Arabic, right to left, alongside English',
+      municipality: 'Municipality lease registrations and renewals',
+      devices: 'One account on phone, tablet and the web',
+    },
+    plansTitle: 'Plans',
+    perMonth: '/ month',
+    perYear: '/ year',
+    free: 'Free',
+    choose: 'Choose this plan',
+    ctaTitle: 'Ready to start?',
+    ctaBody: 'Create your account in minutes. Our team activates it and helps you get started.',
+  },
+
   receipt: {
     title: 'Receipt',
     receivedFrom: 'Received from',
