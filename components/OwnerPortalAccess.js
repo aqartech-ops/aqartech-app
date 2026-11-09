@@ -23,9 +23,11 @@ export default function OwnerPortalAccess({ owner, editable }) {
   const [error, setError] = useState(null);
 
   const load = useCallback(() => {
+    setError(null);
+    setUser(undefined);
     ownerPortalApi
       .get(owner.id)
-      .then((r) => setUser(r.user))
+      .then((r) => setUser(r?.user ?? null))
       .catch((e) => {
         setError(e);
         setUser(null);
@@ -52,7 +54,15 @@ export default function OwnerPortalAccess({ owner, editable }) {
     run('toggle', () => ownerPortalApi.setActive(owner.id, false));
   };
 
-  if (user === undefined) return null;
+  // the card is always shown (even while loading or when the server can't be reached) so the company can see it
+  if (user === undefined && !error) {
+    return (
+      <Card style={{ gap: SPACING.sm }}>
+        <Txt weight="weightBold">{t('portalAccess.title')}</Txt>
+        <Loading />
+      </Card>
+    );
+  }
 
   return (
     <Card style={{ gap: SPACING.md }}>
@@ -61,7 +71,7 @@ export default function OwnerPortalAccess({ owner, editable }) {
         {user ? <Badge label={user.isActive ? t('portalAccess.active') : t('portalAccess.disabled')} tone={user.isActive ? 'success' : 'danger'} /> : <Badge label={t('portalAccess.none')} />}
       </Row>
       <Txt muted size="small">{t('portalAccess.hint')}</Txt>
-      {error && error.field !== 'email' ? <ErrorBox error={error} /> : null}
+      {error && error.field !== 'email' ? <ErrorBox error={error} onRetry={load} /> : null}
 
       {secret ? (
         <View style={{ gap: SPACING.sm }}>
