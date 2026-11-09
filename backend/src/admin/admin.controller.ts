@@ -6,6 +6,8 @@ import { AdminOnly, Auth, type AdminAuth } from '../common/auth-context.js';
 import { ALWAYS_ON, allSectionKeys, customSectionKey, isSectionKey } from '../common/sections.js';
 import { LIMIT_KEYS, publicPlan } from '../plans/plans.service.js';
 import * as v from '../common/validate.js';
+import { SubscriptionsService, subscriptionState } from './subscriptions.js';
+import { eventType, type Status } from './subscription-rules.js';
 
 /**
  * Platform admin API (لوحة الأدمن). Phase 1 covers plans and subscriber activation;
@@ -17,6 +19,7 @@ export class AdminController {
   constructor(
     private readonly prisma: PrismaService,
     private readonly activity: ActivityService,
+    private readonly subscriptions: SubscriptionsService,
   ) {}
 
   // ---------- Plans (الباقات) — everything editable, nothing hard-coded ----------
@@ -81,6 +84,7 @@ export class AdminController {
 
   @Get('companies')
   async companies() {
+    await this.subscriptions.expireOverdue();
     const companies = await this.prisma.company.findMany({
       where: { deletedAt: null },
       orderBy: { createdAt: 'desc' },
@@ -110,6 +114,8 @@ export class AdminController {
       // current usage, compared with the plan limits when the admin changes the plan
       used: { users: staffOf.get(c.id) ?? 0, properties: c._count.properties, units: c._count.units, owners: c._count.owners },
       subscription: c.subscription,
+      // status as it really is today, days left, grace
+      state: subscriptionState(c.subscription),
     }));
   }
 
@@ -146,6 +152,9 @@ export class AdminController {
         endDate: date('endDate'),
       },
       include: { plan: true },
+    });
+    await this.subscriptions.record(auth, subscription, eventType({ status: existing.status as Status, planId: existing.planId }, { status, planId }), {
+      note: v.optionalString(src, 'note', 500) ?? null,
     });
     await this.activity.log(auth, {
       action: 'subscription.update',

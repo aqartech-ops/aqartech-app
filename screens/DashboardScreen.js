@@ -9,6 +9,7 @@ import { adminApi, dashboardApi } from '../services/api';
 import { Badge, Button, Card, ErrorBox, Loading, Row, STATUS_TONE, Screen, Txt } from '../components/ui';
 import { Money, SectionIcon } from '../components/Rial';
 import { MetricValue } from '../components/SectionAnalytics';
+import { formatDate } from '../components/Fields';
 
 export default function DashboardScreen({ onNavigate }) {
   const { isAdmin } = useSession();
@@ -62,6 +63,9 @@ function CompanyDashboard({ onNavigate }) {
   const [data, setData] = useState(null);
   const [error, setError] = useState(null);
   const subscription = me.subscription;
+  const state = subscription?.state;
+  const subStatus = state?.status ?? subscription?.status;
+  const renewSoon = subStatus === 'ACTIVE' && state?.daysLeft !== null && state?.daysLeft !== undefined && (state.inGrace || state.daysLeft <= 14) && me.user.isCompanyAdmin;
 
   const load = useCallback(async () => {
     setError(null);
@@ -87,18 +91,33 @@ function CompanyDashboard({ onNavigate }) {
     <Screen title={t('dashboard.hello', { name: me.user.name })} subtitle={t('dashboard.overview')}>
       <ErrorBox error={error} onRetry={load} />
 
-      {subscription && subscription.status !== 'ACTIVE' ? (
-        <View style={[styles.banner, { flexDirection: row }, subscription.status === 'PENDING' ? styles.bannerWarn : styles.bannerDanger]}>
+      {subscription && subStatus !== 'ACTIVE' ? (
+        <View style={[styles.banner, { flexDirection: row }, subStatus === 'PENDING' ? styles.bannerWarn : styles.bannerDanger]}>
           <MaterialCommunityIcons
-            name={subscription.status === 'PENDING' ? 'clock-outline' : 'alert-circle-outline'}
+            name={subStatus === 'PENDING' ? 'clock-outline' : 'alert-circle-outline'}
             size={22}
-            color={subscription.status === 'PENDING' ? COLORS.warning : COLORS.danger}
+            color={subStatus === 'PENDING' ? COLORS.warning : COLORS.danger}
           />
           <View style={{ flex: 1, gap: 2 }}>
             <Txt weight="weightBold">
-              {subscription.status === 'PENDING' ? t('plan.pendingTitle') : t('plan.inactiveTitle')}
+              {subStatus === 'PENDING' ? t('plan.pendingTitle') : subStatus === 'EXPIRED' ? t('plan.expiredTitle') : t('plan.inactiveTitle')}
             </Txt>
-            <Txt>{subscription.status === 'PENDING' ? t('plan.pendingBody') : t('plan.inactiveBody')}</Txt>
+            <Txt>{subStatus === 'PENDING' ? t('plan.pendingBody') : subStatus === 'EXPIRED' ? t('plan.expiredBody') : t('plan.inactiveBody')}</Txt>
+          </View>
+        </View>
+      ) : renewSoon ? (
+        // renewal reminder: last 14 days, then the grace days
+        <View style={[styles.banner, { flexDirection: row }, state.inGrace ? styles.bannerDanger : styles.bannerWarn]}>
+          <MaterialCommunityIcons name="calendar-alert" size={22} color={state.inGrace ? COLORS.danger : COLORS.warning} />
+          <View style={{ flex: 1, gap: 2 }}>
+            <Txt weight="weightBold">
+              {state.inGrace
+                ? t('plan.graceTitle', { count: state.graceDays + state.daysLeft })
+                : state.daysLeft === 0
+                  ? t('plan.endsToday')
+                  : t('plan.endsSoonTitle', { count: state.daysLeft })}
+            </Txt>
+            <Txt>{t(state.inGrace ? 'plan.graceBody' : 'plan.endsSoonBody', { date: formatDate(subscription.endDate, lang) })}</Txt>
           </View>
         </View>
       ) : null}
@@ -270,7 +289,12 @@ function AdminDashboard({ onNavigate }) {
   }, []);
   useEffect(load, [load]);
 
-  const count = (status) => (companies ?? []).filter((c) => c.subscription?.status === status).length;
+  const statusOf = (c) => c.state?.status ?? c.subscription?.status;
+  const count = (status) => (companies ?? []).filter((c) => statusOf(c) === status).length;
+  // ending within 14 days, or ended and in the grace days
+  const ending = (companies ?? [])
+    .filter((c) => statusOf(c) === 'ACTIVE' && c.state?.daysLeft !== null && c.state?.daysLeft !== undefined && c.state.daysLeft <= 14)
+    .sort((a, b) => a.state.daysLeft - b.state.daysLeft);
 
   return (
     <Screen title={t('dashboard.adminHello')}>
@@ -279,8 +303,24 @@ function AdminDashboard({ onNavigate }) {
         <Kpi icon="domain" label={t('companies.title')} value={companies ? companies.length : '—'} />
         <Kpi icon="check-decagram-outline" label={t('plan.status.ACTIVE')} value={companies ? count('ACTIVE') : '—'} tone={COLORS.success} />
         <Kpi icon="clock-outline" label={t('plan.status.PENDING')} value={companies ? count('PENDING') : '—'} tone={COLORS.warning} />
+        <Kpi icon="calendar-alert" label={t('subscribers.endingSoon')} value={companies ? ending.length : '—'} tone={COLORS.warning} />
+        <Kpi icon="calendar-remove-outline" label={t('plan.status.EXPIRED')} value={companies ? count('EXPIRED') : '—'} tone={COLORS.danger} />
         <Kpi icon="pause-circle-outline" label={t('plan.status.SUSPENDED')} value={companies ? count('SUSPENDED') : '—'} tone={COLORS.danger} />
       </Grid>
+      {ending.length ? (
+        <View style={{ marginTop: SPACING.md }}>
+          <Card style={{ gap: SPACING.sm }}>
+            <Txt weight="weightBold">{t('subscribers.endingSoon')}</Txt>
+            {ending.slice(0, 8).map((c) => (
+              <Row key={c.id} style={{ justifyContent: 'space-between' }}>
+                <Txt style={{ flex: 1 }} numberOfLines={1}>{c.name}</Txt>
+                <Badge label={c.state.inGrace ? t('subscribers.inGrace') : t('subscribers.daysLeft', { count: c.state.daysLeft })} tone={c.state.inGrace || c.state.daysLeft <= 3 ? 'danger' : 'warning'} />
+              </Row>
+            ))}
+            <Txt onPress={() => onNavigate?.('companies', { filter: 'ending' })} style={{ color: COLORS.primaryDark }}>{t('subscribers.openList')}</Txt>
+          </Card>
+        </View>
+      ) : null}
       {count('PENDING') > 0 ? (
         <View style={{ marginTop: SPACING.md }}>
           <Card style={{ gap: SPACING.sm }}>

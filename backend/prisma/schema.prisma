@@ -94,6 +94,28 @@ model Subscription {
   endDate      DateTime?
   createdAt    DateTime           @default(now())
   updatedAt    DateTime           @updatedAt
+
+  events SubscriptionEvent[]
+}
+
+/// History of a subscription: activations, renewals (with the manual payment), plan changes, suspensions, expiry.
+model SubscriptionEvent {
+  id             String       @id @default(uuid())
+  subscriptionId String
+  subscription   Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  companyId      String
+  type           String // ACTIVATED | RENEWED | PLAN_CHANGED | SUSPENDED | RESUMED | CANCELLED | EXPIRED | UPDATED
+  planId         String?
+  endDate        DateTime? // end date after the change
+  amount         Int? // manual payment received, in baisa
+  method         String? // CASH | BANK | CARD | OTHER
+  reference      String?
+  note           String?
+  adminId        String?
+  adminName      String? // null = automatic (expiry)
+  createdAt      DateTime     @default(now())
+
+  @@index([companyId, createdAt])
 }
 
 // ==========================================
@@ -114,6 +136,7 @@ model Company {
   phone       String?
   logo        String?
   locale      String      @default("en")
+  adminNote   String? // platform team's private note about this subscriber
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
   deletedAt   DateTime?
