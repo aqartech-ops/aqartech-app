@@ -5,6 +5,7 @@ import { ActivityService } from '../common/activity.service.js';
 import { TokenService } from './token.service.js';
 import { AccessService } from './access.service.js';
 import { publicPlan } from '../plans/plans.service.js';
+import { subscriptionState } from '../admin/subscriptions.js';
 import type { AuthContext } from '../common/auth-context.js';
 import * as v from '../common/validate.js';
 
@@ -165,6 +166,8 @@ export class AuthService {
             startDate: sub.startDate,
             endDate: sub.endDate,
             plan: publicPlan(sub.plan),
+            // as it really is today: days left, grace (for the renewal reminder)
+            state: subscriptionState(sub),
           }
         : null,
       access: this.access.compute(user),

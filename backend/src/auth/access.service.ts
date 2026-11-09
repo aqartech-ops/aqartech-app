@@ -9,6 +9,8 @@ import {
   type AccessMap,
   type SectionKey,
 } from '../common/sections.js';
+import { effective, omanDay, type Status } from '../admin/subscription-rules.js';
+import { graceDays } from '../admin/subscriptions.js';
 
 type UserWithAccessData = User & {
   role: Role | null;
@@ -25,7 +27,9 @@ type UserWithAccessData = User & {
 export class AccessService {
   compute(user: UserWithAccessData): AccessMap {
     const subscription = user.company.subscription;
-    const active = subscription?.status === 'ACTIVE';
+    // ACTIVE and not past its end date (+ grace days) — the hourly job marks it EXPIRED afterwards
+    const endDay = subscription?.endDate ? new Date(subscription.endDate).toISOString().slice(0, 10) : null;
+    const active = !!subscription && effective(subscription.status as Status, endDay, omanDay(new Date()), graceDays()).status === 'ACTIVE';
     const planSections = new Set<string>(active ? subscription!.plan.features : []);
 
     const roleLevels = user.isCompanyAdmin
