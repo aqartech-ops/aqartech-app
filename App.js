@@ -19,6 +19,8 @@ import TemplatesScreen from './screens/TemplatesScreen';
 import MetricsScreen from './screens/MetricsScreen';
 import TeamScreen from './screens/TeamScreen';
 import PublishScreen from './screens/PublishScreen';
+import OwnerPortalScreen from './screens/OwnerPortalScreen';
+import { ChangePasswordCard } from './screens/SettingsScreen';
 import { AdminPasswordCard } from './components/AdminSecurity';
 import { Screen } from './components/ui';
 import LandingScreen from './screens/LandingScreen';
@@ -60,6 +62,12 @@ const ADMIN_SECTIONS = [
   { key: 'metrics', icon: 'chart-box-outline', Screen: MetricsScreen },
   { key: 'publish', icon: 'publish', Screen: PublishScreen },
   { key: 'team', icon: 'account-key-outline', Screen: TeamScreen, roles: ['OWNER'] },
+  { key: 'settings', icon: 'cog-outline', Screen: SettingsScreen },
+];
+
+/** A property owner signed in to the owner portal: their own view, read-only. */
+const OWNER_SECTIONS = [
+  { key: 'portal', icon: 'home-city-outline', Screen: OwnerPortalScreen },
   { key: 'settings', icon: 'cog-outline', Screen: SettingsScreen },
 ];
 
@@ -107,6 +115,7 @@ function Root() {
 
   const sections = useMemo(() => {
     if (!me) return [];
+    if (!isAdmin && me.user?.kind === 'OWNER') return OWNER_SECTIONS.map((s) => ({ ...s, label: t(`sections.${s.key}`) }));
     if (isAdmin) return ADMIN_SECTIONS.filter((s) => adminSectionAllowed(s, me.admin.role ?? 'OWNER')).map((s) => ({ ...s, label: t(`sections.${s.key}`) }));
     const builtIn = USER_SECTIONS.filter((s) => levelOf(s.key) !== 'HIDDEN').map((s) => ({ ...s, label: t(`sections.${s.key}`) }));
     // sections created by the platform team, shown before "Users" and "Settings" when the plan and role allow them
@@ -117,11 +126,13 @@ function Root() {
     return tailFrom < 0 ? [...builtIn, ...extra] : [...builtIn.slice(0, tailFrom), ...extra, ...builtIn.slice(tailFrom)];
   }, [me, isAdmin, levelOf, t, custom, lang]);
 
-  // If the current section disappears (e.g. permissions changed), fall back to the dashboard.
+  // If the current section disappears (e.g. permissions changed), fall back to the first page.
   useEffect(() => {
     if (sections.length && !sections.some((s) => s.key === active)) {
-      setRoute({ key: 'dashboard', params: null });
-      writeLocation('dashboard', null, { replace: true });
+      // the first page of the menu (the dashboard; the portal for an owner)
+      const first = sections.some((s) => s.key === 'dashboard') ? 'dashboard' : sections[0].key;
+      setRoute({ key: first, params: null });
+      writeLocation(first, null, { replace: true });
     }
   }, [sections, active]);
 
@@ -149,6 +160,17 @@ function Root() {
       <Screen title={t('team.mustChangeTitle')}>
         <View style={{ maxWidth: 520, width: '100%' }}>
           <AdminPasswordCard forced />
+        </View>
+      </Screen>
+    );
+  }
+
+  // A password given by someone else (owner portal invitation) is changed first (the server enforces it too).
+  if (!isAdmin && me.user?.mustChangePassword) {
+    return (
+      <Screen title={t('team.mustChangeTitle')}>
+        <View style={{ maxWidth: 520, width: '100%' }}>
+          <ChangePasswordCard forced />
         </View>
       </Screen>
     );

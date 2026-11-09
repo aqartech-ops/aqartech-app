@@ -95,6 +95,8 @@ export function SessionProvider({ children }) {
         const { token } = await authApi.changePassword(currentPassword, password);
         setAuthToken(token);
         await storage.set(TOKEN_KEY, token);
+        // e.g. the "must change password" step is over
+        setMe(await authApi.me());
       },
       signOut,
       /** Access level for a section: 'EDIT' | 'VIEW' | 'HIDDEN' */

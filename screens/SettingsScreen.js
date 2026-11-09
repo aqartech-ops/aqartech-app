@@ -24,7 +24,7 @@ export default function SettingsScreen() {
         {isAdmin ? <AdminPasswordCard /> : null}
         {isAdmin ? <TwoFactorCard /> : null}
         {!isAdmin && me.user.isCompanyAdmin ? <CompanyCard /> : null}
-        {!isAdmin && me.subscription ? <SubscriptionCard subscription={me.subscription} /> : null}
+        {!isAdmin && me.subscription && me.user.kind !== 'OWNER' ? <SubscriptionCard subscription={me.subscription} /> : null}
         <Card style={{ gap: SPACING.sm }}>
           <Txt muted size="small">{t('settings.server')}</Txt>
           <Txt size="small" selectable>{API_URL}</Txt>
@@ -76,7 +76,8 @@ function ProfileCard({ me, isAdmin }) {
   );
 }
 
-function ChangePasswordCard() {
+/** Change own password. `forced`: first sign-in with a password given by someone else (owner portal). */
+export function ChangePasswordCard({ forced }) {
   const { t } = useI18n();
   const { changePassword } = useSession();
   const [current, setCurrent] = useState('');
@@ -104,10 +105,11 @@ function ChangePasswordCard() {
 
   return (
     <Card style={{ gap: SPACING.md }}>
-      <Txt weight="weightBold">{t('settings.changePassword')}</Txt>
+      <Txt weight="weightBold">{forced ? t('team.mustChangeTitle') : t('settings.changePassword')}</Txt>
+      {forced ? <Txt muted>{t('portal.mustChangeHint')}</Txt> : null}
       {error && !error.field ? <ErrorBox error={error} /> : null}
       <Field
-        label={t('settings.currentPassword')}
+        label={forced ? t('team.temporaryPassword') : t('settings.currentPassword')}
         value={current}
         onChangeText={setCurrent}
         secure

@@ -49,6 +49,7 @@ export default {
     metrics: 'Indicators',
     team: 'Team',
     publish: 'Publish',
+    portal: 'My properties',
   },
 
   // Short labels for the bottom bar
@@ -71,6 +72,7 @@ export default {
     metrics: 'Indicators',
     team: 'Team',
     publish: 'Publish',
+    portal: 'My properties',
     more: 'More',
   },
 
@@ -881,6 +883,52 @@ export default {
     ctaBody: 'Create your account in minutes. Our team activates it and helps you get started.',
   },
 
+  // Owner portal (signed in as a property owner)
+  portal: {
+    hello: 'Hello, {{name}}',
+    subtitle: 'Your properties managed by your property manager — read-only.',
+    tabs: { overview: 'Overview', statements: 'Statements', account: 'My account' },
+    partialYear: 'This year so far (up to today).',
+    owedToYou: 'Due to you',
+    youOwe: 'You owe',
+    lastPayout: 'Last transfer on {{date}}',
+    noPayout: 'No transfer yet',
+    rentCollected: 'Rent collected in {{year}}',
+    expenses: 'Expenses',
+    net: 'Net income',
+    rent: 'Rent',
+    yourProperties: 'Your properties',
+    noProperties: 'No properties are linked to you yet.',
+    units: '{{count}} units',
+    occupancy: 'Occupancy',
+    collectionRate: 'Rent collected on time',
+    openRequests: 'Open maintenance',
+    managedBy: 'Managed by {{name}}',
+    questions: 'A question about your property? Contact them:',
+    noStatements: 'No statements issued yet.',
+    statementsHint: 'Statements are issued by your property manager for each period.',
+    paidTo: 'Paid to: {{account}}',
+    balanceAfter: 'balance',
+    mustChangeHint: 'Your password was given to you by your property manager. Choose your own to continue.',
+  },
+
+  // Owner page (company side): sign-in to the owner portal
+  portalAccess: {
+    title: 'Owner portal',
+    hint: 'Give the owner a sign-in to follow their properties: occupancy, rent, expenses, statements and transfers. Read-only, and only their properties.',
+    none: 'No access',
+    active: 'Active',
+    disabled: 'Disabled',
+    invite: 'Give portal access',
+    create: 'Create the sign-in',
+    resetPassword: 'New password',
+    disable: 'Disable access',
+    enable: 'Enable access',
+    disableConfirm: 'Disable the portal access of {{name}}? They are signed out at once.',
+    passwordTitle: 'Temporary password',
+    passwordOnce: 'Give it to the owner with their email ({{email}}). It is shown only now; they choose their own at the first sign-in.',
+  },
+
   receipt: {
     title: 'Receipt',
     receivedFrom: 'Received from',
@@ -1449,5 +1497,7 @@ export default {
     'config.nothingToPublish': 'There are no changes to publish.',
     'config.publishFirst': 'Subscribers still use this section: switch it off and publish first, then delete it for good.',
     'validation.money': 'Enter a valid amount in rials, e.g. 25.500',
+    'portal.companyInactive': 'The portal is not available right now: your property manager\'s subscription is not active.',
+    'portal.alreadyInvited': 'This owner already has a portal sign-in.',
   },
 };

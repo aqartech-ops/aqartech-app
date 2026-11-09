@@ -113,7 +113,7 @@ export class PasswordService {
     }
     await this.prisma.user.update({
       where: { id: user.id },
-      data: { passwordHash: await hashPassword(password), passwordChangedAt: new Date() },
+      data: { passwordHash: await hashPassword(password), passwordChangedAt: new Date(), mustChangePassword: false },
     });
     await this.activity.log(auth, { action: 'auth.changePassword', entity: 'User', entityId: user.id });
     // Other devices are signed out; this device continues with a fresh session.

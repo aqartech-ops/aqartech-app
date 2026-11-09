@@ -22,9 +22,10 @@ import { ButtonsModule } from './buttons/buttons.module.js';
 import { TemplatesModule } from './templates/templates.module.js';
 import { MetricsModule } from './metrics/metrics.module.js';
 import { ConfigVersionsModule } from './config-versions/config.module.js';
+import { PortalModule } from './portal/portal.module.js';
 
 @Module({
-  imports: [PrismaModule, CommonModule, ConfigVersionsModule, FieldsModule, AuthModule, PlansModule, CompanyModule, UserModule, AdminModule, SearchModule, PropertiesModule, DashboardModule, OwnersModule, TenantsModule, LeasesModule, FinanceModule, MaintenanceModule, CustomSectionsModule, ButtonsModule, TemplatesModule, MetricsModule],
+  imports: [PrismaModule, CommonModule, ConfigVersionsModule, FieldsModule, AuthModule, PlansModule, CompanyModule, UserModule, AdminModule, SearchModule, PropertiesModule, DashboardModule, OwnersModule, TenantsModule, LeasesModule, FinanceModule, MaintenanceModule, CustomSectionsModule, ButtonsModule, TemplatesModule, MetricsModule, PortalModule],
   controllers: [AppController],
   providers: [AppService],
 })

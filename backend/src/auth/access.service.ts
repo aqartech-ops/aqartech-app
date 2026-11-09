@@ -26,6 +26,12 @@ type UserWithAccessData = User & {
 @Injectable()
 export class AccessService {
   compute(user: UserWithAccessData): AccessMap {
+    // Owner portal sign-ins see none of the company's sections: only the portal (/portal), their own data.
+    if (user.kind === 'OWNER') {
+      const result = {} as AccessMap;
+      for (const section of allSectionKeys()) result[section] = ALWAYS_ON.includes(section as SectionKey) ? 'VIEW' : 'HIDDEN';
+      return result;
+    }
     const subscription = user.company.subscription;
     // ACTIVE and not past its end date (+ grace days) — the hourly job marks it EXPIRED afterwards
     const endDay = subscription?.endDate ? new Date(subscription.endDate).toISOString().slice(0, 10) : null;

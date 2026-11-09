@@ -189,6 +189,10 @@ model User {
   passwordHash   String
   passwordChangedAt DateTime? // sessions issued before this are rejected
   isCompanyAdmin Boolean   @default(false) // the subscriber's main account: full access
+  /// kind OWNER: the owner record this sign-in belongs to (owner portal, read-only, only their properties)
+  ownerId        String?   @unique
+  owner          Owner?    @relation(fields: [ownerId], references: [id])
+  mustChangePassword Boolean @default(false) // set when the password was given by someone else
   roleId         String?
   role           Role?     @relation(fields: [roleId], references: [id])
   isActive       Boolean   @default(true)
@@ -394,6 +398,7 @@ model Owner {
   partners   PropertyPartner[]
   statements OwnerStatement[]
   payouts    OwnerPayout[]
+  user       User? // sign-in to the owner portal
 
   @@index([companyId])
 }

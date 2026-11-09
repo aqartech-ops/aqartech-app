@@ -15,6 +15,8 @@ export type AuthContext =
       access: AccessMap;
       /** Properties this user may see; null = all of the company's properties. */
       propertyIds: string[] | null;
+      /** Owner portal sign-in (userKind OWNER): the owner record. */
+      ownerId?: string | null;
     };
 
 export type UserAuth = Extract<AuthContext, { kind: 'user' }>;
