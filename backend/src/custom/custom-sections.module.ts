@@ -19,9 +19,10 @@ import type { CustomSection, Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { ActivityService } from '../common/activity.service.js';
 import { AdminOnly, AnyAuthenticated, Auth, type AdminAuth, type AuthContext, type UserAuth } from '../common/auth-context.js';
-import { LEVEL_RANK, customSectionKey, setCustomSectionKeys } from '../common/sections.js';
+import { LEVEL_RANK, customSectionKey } from '../common/sections.js';
 import * as v from '../common/validate.js';
 import { FieldsService } from '../fields/fields.module.js';
+import { ConfigService } from '../config-versions/config.module.js';
 import { slugKey } from '../fields/rules.js';
 
 const RESERVED = ['dashboard', 'properties', 'tenants', 'financials', 'maintenance', 'documents', 'owners', 'users', 'settings', 'companies', 'plans', 'fields', 'sections', 'buttons', 'templates', 'metrics'];
@@ -32,36 +33,41 @@ const RESERVED = ['dashboard', 'properties', 'tenants', 'financials', 'maintenan
  */
 @Injectable()
 export class CustomSectionsService implements OnModuleInit {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly versions: ConfigService,
+  ) {}
 
   async onModuleInit() {
     await this.refreshKeys();
   }
 
+  /** Access keys follow the PUBLISHED sections (loading them sets the keys). */
   async refreshKeys() {
-    const top = await this.prisma.customSection.findMany({ where: { parentId: null, isActive: true }, select: { key: true } });
-    setCustomSectionKeys(top.map((s) => s.key));
+    try {
+      await this.versions.published();
+    } catch {
+      // migration not applied yet: the first request loads them
+    }
   }
 
-  /** Definitions the app needs: sections (with sub-sections) — fields come from GET /fields ("cs:<key>"). */
-  async list(activeOnly = true) {
-    return this.prisma.customSection.findMany({
-      where: activeOnly ? { isActive: true } : {},
-      orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }],
-    });
+  /** Published sections (what subscribers see) — fields come from GET /fields ("cs:<key>"). */
+  async list() {
+    return (await this.versions.published()).sections.filter((s) => s.isActive);
   }
 
   async byKey(key: string) {
-    const section = await this.prisma.customSection.findUnique({ where: { key } });
+    const section = (await this.versions.published()).sections.find((s) => s.key === key);
     if (!section || !section.isActive) throw new NotFoundException('common.notFound');
     return section;
   }
 
   /** The top-level section whose permission applies (a sub-section follows its parent). */
   async root(section: CustomSection): Promise<CustomSection> {
+    const all = (await this.versions.published()).sections;
     let current = section;
     for (let i = 0; current.parentId && i < 5; i += 1) {
-      const parent = await this.prisma.customSection.findUnique({ where: { id: current.parentId } });
+      const parent = all.find((s) => s.id === current.parentId);
       if (!parent) break;
       current = parent;
     }
@@ -79,11 +85,13 @@ export class AdminCustomSectionsController {
     private readonly sections: CustomSectionsService,
     private readonly fields: FieldsService,
     private readonly activity: ActivityService,
+    private readonly versions: ConfigService,
   ) {}
 
   @Get()
   async list() {
-    const rows = await this.sections.list(false);
+    // the draft: every section, switched-off ones too
+    const rows = await this.prisma.customSection.findMany({ orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }] });
     const counts = await this.prisma.customRecord.groupBy({ by: ['sectionId'], where: { deletedAt: null }, _count: { _all: true } });
     const countOf = new Map(counts.map((c) => [c.sectionId, c._count._all]));
     return rows.map((r) => ({ ...r, records: countOf.get(r.id) ?? 0 }));
@@ -169,6 +177,8 @@ export class AdminCustomSectionsController {
   async remove(@Auth() auth: AdminAuth, @Param('id') id: string, @Query('purge') purge?: string) {
     const section = await this.find(id);
     if (purge === '1') {
+      // subscribers still use it: switch it off and publish first, so no one adds records meanwhile
+      if (await this.versions.isPublishedSection(id)) throw new BadRequestException({ message: 'config.publishFirst' });
       const children = await this.prisma.customSection.count({ where: { parentId: id } });
       const records = await this.prisma.customRecord.count({ where: { sectionId: id } });
       if (children || records) throw new BadRequestException({ message: 'sections.notEmpty', records, children });
@@ -312,7 +322,7 @@ export class CustomRecordsController {
   @AnyAuthenticated()
   @Get('sections')
   sectionsList() {
-    return this.sections.list(true);
+    return this.sections.list();
   }
 
   @AnyAuthenticated()

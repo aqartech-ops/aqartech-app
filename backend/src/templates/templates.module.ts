@@ -1,13 +1,12 @@
 import { BadRequestException, Body, Controller, Delete, Get, Injectable, Module, NotFoundException, Param, Patch, Post, Query } from '@nestjs/common';
-import type { Prisma, PrintTemplate } from '@prisma/client';
+import type { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service.js';
+import { ConfigService } from '../config-versions/config.module.js';
 import { ActivityService } from '../common/activity.service.js';
 import { AdminOnly, AnyAuthenticated, Auth, type AdminAuth } from '../common/auth-context.js';
 import * as v from '../common/validate.js';
 import { BUTTON_ENTITIES } from '../buttons/rules.js';
 import { PAPERS, checkBody, checkSignatures } from './rules.js';
-
-const CACHE_MS = 30_000;
 
 /**
  * Print templates (قوالب الطباعة), written by the platform team for every subscriber: letters, notices and forms
@@ -16,20 +15,15 @@ const CACHE_MS = 30_000;
  */
 @Injectable()
 export class TemplatesService {
-  private cache: { at: number; rows: PrintTemplate[] } | null = null;
+  constructor(private readonly versions: ConfigService) {}
 
-  constructor(private readonly prisma: PrismaService) {}
-
+  /** What subscribers use: the templates of the published configuration (see Draft & publish). */
   async active() {
-    if (this.cache && Date.now() - this.cache.at < CACHE_MS) return this.cache.rows;
-    const rows = await this.prisma.printTemplate.findMany({ where: { isActive: true }, orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }] });
-    this.cache = { at: Date.now(), rows };
-    return rows;
+    return (await this.versions.published()).templates.filter((t) => t.isActive);
   }
 
-  invalidate() {
-    this.cache = null;
-  }
+  /** Kept for the admin pages: the published version is cached by ConfigService. */
+  invalidate() {}
 }
 
 /** Read by every signed-in user (record pages). */

@@ -26,6 +26,14 @@ export function setUnauthorizedHandler(handler) {
   onUnauthorized = handler;
 }
 
+// Draft & publish: listeners told when the platform team changes the draft configuration.
+const CONFIG_PATHS = /^\/admin\/(fields|custom-sections|buttons|print-templates|metrics|config)(\/|$)/;
+const configListeners = new Set();
+export function onConfigChange(fn) {
+  configListeners.add(fn);
+  return () => configListeners.delete(fn);
+}
+
 export async function request(path, { method = 'GET', body, query } = {}) {
   let url = `${API_URL}${path}`;
   if (query) {
@@ -66,6 +74,7 @@ export async function request(path, { method = 'GET', body, query } = {}) {
     if (response.status === 401 && authToken && onUnauthorized) onUnauthorized();
     throw new ApiError(code, response.status, data?.field, data);
   }
+  if (method !== 'GET' && CONFIG_PATHS.test(path)) configListeners.forEach((fn) => fn());
   return data;
 }
 
@@ -287,6 +296,11 @@ export const adminApi = {
   updateTemplate: (id, data) => api.patch(`/admin/print-templates/${id}`, data),
   moveTemplate: (id, direction) => api.post(`/admin/print-templates/${id}/move`, { direction }),
   removeTemplate: (id, purge = false) => api.delete(`/admin/print-templates/${id}${purge ? '?purge=1' : ''}`),
+  configStatus: () => api.get('/admin/config'),
+  configVersions: () => api.get('/admin/config/versions'),
+  publish: (note) => api.post('/admin/config/publish', { note }),
+  discardDraft: () => api.post('/admin/config/discard', {}),
+  restoreVersion: (number) => api.post(`/admin/config/versions/${number}/restore`, {}),
   metrics: () => api.get('/admin/metrics'),
   createMetric: (data) => api.post('/admin/metrics', data),
   updateMetric: (id, data) => api.patch(`/admin/metrics/${id}`, data),

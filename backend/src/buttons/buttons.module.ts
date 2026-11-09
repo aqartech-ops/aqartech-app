@@ -1,14 +1,13 @@
 import { BadRequestException, Body, Controller, Delete, Get, Injectable, Module, NotFoundException, Param, Patch, Post, Put, Query } from '@nestjs/common';
-import type { ButtonOverride, CustomButton, Prisma } from '@prisma/client';
+import type { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service.js';
+import { ConfigService } from '../config-versions/config.module.js';
 import { ActivityService } from '../common/activity.service.js';
 import { AdminOnly, AnyAuthenticated, Auth, type AdminAuth } from '../common/auth-context.js';
 import * as v from '../common/validate.js';
 import { FieldsService } from '../fields/fields.module.js';
 import { checkValue, type FieldDef } from '../fields/rules.js';
 import { ACTIONS, BUTTON_ENTITIES, OVERRIDE_KEY, checkConfig, type Action } from './rules.js';
-
-const CACHE_MS = 30_000;
 
 /**
  * Buttons (الأزرار), set by the platform team for every subscriber:
@@ -19,27 +18,19 @@ const CACHE_MS = 30_000;
  */
 @Injectable()
 export class ButtonsService {
-  private cache: { at: number; value: { overrides: Record<string, Omit<ButtonOverride, 'key' | 'updatedAt'>>; custom: CustomButton[] } } | null = null;
+  constructor(private readonly versions: ConfigService) {}
 
-  constructor(private readonly prisma: PrismaService) {}
-
+  /** What subscribers use: the buttons of the published configuration (see Draft & publish). */
   async config() {
-    if (this.cache && Date.now() - this.cache.at < CACHE_MS) return this.cache.value;
-    const [overrides, custom] = await Promise.all([
-      this.prisma.buttonOverride.findMany(),
-      this.prisma.customButton.findMany({ where: { isActive: true }, orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }] }),
-    ]);
-    const value = {
-      overrides: Object.fromEntries(overrides.map((o) => [o.key, { labelAr: o.labelAr, labelEn: o.labelEn, icon: o.icon, hidden: o.hidden }])),
-      custom,
+    const published = await this.versions.published();
+    return {
+      overrides: Object.fromEntries(published.buttonOverrides.map((o) => [o.key, { labelAr: o.labelAr, labelEn: o.labelEn, icon: o.icon, hidden: o.hidden }])),
+      custom: published.customButtons.filter((b) => b.isActive),
     };
-    this.cache = { at: Date.now(), value };
-    return value;
   }
 
-  invalidate() {
-    this.cache = null;
-  }
+  /** Kept for the admin pages: the published version is cached by ConfigService. */
+  invalidate() {}
 }
 
 /** Read by every signed-in user (every screen draws its buttons with it). */

@@ -48,6 +48,7 @@ export default {
     templates: 'Print templates',
     metrics: 'Indicators',
     team: 'Team',
+    publish: 'Publish',
   },
 
   // Short labels for the bottom bar
@@ -69,6 +70,7 @@ export default {
     templates: 'Templates',
     metrics: 'Indicators',
     team: 'Team',
+    publish: 'Publish',
     more: 'More',
   },
 
@@ -764,6 +766,38 @@ export default {
     mustChangeHint: 'Your password was set by a team owner. Choose a new one to continue.',
   },
 
+  // Platform team: draft & publish
+  publish: {
+    title: 'Publish',
+    subtitle: 'Changes to fields, sections, buttons, templates and indicators wait here until you publish them to every subscriber.',
+    draft: 'Draft',
+    liveVersion: 'Subscribers use version {{number}}',
+    noChanges: 'Nothing waiting: subscribers see exactly what you see.',
+    pending: '{{count}} changes not published yet:',
+    note: 'Note (optional)',
+    notePlaceholder: 'e.g. Added the maintenance contracts section',
+    publish: 'Publish to all subscribers',
+    discard: 'Discard changes',
+    discardConfirm: 'Put every page back as published? The unpublished changes are lost (data deleted for good cannot come back).',
+    discarded: 'Changes discarded: the pages are back to the published version.',
+    published: 'Published: subscribers now use version {{number}} (within a few seconds).',
+    howItWorks: 'Plans, subscriptions and permanent deletions apply at once and are not part of the draft.',
+    history: 'History',
+    version: 'Version {{number}}',
+    current: 'In use',
+    initial: 'starting point',
+    changesCount: '{{count}} changes',
+    showChanges: 'Show changes',
+    hideChanges: 'Hide',
+    restore: 'Bring back',
+    restoreConfirm: 'Bring back version {{number}}? The pages go back to it and it is published as a new version (nothing is lost: today\'s version stays in the history).',
+    bannerTitle: '{{count}} changes not published yet',
+    bannerHint: 'Subscribers still see the published version.',
+    review: 'Review & publish',
+    kinds: { added: 'Added', changed: 'Changed', removed: 'Removed' },
+    areas: { fields: 'Fields', sections: 'Sections', buttonOverrides: 'App buttons', customButtons: 'Added buttons', templates: 'Print templates', metrics: 'Indicators' },
+  },
+
   receipt: {
     title: 'Receipt',
     receivedFrom: 'Received from',
@@ -1329,5 +1363,7 @@ export default {
     'auth.mustChangePassword': 'Change your password first.',
     'admin.team.notYourself': 'You cannot do this to your own account.',
     'admin.team.lastOwner': 'The team must keep at least one active owner.',
+    'config.nothingToPublish': 'There are no changes to publish.',
+    'config.publishFirst': 'Subscribers still use this section: switch it off and publish first, then delete it for good.',
   },
 };
