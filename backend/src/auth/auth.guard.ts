@@ -65,6 +65,11 @@ export class AuthGuard implements CanActivate {
       throw new UnauthorizedException('auth.invalidToken');
     }
 
+    const path = String(req.path ?? req.url ?? '').split('?')[0];
+    // a password given by someone else (owner portal invitation) is changed first
+    if (user.mustChangePassword && path !== '/auth/change-password' && path !== '/auth/me') {
+      throw new ForbiddenException('auth.mustChangePassword');
+    }
     const access = this.access.compute(user);
     req.auth = {
       kind: 'user',
@@ -77,6 +82,7 @@ export class AuthGuard implements CanActivate {
         user.isCompanyAdmin || !user.role || user.role.deletedAt || user.role.propertyIds.length === 0
           ? null
           : user.role.propertyIds,
+      ownerId: user.kind === 'OWNER' ? user.ownerId : null,
     } satisfies AuthContext;
 
     const required = this.meta<{ section: SectionKey; level: AccessLevel }>(REQUIRED_PERMISSION, ctx);

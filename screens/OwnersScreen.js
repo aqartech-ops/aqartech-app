@@ -3,6 +3,7 @@ import DataTable, { useTableLayout } from '../components/DataTable';
 import { toEditable, toPayload, useFieldRules } from '../services/fields';
 import CustomFields, { CustomValues } from '../components/CustomFields';
 import CustomActions from '../components/CustomActions';
+import OwnerPortalAccess from '../components/OwnerPortalAccess';
 import { Linking, Pressable, StyleSheet, View } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { COLORS, RADIUS, SPACING } from '../theme';
@@ -307,6 +308,8 @@ function OwnerDetail({ id, onBack, onNavigate }) {
             }}
           />
         </Card>
+
+        <OwnerPortalAccess owner={owner} editable={editable} />
 
         <Row style={{ justifyContent: 'space-between', flexWrap: 'wrap' }}>
           <Txt size="medium" weight="weightBold">{t('owners.properties')}</Txt>

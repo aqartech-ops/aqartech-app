@@ -104,6 +104,22 @@ export const authApi = {
   admin2faRecoveryCodes: (code) => api.post('/admin/auth/2fa/recovery-codes', { code }),
 };
 
+/** Owner portal (signed in as a property owner): read-only, only their properties. */
+export const portalApi = {
+  overview: (year) => api.get('/portal', { year }),
+  statements: () => api.get('/portal/statements'),
+  statement: (id) => api.get(`/portal/statements/${id}`),
+  account: () => api.get('/portal/account'),
+};
+
+/** The company gives an owner a sign-in to the owner portal. */
+export const ownerPortalApi = {
+  get: (ownerId) => api.get(`/owners/${ownerId}/portal`),
+  invite: (ownerId, email) => api.post(`/owners/${ownerId}/portal`, { email }),
+  setActive: (ownerId, isActive) => api.patch(`/owners/${ownerId}/portal`, { isActive }),
+  resetPassword: (ownerId) => api.post(`/owners/${ownerId}/portal/reset-password`, {}),
+};
+
 /** The platform team (owners only). */
 export const teamApi = {
   list: () => api.get('/admin/team'),

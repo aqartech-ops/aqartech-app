@@ -149,6 +149,8 @@ export class AuthService {
         kind: user.kind,
         isCompanyAdmin: user.isCompanyAdmin,
         roleId: user.roleId,
+        ownerId: user.ownerId,
+        mustChangePassword: user.mustChangePassword,
       },
       company: {
         id: user.company.id,

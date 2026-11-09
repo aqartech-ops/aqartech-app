@@ -343,6 +343,6 @@ export class FinanceController {
   imports: [FinanceCoreModule],
   controllers: [FinanceController],
   providers: [FinanceService, PaymentsService, ChequesService, OwnersFinanceService, ReportsService, ClosingService, MunicipalityService],
-  exports: [FinanceService, ChequesService, MunicipalityService],
+  exports: [FinanceService, ChequesService, MunicipalityService, OwnersFinanceService, ReportsService],
 })
 export class FinanceModule {}

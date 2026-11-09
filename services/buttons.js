@@ -128,6 +128,10 @@ export const BUTTON_GROUPS = [
     ['owners.whatsapp', 'buttons.whatsapp', 'whatsapp'],
     ['owners.linkProperty', 'owners.linkProperty', 'link-variant-plus'],
     ['owners.newProperty', 'owners.newPropertyForOwner', 'home-plus-outline'],
+    ['owners.portalInvite', 'portalAccess.invite', 'account-key-outline'],
+    ['owners.portalReset', 'portalAccess.resetPassword', 'lock-reset'],
+    ['owners.portalDisable', 'portalAccess.disable', 'account-cancel-outline'],
+    ['owners.portalEnable', 'portalAccess.enable', 'account-check-outline'],
   ]],
   ['payments', [
     ['payments.add', 'payments.add', 'cash-plus'],
