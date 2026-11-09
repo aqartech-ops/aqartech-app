@@ -51,8 +51,6 @@ export class AccessService {
       if (ALWAYS_ON.includes(section as SectionKey) && LEVEL_RANK[level] < LEVEL_RANK.VIEW) {
         level = 'VIEW';
       }
-      // Linked property owners are read-only everywhere.
-      if (user.kind === 'OWNER' && level === 'EDIT') level = 'VIEW';
       result[section] = level;
     }
     if (user.isCompanyAdmin) result.settings = 'EDIT';
