@@ -1,11 +1,12 @@
-import { Controller, Get, Injectable, Module } from '@nestjs/common';
+import { Controller, Get, Injectable, Module, Query } from '@nestjs/common';
 import { PlansService } from '../plans/plans.service.js';
 import { PropertiesModule } from '../properties/properties.controller.js';
 import { PropertiesService } from '../properties/properties.service.js';
 import { TenantsModule, TenantsService } from '../tenants/tenants.controller.js';
 import { LeasesModule } from '../leases/leases.controller.js';
 import { LeasesService } from '../leases/leases.service.js';
-import { FinanceModule } from '../finance/finance.module.js';
+import { FinanceCoreModule, FinanceModule } from '../finance/finance.module.js';
+import { MonthlyReportService } from './monthly-report.service.js';
 import { FinanceService } from '../finance/finance.service.js';
 import { ChequesService } from '../finance/cheques.service.js';
 import { MunicipalityService } from '../finance/municipality.service.js';
@@ -70,17 +71,32 @@ export class DashboardService {
 
 @Controller('dashboard')
 export class DashboardController {
-  constructor(private readonly dashboard: DashboardService) {}
+  constructor(
+    private readonly dashboard: DashboardService,
+    private readonly monthly: MonthlyReportService,
+  ) {}
 
   @Get()
   get(@Auth() auth: UserAuth) {
     return this.dashboard.get(auth);
   }
+
+  /** Monthly property report: ?propertyId= (empty = all properties) &month=YYYY-MM (empty = this month). */
+  @Get('report')
+  report(@Auth() auth: UserAuth, @Query('propertyId') propertyId?: string, @Query('month') month?: string) {
+    return this.monthly.report(auth, { propertyId, month });
+  }
+
+  /** The same report for every property (the printed pack: one page per building). */
+  @Get('report/all')
+  reportAll(@Auth() auth: UserAuth, @Query('month') month?: string) {
+    return this.monthly.reportAll(auth, { month });
+  }
 }
 
 @Module({
-  imports: [PropertiesModule, TenantsModule, LeasesModule, FinanceModule, MaintenanceModule, MetricsModule],
+  imports: [PropertiesModule, TenantsModule, LeasesModule, FinanceCoreModule, FinanceModule, MaintenanceModule, MetricsModule],
   controllers: [DashboardController],
-  providers: [DashboardService],
+  providers: [DashboardService, MonthlyReportService],
 })
 export class DashboardModule {}

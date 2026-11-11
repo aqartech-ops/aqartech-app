@@ -418,7 +418,7 @@ function CategoriesSheet({ visible, onClose }) {
   const { t, lang } = useI18n();
   const [list, setList] = useState(null);
   const [editing, setEditing] = useState(null); // {} new | category
-  const [form, setForm] = useState({ nameAr: '', nameEn: '' });
+  const [form, setForm] = useState({ nameAr: '', nameEn: '', reportGroup: '' });
   const [error, setError] = useState(null);
 
   const load = useCallback(() => financeApi.categories(true).then(setList).catch(setError), []);
@@ -428,14 +428,15 @@ function CategoriesSheet({ visible, onClose }) {
 
   const open = (c) => {
     setEditing(c);
-    setForm({ nameAr: c.nameAr ?? '', nameEn: c.nameEn ?? '' });
+    setForm({ nameAr: c.nameAr ?? '', nameEn: c.nameEn ?? '', reportGroup: c.reportGroup ?? '' });
     setError(null);
   };
 
   const save = async () => {
     try {
-      if (editing.id) await financeApi.updateCategory(editing.id, form);
-      else await financeApi.createCategory(form);
+      const payload = { ...form, reportGroup: form.reportGroup || null };
+      if (editing.id) await financeApi.updateCategory(editing.id, payload);
+      else await financeApi.createCategory(payload);
       setEditing(null);
       load();
     } catch (e) {
@@ -462,6 +463,13 @@ function CategoriesSheet({ visible, onClose }) {
             <Field label={t('plans.nameAr')} value={form.nameAr} onChangeText={(v) => setForm((f) => ({ ...f, nameAr: v }))} />
             <Field label={t('plans.nameEn')} value={form.nameEn} onChangeText={(v) => setForm((f) => ({ ...f, nameEn: v }))} />
           </FieldRow>
+          {/* which row of the dashboard's monthly report this item is counted in */}
+          <Txt size="small" weight="weightMedium">{t('expenses.reportGroup')}</Txt>
+          <ChipSelect
+            value={form.reportGroup}
+            onChange={(v) => setForm((f) => ({ ...f, reportGroup: v }))}
+            options={[{ value: '', label: t('expenses.groups.AUTO') }, ...['MAINTENANCE', 'UTILITIES', 'STAFF', 'ADMIN'].map((g) => ({ value: g, label: t(`expenses.groups.${g}`) }))]}
+          />
           <Row style={{ justifyContent: 'flex-end' }}>
             <Button small variant="secondary" title={t('common.cancel')} onPress={() => setEditing(null)} />
             <Button small title={t('common.save')} onPress={save} disabled={!form.nameAr.trim() || !form.nameEn.trim()} />

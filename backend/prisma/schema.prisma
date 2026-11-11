@@ -815,6 +815,14 @@ enum ExpenseStatus {
   VOIDED // cancelled with a reversing entry — never deleted
 }
 
+/// Row of the monthly report's financial summary an expense item belongs to.
+enum ExpenseGroup {
+  MAINTENANCE // صيانة
+  UTILITIES // مرافق (كهرباء، مياه…)
+  STAFF // موظفون (رواتب، نظافة، حراسة)
+  ADMIN // إدارة وأخرى
+}
+
 /// Expense items (بنود المصروفات) — each company edits its own list; defaults are created on first use.
 model ExpenseCategory {
   id            String   @id @default(uuid())
@@ -824,6 +832,7 @@ model ExpenseCategory {
   nameEn        String
   isMaintenance Boolean  @default(false) // used by default when a work order is closed with a cost
   systemKey     String? // "municipality" — the item used automatically for municipality fees
+  reportGroup   ExpenseGroup? // null = guessed from the item (dashboard/monthly-report.ts)
   isActive      Boolean  @default(true)
   sortOrder     Int      @default(0)
   createdAt     DateTime @default(now())

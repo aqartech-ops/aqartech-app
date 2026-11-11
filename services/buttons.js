@@ -79,6 +79,8 @@ export const BUTTON_GROUPS = [
     ['dashboard.newTenant', 'dashboard.newTenant', 'account-plus-outline'],
     ['dashboard.addProperty', 'properties.add', 'home-plus-outline'],
     ['dashboard.newWorkOrder', 'maintenance.add', 'wrench-outline'],
+    ['dashboard.printReport', 'report.print', 'printer-outline'],
+    ['dashboard.shareReport', 'report.pdf', 'file-pdf-box'],
   ]],
   ['properties', [
     ['properties.add', 'properties.add', 'plus'],
