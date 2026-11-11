@@ -170,6 +170,10 @@ export const rolesApi = {
 
 export const dashboardApi = {
   get: () => api.get('/dashboard'),
+  /** Monthly property report: { propertyId (empty = all), month: 'YYYY-MM' } */
+  report: (query) => api.get('/dashboard/report', query),
+  /** The same report for every property (printed pack). */
+  reportAll: (month) => api.get('/dashboard/report/all', { month }),
 };
 
 export const propertiesApi = {

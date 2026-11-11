@@ -1,15 +1,16 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Pressable, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { COLORS, FONT, RADIUS, SPACING } from '../theme';
+import { COLORS, RADIUS, SPACING } from '../theme';
 import { BREAKPOINTS } from '../services/config';
 import { useI18n } from '../i18n';
 import { useSession } from '../services/session';
 import { adminApi, dashboardApi } from '../services/api';
 import { Badge, Button, Card, ErrorBox, Loading, Row, STATUS_TONE, Screen, Txt } from '../components/ui';
-import { Money, SectionIcon } from '../components/Rial';
+import { SectionIcon } from '../components/Rial';
 import { MetricValue } from '../components/SectionAnalytics';
 import { formatDate } from '../components/Fields';
+import MonthlyReport from '../components/MonthlyReport';
 
 export default function DashboardScreen({ onNavigate }) {
   const { isAdmin } = useSession();
@@ -83,9 +84,7 @@ function CompanyDashboard({ onNavigate }) {
 
   const planName = subscription ? (lang === 'ar' ? subscription.plan.nameAr : subscription.plan.nameEn) : '—';
   const w = data?.widgets ?? {};
-  const portfolio = w.portfolio;
   const quick = data?.quickActions ?? [];
-  const pct = (r) => (r === null || r === undefined ? '—' : `${Math.round(r * 100)}%`);
 
   return (
     <Screen title={t('dashboard.hello', { name: me.user.name })} subtitle={t('dashboard.overview')}>
@@ -150,74 +149,8 @@ function CompanyDashboard({ onNavigate }) {
         </Row>
       ) : null}
 
-      {portfolio ? (
-        <Grid columns={columns}>
-          <Kpi icon="office-building-outline" label={t('dashboard.properties')} value={portfolio.properties} />
-          <Kpi icon="door" label={t('dashboard.units')} value={portfolio.total} />
-          <Kpi icon="door-open" label={t('dashboard.vacant')} value={portfolio.vacant} tone={COLORS.warning} />
-          <Kpi icon="home-percent-outline" label={t('dashboard.occupancy')} value={pct(portfolio.occupancyRate)} tone={COLORS.success} />
-        </Grid>
-      ) : null}
-
-      {w.tenants ? (
-        <Grid columns={columns}>
-          <Kpi icon="account-group-outline" label={t('tenants.count')} value={w.tenants.count} />
-          {w.tenants.leases ? <Kpi icon="file-sign" label={t('leases.activeCount')} value={w.tenants.leases.active} tone={COLORS.success} /> : null}
-          {w.tenants.leases ? <Kpi icon="calendar-alert" label={t('leases.expiring30')} value={w.tenants.leases.expiring30} tone={COLORS.danger} /> : null}
-          {w.tenants.leases ? <Kpi icon="calendar-clock" label={t('leases.expiring90')} value={w.tenants.leases.expiring90} tone={COLORS.warning} /> : null}
-        </Grid>
-      ) : null}
-
-      {w.maintenance ? (
-        <Grid columns={columns}>
-          <Kpi icon="wrench-outline" label={t('maintenance.openCount')} value={String(w.maintenance.open)} />
-          <Kpi icon="alert" label={t('maintenance.urgentCount')} value={String(w.maintenance.urgent)} tone={w.maintenance.urgent ? COLORS.danger : COLORS.primary} />
-        </Grid>
-      ) : null}
-
-      {w.financials ? (
-        <>
-          <View style={{ height: SPACING.sm }} />
-          <Grid columns={columns}>
-            <Kpi icon="rial" label={t('finance.rentIncomeMonth')} value={<Money baisa={w.financials.rentIncomeMonth} size={FONT.title} weight="weightBold" />} />
-            <Kpi
-              icon="cash-check"
-              label={t('dashboard.collection')}
-              tone={COLORS.success}
-              value={w.financials.collectionRate === null || w.financials.collectionRate === undefined ? '—' : `${w.financials.collectionRate}%`}
-              hint={t('finance.collectedOfMonth')}
-            />
-            <Kpi icon="cash-clock" label={t('finance.receivable')} value={<Money baisa={w.financials.receivable} size={FONT.title} weight="weightBold" />} />
-            <Kpi
-              icon="alert-octagon-outline"
-              label={t('dashboard.arrears')}
-              tone={COLORS.danger}
-              value={<Money baisa={w.financials.overdue} size={FONT.title} weight="weightBold" color={w.financials.overdue ? COLORS.danger : COLORS.textDark} />}
-            />
-            {w.financials.municipality ? (
-              <Kpi
-                icon="file-certificate-outline"
-                label={t('municipality.unregisteredKpi')}
-                tone={w.financials.municipality.unregistered ? COLORS.danger : COLORS.primary}
-                value={String(w.financials.municipality.unregistered)}
-              />
-            ) : null}
-            {w.financials.chequesToDeposit ? (
-              <Kpi
-                icon="checkbook"
-                label={t('cheques.stats.toDeposit')}
-                tone={w.financials.chequesToDeposit.count ? COLORS.warning : COLORS.primary}
-                value={String(w.financials.chequesToDeposit.count)}
-              />
-            ) : null}
-            <Kpi
-              icon="chart-line"
-              label={t('finance.noiMonth')}
-              value={<Money baisa={w.financials.noiMonth} size={FONT.title} weight="weightBold" color={w.financials.noiMonth < 0 ? COLORS.danger : COLORS.textDark} />}
-            />
-          </Grid>
-        </>
-      ) : null}
+      {/* the monthly property report (Liwan layout): building + month, KPIs, tables, charts, printable */}
+      {data ? <MonthlyReport onNavigate={onNavigate} /> : null}
 
       {w.metrics ? (
         <>

@@ -5,6 +5,7 @@ import { ActivityService } from '../common/activity.service.js';
 import type { UserAuth } from '../common/auth-context.js';
 import { today } from '../common/dates.js';
 import * as v from '../common/validate.js';
+import { EXPENSE_GROUPS, type ExpenseGroup } from '../dashboard/monthly-report.js';
 import { LedgerService } from './ledger.service.js';
 import { chargeLines, defaultBearer, expenseLines } from './journal.js';
 import { FieldsService } from '../fields/fields.module.js';
@@ -15,17 +16,17 @@ export const BEARERS = ['OWNER', 'COMPANY', 'TENANT'] as const;
 export const PAID_FROM = ['CASH', 'BANK'] as const;
 
 /** Starting list of expense items; each company edits its own copy. */
-const DEFAULT_CATEGORIES: { nameAr: string; nameEn: string; isMaintenance?: boolean; systemKey?: string }[] = [
-  { nameAr: 'صيانة وإصلاحات', nameEn: 'Maintenance & repairs', isMaintenance: true },
-  { nameAr: 'كهرباء ومياه', nameEn: 'Electricity & water' },
-  { nameAr: 'رواتب', nameEn: 'Salaries' },
-  { nameAr: 'نظافة', nameEn: 'Cleaning' },
-  { nameAr: 'حراسة وأمن', nameEn: 'Security' },
-  { nameAr: 'تأمين', nameEn: 'Insurance' },
-  { nameAr: 'رسوم بلدية وحكومية', nameEn: 'Municipality & government fees', systemKey: 'municipality' },
-  { nameAr: 'تسويق وعمولات', nameEn: 'Marketing & commissions' },
-  { nameAr: 'مصاريف إدارية', nameEn: 'Administrative' },
-  { nameAr: 'أخرى', nameEn: 'Other' },
+const DEFAULT_CATEGORIES: { nameAr: string; nameEn: string; isMaintenance?: boolean; systemKey?: string; reportGroup: ExpenseGroup }[] = [
+  { nameAr: 'صيانة وإصلاحات', nameEn: 'Maintenance & repairs', isMaintenance: true, reportGroup: 'MAINTENANCE' },
+  { nameAr: 'كهرباء ومياه', nameEn: 'Electricity & water', reportGroup: 'UTILITIES' },
+  { nameAr: 'رواتب', nameEn: 'Salaries', reportGroup: 'STAFF' },
+  { nameAr: 'نظافة', nameEn: 'Cleaning', reportGroup: 'STAFF' },
+  { nameAr: 'حراسة وأمن', nameEn: 'Security', reportGroup: 'STAFF' },
+  { nameAr: 'تأمين', nameEn: 'Insurance', reportGroup: 'ADMIN' },
+  { nameAr: 'رسوم بلدية وحكومية', nameEn: 'Municipality & government fees', systemKey: 'municipality', reportGroup: 'ADMIN' },
+  { nameAr: 'تسويق وعمولات', nameEn: 'Marketing & commissions', reportGroup: 'ADMIN' },
+  { nameAr: 'مصاريف إدارية', nameEn: 'Administrative', reportGroup: 'ADMIN' },
+  { nameAr: 'أخرى', nameEn: 'Other', reportGroup: 'ADMIN' },
 ];
 
 const INCLUDE = {
@@ -82,6 +83,8 @@ export class ExpensesService {
     if (!id || src.nameEn !== undefined) data.nameEn = v.requiredString(src, 'nameEn', 80);
     if (src.isActive !== undefined) data.isActive = v.optionalBoolean(src, 'isActive');
     if (src.sortOrder !== undefined) data.sortOrder = v.nonNegativeInt(src, 'sortOrder');
+    // row of the monthly report (empty = guessed from the item's name)
+    if (src.reportGroup !== undefined) data.reportGroup = src.reportGroup === null || src.reportGroup === '' ? null : v.oneOf(src, 'reportGroup', EXPENSE_GROUPS);
     if (id) {
       await this.findCategory(auth, id, true);
       const updated = await this.prisma.expenseCategory.update({ where: { id }, data });
@@ -317,7 +320,7 @@ export class ExpensesService {
       (await this.prisma.expenseCategory.findFirst({ where: { companyId, nameEn: 'Municipality & government fees' } }));
     if (found) return found.id;
     const def = DEFAULT_CATEGORIES.find((c) => c.systemKey === 'municipality')!;
-    const created = await this.prisma.expenseCategory.create({ data: { companyId, nameAr: def.nameAr, nameEn: def.nameEn, systemKey: 'municipality', sortOrder: 99 } });
+    const created = await this.prisma.expenseCategory.create({ data: { companyId, nameAr: def.nameAr, nameEn: def.nameEn, systemKey: 'municipality', reportGroup: def.reportGroup, sortOrder: 99 } });
     return created.id;
   }
 
@@ -327,7 +330,7 @@ export class ExpensesService {
     const count = await this.prisma.expenseCategory.count({ where: { companyId } });
     if (count > 0) return;
     await this.prisma.expenseCategory.createMany({
-      data: DEFAULT_CATEGORIES.map((c, i) => ({ companyId, nameAr: c.nameAr, nameEn: c.nameEn, isMaintenance: c.isMaintenance ?? false, systemKey: c.systemKey ?? null, sortOrder: i + 1 })),
+      data: DEFAULT_CATEGORIES.map((c, i) => ({ companyId, nameAr: c.nameAr, nameEn: c.nameEn, isMaintenance: c.isMaintenance ?? false, systemKey: c.systemKey ?? null, reportGroup: c.reportGroup, sortOrder: i + 1 })),
     });
   }
 
