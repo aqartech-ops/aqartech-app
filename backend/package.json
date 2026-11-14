@@ -27,7 +27,8 @@
     "prisma:generate": "prisma generate",
     "admin:reset-password": "node prisma/reset-admin-password.mjs",
     "ocr:setup": "node scripts/ocr-setup.mjs",
-    "postinstall": "node scripts/ocr-setup.mjs --quiet"
+    "postinstall": "node scripts/ocr-setup.mjs --quiet",
+    "demo:reset": "node scripts/demo-reset.mjs"
   },
   "dependencies": {
     "@nestjs/common": "^12.0.1",
