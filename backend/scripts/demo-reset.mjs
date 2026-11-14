@@ -134,13 +134,13 @@ const TENANTS = [
 const BANKS = ['بنك مسقط', 'البنك الوطني العماني', 'بنك ظفار', 'بنك صحار الدولي'];
 
 async function build(companyId) {
-  const cats = await get('/expense-categories?all=1');
+  const cats = await get('/finance/expense-categories?all=1');
   const cat = (key) => {
     const c = cats.find((x) => x.nameEn.toLowerCase().startsWith(key));
     if (!c) throw new Error(`expense item "${key}" not found`);
     return c.id;
   };
-  const vendor = await post('/vendors', { name: 'مؤسسة الإتقان للصيانة', phone: '+96895001122', specialty: 'تكييف وسباكة وكهرباء' });
+  const vendor = await post('/maintenance/vendors', { name: 'مؤسسة الإتقان للصيانة', phone: '+96895001122', specialty: 'تكييف وسباكة وكهرباء' });
 
   const properties = [];
   for (const b of BUILDINGS) {
@@ -189,14 +189,14 @@ async function build(companyId) {
       const date = minDate(new Date(c.dueDate.getTime() + ((i % 3) + 1) * DAY), today);
       if (x.method === 'CHEQUE') {
         const number = String(chequeNo++);
-        const payment = await post('/payments', { leaseId: lease.id, amount: c.amount, date: iso(date), method: 'CHEQUE', chequeNo: number, bankName: bank, chequeDate: iso(date) });
+        const payment = await post('/finance/payments', { leaseId: lease.id, amount: c.amount, date: iso(date), method: 'CHEQUE', chequeNo: number, bankName: bank, chequeDate: iso(date) });
         // the bank cleared it a few days later (unless that is still in the future)
-        const cheque = (await get(`/cheques?leaseId=${lease.id}`)).find((q) => q.number === number);
+        const cheque = (await get(`/finance/cheques?leaseId=${lease.id}`)).find((q) => q.number === number);
         const cleared = new Date(date.getTime() + 3 * DAY);
-        if (cheque && cleared <= today) await post(`/cheques/${cheque.id}/clear`, { date: iso(cleared) });
+        if (cheque && cleared <= today) await post(`/finance/cheques/${cheque.id}/clear`, { date: iso(cleared) });
         void payment;
       } else {
-        await post('/payments', { leaseId: lease.id, amount: c.amount, date: iso(date), method: x.method, ...(x.method === 'BANK_TRANSFER' ? { reference: `TRF-${iso(date).replace(/-/g, '')}-${i + 1}`, bankName: bank } : {}) });
+        await post('/finance/payments', { leaseId: lease.id, amount: c.amount, date: iso(date), method: x.method, ...(x.method === 'BANK_TRANSFER' ? { reference: `TRF-${iso(date).replace(/-/g, '')}-${i + 1}`, bankName: bank } : {}) });
       }
     }
     // post-dated cheques for the coming months (one due within a week → deposit reminder)
@@ -204,7 +204,7 @@ async function build(companyId) {
       const nextDue = detail.schedule.filter((s) => new Date(s.dueDate) > today).slice(0, 2);
       for (const [k, s] of nextDue.entries()) {
         const dueDate = k === 0 && x.pay === 'postDated' ? plusDays(4) : new Date(s.dueDate);
-        await post('/cheques', { leaseId: lease.id, number: String(chequeNo++), bankName: bank, drawer: x.t.name, amount: s.amount, dueDate: iso(dueDate) });
+        await post('/finance/cheques', { leaseId: lease.id, number: String(chequeNo++), bankName: bank, drawer: x.t.name, amount: s.amount, dueDate: iso(dueDate) });
       }
     }
     console.log(`  + ${x.t.name} → ${b.name} ${x.unit} (${x.rent} OMR, ${{ onTime: 'pays on time', lastMonthLate: 'owes this month', stopped: '90+ days in arrears', postDated: 'post-dated cheques', cheques: 'pays by cheque', twoLate: 'owes 2 months, lease ending soon' }[x.pay]})`);
@@ -214,25 +214,25 @@ async function build(companyId) {
   for (const [n, b] of properties.entries()) {
     for (let back = 2; back >= 0; back--) {
       const d = minDate(new Date(monthStart(back).getTime() + 9 * DAY), today);
-      await post('/expenses', { propertyId: b.property.id, categoryId: cat('electricity'), amount: omr(45 + n * 12 + back * 3), date: iso(d), paidFrom: 'BANK', bearer: 'OWNER', description: 'كهرباء ومياه المناطق المشتركة', invoiceNo: `NAMA-${n + 1}${back}` });
-      await post('/expenses', { propertyId: b.property.id, categoryId: cat('cleaning'), amount: omr(60), date: iso(minDate(new Date(d.getTime() + 5 * DAY), today)), paidFrom: 'CASH', bearer: 'OWNER', description: 'نظافة المبنى الشهرية' });
+      await post('/finance/expenses', { propertyId: b.property.id, categoryId: cat('electricity'), amount: omr(45 + n * 12 + back * 3), date: iso(d), paidFrom: 'BANK', bearer: 'OWNER', description: 'كهرباء ومياه المناطق المشتركة', invoiceNo: `NAMA-${n + 1}${back}` });
+      await post('/finance/expenses', { propertyId: b.property.id, categoryId: cat('cleaning'), amount: omr(60), date: iso(minDate(new Date(d.getTime() + 5 * DAY), today)), paidFrom: 'CASH', bearer: 'OWNER', description: 'نظافة المبنى الشهرية' });
     }
-    await post('/expenses', { propertyId: b.property.id, categoryId: cat('insurance'), amount: omr(120 + n * 30), date: iso(new Date(monthStart(1).getTime() + 2 * DAY)), paidFrom: 'BANK', bearer: 'OWNER', description: 'تأمين المبنى السنوي' });
+    await post('/finance/expenses', { propertyId: b.property.id, categoryId: cat('insurance'), amount: omr(120 + n * 30), date: iso(new Date(monthStart(1).getTime() + 2 * DAY)), paidFrom: 'BANK', bearer: 'OWNER', description: 'تأمين المبنى السنوي' });
 
     // maintenance: one job done last month (its cost becomes the expense), one open now
     const firstUnit = Object.values(b.units)[0];
-    const done = await post('/work-orders', { propertyId: b.property.id, unitId: firstUnit.id, title: n === 0 ? 'صيانة مكيف الشقة' : 'تسريب مياه في المطبخ', description: n === 0 ? 'المكيف لا يبرد — تنظيف وتعبئة غاز' : 'تغيير محبس وإصلاح التسريب', priority: 'HIGH', vendorId: vendor.id, bearer: 'OWNER', estimatedCost: omr(n === 0 ? 85 : 60), reportedBy: 'المستأجر' });
+    const done = await post('/maintenance/work-orders', { propertyId: b.property.id, unitId: firstUnit.id, title: n === 0 ? 'صيانة مكيف الشقة' : 'تسريب مياه في المطبخ', description: n === 0 ? 'المكيف لا يبرد — تنظيف وتعبئة غاز' : 'تغيير محبس وإصلاح التسريب', priority: 'HIGH', vendorId: vendor.id, bearer: 'OWNER', estimatedCost: omr(n === 0 ? 85 : 60), reportedBy: 'المستأجر' });
     const doneDate = new Date(monthStart(1).getTime() + (12 + n * 3) * DAY);
-    await post(`/work-orders/${done.id}/start`);
-    await post(`/work-orders/${done.id}/complete`, { amount: omr(n === 0 ? 92.5 : 58), date: iso(doneDate), paidFrom: 'CASH', invoiceNo: `ITQ-${100 + n}` });
+    await post(`/maintenance/work-orders/${done.id}/start`);
+    await post(`/maintenance/work-orders/${done.id}/complete`, { amount: omr(n === 0 ? 92.5 : 58), date: iso(doneDate), paidFrom: 'CASH', invoiceNo: `ITQ-${100 + n}` });
     await prisma.workOrder.update({ where: { id: done.id }, data: { createdAt: new Date(doneDate.getTime() - 3 * DAY), startedAt: new Date(doneDate.getTime() - 2 * DAY) } });
-    const open = await post('/work-orders', { propertyId: b.property.id, title: n === 0 ? 'إصلاح إنارة الدرج' : 'صيانة مضخة المياه', description: 'بلاغ من الحارس', priority: 'NORMAL', vendorId: vendor.id, bearer: 'OWNER', estimatedCost: omr(n === 0 ? 35 : 120), scheduledDate: iso(plusDays(3)) });
+    const open = await post('/maintenance/work-orders', { propertyId: b.property.id, title: n === 0 ? 'إصلاح إنارة الدرج' : 'صيانة مضخة المياه', description: 'بلاغ من الحارس', priority: 'NORMAL', vendorId: vendor.id, bearer: 'OWNER', estimatedCost: omr(n === 0 ? 35 : 120), scheduledDate: iso(plusDays(3)) });
     await prisma.workOrder.update({ where: { id: open.id }, data: { createdAt: plusDays(-2) } });
   }
 
   // the first owner received last month's money
   const b0 = properties[0];
-  await post('/owner-payouts', { ownerId: b0.owner.id, propertyId: b0.property.id, amount: omr(450), date: iso(new Date(monthStart(0).getTime() + 4 * DAY) > today ? today : new Date(monthStart(0).getTime() + 4 * DAY)), paidFrom: 'BANK', reference: 'TRF-OWNER-001', notes: 'تحويل مستحقات الشهر السابق' });
+  await post('/finance/owner-payouts', { ownerId: b0.owner.id, propertyId: b0.property.id, amount: omr(450), date: iso(new Date(monthStart(0).getTime() + 4 * DAY) > today ? today : new Date(monthStart(0).getTime() + 4 * DAY)), paidFrom: 'BANK', reference: 'TRF-OWNER-001', notes: 'تحويل مستحقات الشهر السابق' });
   console.log('  + expenses (utilities, cleaning, insurance), 4 work orders, 1 owner transfer');
 }
 
