@@ -110,6 +110,8 @@ export function Field({ label, hint, error, secure, style, inputStyle, onFocus, 
   const [hidden, setHidden] = useState(true);
   const reveal = useRevealOnFocus(onFocus);
   if (hiddenByAdmin) return null; // a field hidden by the platform team (الحقول)
+  // a form whose values are not loaded yet passes undefined: keep the input controlled from the first render
+  const controlled = 'value' in inputProps ? { value: inputProps.value ?? '' } : null;
   return (
     <View style={[{ gap: SPACING.xs }, style]}>
       {label ? <Txt weight="weightMedium" size="small">{label}</Txt> : null}
@@ -119,6 +121,7 @@ export function Field({ label, hint, error, secure, style, inputStyle, onFocus, 
           secureTextEntry={secure && hidden}
           style={[styles.input, { textAlign: align }, inputStyle]}
           {...inputProps}
+          {...controlled}
           ref={reveal.ref}
           onFocus={reveal.onFocus}
         />

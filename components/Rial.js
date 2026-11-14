@@ -85,7 +85,7 @@ export function MoneyField({ label, value, onChangeText, error, hint, hidden }) 
         <TextInput
           ref={reveal.ref}
           onFocus={reveal.onFocus}
-          value={value}
+          value={value ?? ''}
           onChangeText={(t) => onChangeText(t.replace(/[٠-٩]/g, (d) => String('٠١٢٣٤٥٦٧٨٩'.indexOf(d))).replace(/[٫]/g, '.').replace(/[^0-9.,]/g, ''))}
           keyboardType="decimal-pad"
           inputMode="decimal"
