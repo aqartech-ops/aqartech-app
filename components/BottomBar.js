@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Keyboard, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { SectionIcon } from './Rial';
-import { COLORS, FONT, RADIUS, SHADOWS, SPACING } from '../theme';
+import { COLORS, FONT, SHADOWS, SPACING } from '../theme';
 import { useI18n } from '../i18n';
 
 // Preferred order of the side tabs; if a section is hidden for this user/plan the next one fills its place.
@@ -48,8 +48,8 @@ export default function BottomBar({ items, active, onSelect, onMore, bottomInset
   const homeSelected = active === CENTER;
 
   return (
-    <View style={[styles.wrap, { paddingBottom: Math.max(bottomInset, SPACING.sm) }]} pointerEvents="box-none">
-      <View style={[styles.bar, { flexDirection: row }]}>
+    <View style={styles.wrap} pointerEvents="box-none">
+      <View style={[styles.bar, { flexDirection: row, paddingBottom: Math.max(bottomInset, SPACING.sm) }]}>
         {left.map(sideTab)}
 
         {center ? (
@@ -95,20 +95,17 @@ function useKeyboardOpen() {
 const CENTER_SIZE = 62;
 
 const styles = StyleSheet.create({
-  wrap: { paddingHorizontal: SPACING.md, paddingTop: SPACING.lg, backgroundColor: 'transparent' },
+  // a flat white bar along the bottom edge, like the web's top navigation (Ivory & Emerald)
+  wrap: { paddingTop: SPACING.lg, backgroundColor: 'transparent' },
   bar: {
     alignItems: 'flex-end',
     justifyContent: 'space-around',
-    backgroundColor: COLORS.primarySoft,
-    borderRadius: RADIUS.pill,
-    borderWidth: 1,
-    borderColor: COLORS.borderStrong,
+    backgroundColor: COLORS.surface,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.border,
     paddingHorizontal: SPACING.sm,
-    paddingVertical: SPACING.sm,
+    paddingTop: SPACING.sm,
     width: '100%',
-    maxWidth: 640,
-    alignSelf: 'center',
-    ...SHADOWS.floating,
   },
   tab: { flex: 1, alignItems: 'center', justifyContent: 'flex-end', gap: 2, paddingVertical: 2, minHeight: 48 },
   tabLabel: { fontSize: FONT.small, textAlign: 'center' },

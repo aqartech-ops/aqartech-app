@@ -35,11 +35,11 @@ export function ownerStatementHtml(st, t, lang) {
   * { box-sizing: border-box; }
   body { font-family: -apple-system, "Segoe UI", Tahoma, Arial, sans-serif; color: #1f2937; margin: 0; padding: 28px; font-size: 13px; }
   .doc { max-width: 760px; margin: 0 auto; }
-  .head { display: flex; justify-content: space-between; gap: 16px; border-bottom: 2px solid #8F6A4C; padding-bottom: 12px; margin-bottom: 16px; }
+  .head { display: flex; justify-content: space-between; gap: 16px; border-bottom: 2px solid #0F4D3F; padding-bottom: 12px; margin-bottom: 16px; }
   .company { font-size: 20px; font-weight: 700; }
-  .title { font-size: 18px; font-weight: 700; color: #8F6A4C; text-align: end; }
+  .title { font-size: 18px; font-weight: 700; color: #0F4D3F; text-align: end; }
   .muted { color: #6b7280; font-size: 12px; }
-  h3 { font-size: 14px; margin: 18px 0 6px; color: #8F6A4C; }
+  h3 { font-size: 14px; margin: 18px 0 6px; color: #0F4D3F; }
   table { width: 100%; border-collapse: collapse; }
   th, td { padding: 7px 4px; border-bottom: 1px solid #f0ebe4; text-align: start; vertical-align: top; }
   th { font-size: 12px; color: #6b7280; font-weight: 600; }
@@ -47,7 +47,7 @@ export function ownerStatementHtml(st, t, lang) {
   .money { display: inline-flex; align-items: center; gap: 4px; direction: ltr; font-variant-numeric: tabular-nums; }
   .rial svg { height: 0.72em; width: auto; display: block; }
   .summary td { font-size: 14px; }
-  .total td { font-weight: 700; font-size: 16px; border-top: 2px solid #8F6A4C; }
+  .total td { font-weight: 700; font-size: 16px; border-top: 2px solid #0F4D3F; }
   .void { margin: 12px 0; padding: 10px; border: 2px solid #b91c1c; color: #b91c1c; border-radius: 8px; font-weight: 700; text-align: center; }
 </style>
 </head>

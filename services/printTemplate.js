@@ -174,10 +174,10 @@ export function templateHtml(template, data, opts) {
   * { box-sizing: border-box; }
   body { font-family: -apple-system, "Segoe UI", Tahoma, Arial, sans-serif; color: #1f2937; margin: 0; padding: 24px; line-height: 1.7; font-size: ${paper === 'A5' ? 13 : 15}px; }
   .doc { max-width: 760px; margin: 0 auto; }
-  .head { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; border-bottom: 2px solid #8F6A4C; padding-bottom: 12px; margin-bottom: 20px; }
+  .head { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; border-bottom: 2px solid #0F4D3F; padding-bottom: 12px; margin-bottom: 20px; }
   .company { font-size: 1.35em; font-weight: 700; }
   .muted { color: #6b7280; font-size: 0.85em; }
-  h1 { font-size: 1.3em; color: #8F6A4C; text-align: center; margin: 8px 0 18px; }
+  h1 { font-size: 1.3em; color: #0F4D3F; text-align: center; margin: 8px 0 18px; }
   h2 { font-size: 1.05em; margin: 18px 0 6px; }
   p { margin: 0 0 12px; }
   ul { margin: 0 0 12px; padding-inline-start: 22px; }

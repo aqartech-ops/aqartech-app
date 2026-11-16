@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Pressable, StyleSheet, View, useWindowDimensions } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { COLORS, FONT, RADIUS, SPACING } from '../theme';
 import { BREAKPOINTS } from '../services/config';
@@ -10,15 +10,14 @@ import { AGING_COLORS, monthlyReportHtml, monthLabel, overviewText, pctText, rec
 import { useSession } from '../services/session';
 import { printHtml, shareHtml } from '../services/receipt';
 import { BarChart, Donut, Legend } from './Charts';
-import { PickerButton } from './Fields';
 import { Money } from './Rial';
-import { Badge, Button, Card, EmptyState, ErrorBox, Loading, Row, Sheet, Txt, errorText } from './ui';
+import { Badge, Button, Card, EmptyState, ErrorBox, Row, Sheet, Txt, errorText } from './ui';
 
 // Monthly property report on the dashboard (التقرير الشهري للعقار): one building or all, one month.
 // Same content and order as the Liwan monthly report, in our design. Every number is computed by the server
 // from the books; a part only arrives when the user may see its section.
 
-const GROUP_COLORS = ['#1F6E66', '#2B6CB0', '#8F6A4C', '#6B7A8F', '#B7791F'];
+const GROUP_COLORS = ['#0F4D3F', '#A9864A', '#24609B', '#6B7A8F', '#8A6416'];
 
 const amount = (baisa, lang) => formatOMR(baisa, lang, { withCurrency: false });
 
@@ -91,24 +90,27 @@ export default function MonthlyReport({ onNavigate }) {
 
   return (
     <View style={{ gap: SPACING.md }}>
-      {/* controls */}
-      <Card style={{ gap: SPACING.md }}>
-        <View style={[styles.controls, { flexDirection: medium ? row : 'column' }]}>
-          <View style={{ flex: 1, minWidth: 200 }}>
-            <PickerButton label={t('report.property')} value={propertyName} onPress={() => setPicking('property')} />
-          </View>
-          <View style={{ flex: 1, minWidth: 200 }}>
-            <PickerButton label={t('report.month')} value={monthLabel(month, t) + (month === months[0] ? ` · ${t('report.live')}` : '')} onPress={() => setPicking('month')} />
+      {/* the emerald band: which report, the buttons, the four KPIs (Ivory & Emerald) */}
+      <View style={styles.band}>
+        <View style={[styles.bandHead, { flexDirection: medium ? row : 'column' }]}>
+          <View style={{ flex: 1, gap: 6 }}>
+            <Txt size="small" style={{ color: COLORS.bandMuted }}>{t('report.title')}</Txt>
+            <Txt display weight="weightBold" style={{ color: COLORS.bandText, fontSize: medium ? 30 : 22, lineHeight: medium ? 44 : 34 }}>
+              {`${propertyName} — ${monthLabel(month, t)}`}
+            </Txt>
+            {data ? <Txt size="small" style={{ color: COLORS.bandMuted }}>{bandLine(data, t)}</Txt> : null}
           </View>
           <Row style={{ flexWrap: 'wrap', alignSelf: medium ? 'flex-end' : 'stretch' }}>
-            <Button id="dashboard.printReport" icon="printer-outline" title={t('report.print')} loading={printing} disabled={!data} onPress={() => print(false)} />
-            <Button id="dashboard.shareReport" variant="secondary" icon="file-pdf-box" title={t('report.pdf')} disabled={!data || printing} onPress={() => print(true)} />
+            <Button id="dashboard.pickProperty" variant="onBand" small={!medium} icon="home-city-outline" title={propertyName} onPress={() => setPicking('property')} />
+            <Button id="dashboard.pickMonth" variant="onBand" small={!medium} icon="calendar-month-outline" title={monthLabel(month, t) + (month === months[0] ? ` · ${t('report.live')}` : '')} onPress={() => setPicking('month')} />
+            <Button id="dashboard.printReport" variant="onBand" small={!medium} icon="printer-outline" title={t('report.print')} loading={printing} disabled={!data} onPress={() => print(false)} />
+            <Button id="dashboard.shareReport" variant="accent" small={!medium} icon="file-pdf-box" title={t('report.pdf')} disabled={!data || printing} onPress={() => print(true)} />
           </Row>
         </View>
-      </Card>
+        {data ? <BandKpis k={data.kpis ?? {}} medium={medium} /> : !error ? <ActivityIndicator color={COLORS.accentSoft} style={{ paddingVertical: SPACING.xl }} /> : null}
+      </View>
 
       <ErrorBox error={error} onRetry={load} />
-      {!data && !error ? <Loading /> : null}
       {data ? <ReportBody data={data} wide={wide} medium={medium} onNavigate={onNavigate} /> : null}
 
       <OptionSheet
@@ -144,6 +146,7 @@ function ReportBody({ data, wide, medium, onNavigate }) {
   const info = data.info ?? {};
   const k = data.kpis ?? {};
   const hasAnything = k.occupancy || k.collectionRate || data.financial || data.workOrders;
+  void wide;
   if (!hasAnything) {
     return (
       <Card>
@@ -156,27 +159,8 @@ function ReportBody({ data, wide, medium, onNavigate }) {
 
   return (
     <View style={{ gap: SPACING.md }}>
-      {/* property band */}
-      <View style={[styles.band, { flexDirection: row }]}>
-        <BandItem label={t('report.propertyLabel')} value={name} />
-        {info.owners ? <BandItem label={t('report.ownerLabel')} value={info.owners.length ? info.owners.join('، ') : '—'} /> : null}
-        {info.address ? <BandItem label={t('report.addressLabel')} value={info.address} /> : null}
-        <BandItem
-          label={info.floors ? t('report.floorsLabel') : t('report.unitsLabel')}
-          value={[info.floors ? String(info.floors) : null, t('report.unitsCount', { count: info.units?.total ?? 0 })].filter(Boolean).join(' · ')}
-        />
-        <BandItem label={t('report.monthLabel')} value={monthLabel(data.month, t)} />
-      </View>
-
       <Alerts alerts={data.alerts} onNavigate={onNavigate} />
 
-      {/* KPIs */}
-      <View style={[styles.kpis, { flexDirection: row }]}>
-        {k.occupancy ? <Kpi label={t('report.kpi.occupancy')} value={pctText(k.occupancy.value)} change={k.occupancy.change} unit="pts" color={COLORS.info} /> : null}
-        {k.collectionRate ? <Kpi label={t('report.kpi.collection')} value={pctText(k.collectionRate.value)} change={k.collectionRate.change} unit="pts" color={COLORS.success} /> : null}
-        {k.noi ? <Kpi label={t('report.kpi.noi')} value={amount(k.noi.value, lang)} change={k.noi.change} unit="money" color={COLORS.primaryDark} negative={k.noi.value < 0} /> : null}
-        {k.arrears ? <Kpi label={t('report.kpi.arrears')} value={amount(k.arrears.value, lang)} change={k.arrears.change} unit="money" color={COLORS.danger} valueColor={COLORS.danger} lowerIsBetter /> : null}
-      </View>
       <Txt muted size="small">{t(data.current ? 'report.compareLive' : 'report.compare')}</Txt>
 
       <Overview data={data} name={name} />
@@ -216,40 +200,59 @@ function Columns({ columns, children }) {
   );
 }
 
-function BandItem({ label, value }) {
-  const { row } = useI18n();
+/** The line under the band's title: owner · address · floors and units. */
+function bandLine(data, t) {
+  const info = data.info ?? {};
+  return [
+    info.owners?.length ? `${t('report.ownerLabel')} ${info.owners.join('، ')}` : null,
+    info.address,
+    info.floors ? `${t('report.floorsLabel')} ${info.floors}` : null,
+    t('report.unitsCount', { count: info.units?.total ?? 0 }),
+    t(data.current ? 'report.liveNote' : 'report.closedNote'),
+  ]
+    .filter(Boolean)
+    .join(' · ');
+}
+
+function BandKpis({ k, medium }) {
+  const { t, lang, row } = useI18n();
+  const cards = [
+    k.occupancy && { key: 'occ', label: t('report.kpi.occupancy'), value: pctText(k.occupancy.value), change: k.occupancy.change, unit: 'pts', color: COLORS.bandText },
+    k.collectionRate && { key: 'col', label: t('report.kpi.collection'), value: pctText(k.collectionRate.value), change: k.collectionRate.change, unit: 'pts', color: COLORS.bandText },
+    k.noi && { key: 'noi', label: t('report.kpi.noi'), value: amount(k.noi.value, lang), change: k.noi.change, unit: 'money', color: k.noi.value < 0 ? BAND_BAD : COLORS.accentSoft },
+    k.arrears && { key: 'arr', label: t('report.kpi.arrears'), value: amount(k.arrears.value, lang), change: k.arrears.change, unit: 'money', color: BAND_BAD, lowerIsBetter: true },
+  ].filter(Boolean);
+  if (!cards.length) return null;
   return (
-    <View style={[styles.bandItem, { flexDirection: row }]}>
-      <Txt size="small" weight="weightBold" style={{ color: COLORS.onPrimary }}>{label}</Txt>
-      <Txt size="small" style={{ color: COLORS.onPrimary }}>{value}</Txt>
+    <View style={[styles.kpiGrid, { flexDirection: row }]}>
+      {cards.map((c) => (
+        <View key={c.key} style={[styles.kpi, { flexBasis: medium ? 200 : '45%' }]}>
+          <Txt size="small" style={{ color: COLORS.bandMuted }}>{c.label}</Txt>
+          <Txt display weight="weightBold" style={{ color: c.color, fontSize: medium ? 32 : 22, lineHeight: medium ? 46 : 34 }} numberOfLines={1} adjustsFontSizeToFit>
+            {c.value}
+          </Txt>
+          <Change change={c.change} unit={c.unit} lowerIsBetter={c.lowerIsBetter} />
+        </View>
+      ))}
     </View>
   );
 }
 
-function Kpi({ label, value, change, unit, color, valueColor, negative, lowerIsBetter }) {
+const BAND_GOOD = '#B9E2C8';
+const BAND_BAD = '#F2B8AE';
+
+function Change({ change, unit, lowerIsBetter }) {
   const { t, lang, row } = useI18n();
-  let changeText = null;
-  let tone = COLORS.textMuted;
-  if (change !== null && change !== undefined) {
-    const sign = change > 0 ? '+' : change < 0 ? '−' : '';
-    const abs = Math.abs(change);
-    changeText = t(unit === 'pts' ? 'report.changePts' : 'report.changeMoney', { value: `${sign}${unit === 'pts' ? abs : amount(abs, lang)}` });
-    const good = lowerIsBetter ? change < 0 : change > 0;
-    tone = change === 0 ? COLORS.textMuted : good ? COLORS.success : COLORS.danger;
-  }
+  if (change === null || change === undefined) return <Txt size="small" style={{ color: COLORS.bandMuted }}> </Txt>;
+  const abs = Math.abs(change);
+  const sign = change > 0 ? '+' : change < 0 ? '−' : '';
+  const text = change === 0 ? t('report.noChange') : t(unit === 'pts' ? 'report.changePts' : 'report.changeMoney', { value: `${sign}${unit === 'pts' ? abs : amount(abs, lang)}` });
+  const good = lowerIsBetter ? change < 0 : change > 0;
+  const tone = change === 0 ? COLORS.bandMuted : good ? BAND_GOOD : BAND_BAD;
   return (
-    <View style={[styles.kpi, { flexDirection: row }]}>
-      <View style={[styles.kpiAccent, { backgroundColor: color }]} />
-      <View style={styles.kpiBody}>
-        <Txt weight="weightBold" style={{ fontSize: 28, color: valueColor ?? (negative ? COLORS.danger : color) }}>{value}</Txt>
-        <Txt muted>{label}</Txt>
-        {changeText ? (
-          <View style={{ flexDirection: row, alignItems: 'center', gap: 4 }}>
-            <MaterialCommunityIcons name={change > 0 ? 'arrow-up' : change < 0 ? 'arrow-down' : 'minus'} size={14} color={tone} />
-            <Txt size="small" style={{ color: tone }}>{changeText}</Txt>
-          </View>
-        ) : null}
-      </View>
+    <View style={{ flexDirection: row, alignItems: 'center', gap: 4 }}>
+      {change !== 0 ? <MaterialCommunityIcons name={change > 0 ? 'arrow-up' : 'arrow-down'} size={13} color={tone} /> : null}
+      <Txt size="small" style={{ color: tone }}>{text}</Txt>
     </View>
   );
 }
@@ -276,7 +279,7 @@ function Alerts({ alerts, onNavigate }) {
   return (
     <View style={[styles.chips, { flexDirection: row }]}>
       {chips.map((c) => (
-        <Pressable key={c.key} onPress={c.go} style={[styles.chip, c.tone === 'warning' ? styles.chipWarn : styles.chipDanger]}>
+        <Pressable key={c.key} onPress={c.go} accessibilityRole="link" style={({ hovered }) => [styles.chip, c.tone === 'warning' ? styles.chipWarn : styles.chipDanger, hovered && { opacity: 0.85 }]}>
           <Txt size="small" weight="weightMedium" style={{ color: c.tone === 'warning' ? COLORS.warning : COLORS.danger }}>{c.text}</Txt>
         </Pressable>
       ))}
@@ -289,41 +292,33 @@ function Overview({ data, name }) {
   const text = overviewText(data, name, t, lang);
   if (!text) return null;
   return (
-    <Card style={{ gap: SPACING.sm, backgroundColor: COLORS.surfaceSoft }}>
-      <Txt weight="weightBold" style={{ color: COLORS.primaryDark }}>{t('report.overviewTitle', { name })}</Txt>
-      <Txt style={{ lineHeight: 24 }}>{text}</Txt>
+    <Card style={{ gap: SPACING.sm, padding: SPACING.xl }}>
+      <Txt display weight="weightBold" size="medium" style={{ color: COLORS.primary }}>{t('report.overviewTitle', { name })}</Txt>
+      <Txt style={{ lineHeight: 26 }}>{text}</Txt>
     </Card>
   );
 }
 
 // ---------------------------------------------------------------- tables
 
-function Table({ icon, title, rows }) {
-  const { t, lang, row } = useI18n();
+function Table({ title, rows }) {
+  const { lang, row, align } = useI18n();
+  const end = align === 'right' ? 'left' : 'right'; // amounts line up at the far edge
   return (
-    <View style={{ gap: SPACING.sm }}>
-      <Row>
-        <MaterialCommunityIcons name={icon} size={20} color={COLORS.primaryDark} />
-        <Txt size="medium" weight="weightBold">{title}</Txt>
-      </Row>
-      <Card padded={false} style={{ overflow: 'hidden' }}>
-        <View style={[styles.tr, styles.th, { flexDirection: row }]}>
-          <Txt size="small" weight="weightBold" style={styles.amountCol}>{t('report.amount')}</Txt>
-          <Txt size="small" weight="weightBold" style={{ flex: 1 }}>{t('report.description')}</Txt>
-        </View>
-        {rows.filter(Boolean).map((r, i) => (
-          <View key={r.label} style={[styles.tr, { flexDirection: row }, i % 2 === 1 && { backgroundColor: COLORS.surfaceSoft }, r.total && styles.totalRow]}>
-            <Txt weight={r.total ? 'weightBold' : 'weightMedium'} style={[styles.amountCol, { color: r.value < 0 ? COLORS.danger : COLORS.textDark }]}>
-              {r.value === null || r.value === undefined ? '—' : amount(r.value, lang)}
-            </Txt>
-            <View style={{ flex: 1 }}>
-              <Txt weight={r.total ? 'weightBold' : undefined}>{r.label}</Txt>
-              {r.hint ? <Txt muted size="small">{r.hint}</Txt> : null}
-            </View>
+    <Card style={styles.tableCard}>
+      <Txt display weight="weightBold" size={18} style={{ color: COLORS.primary, marginBottom: SPACING.xs }}>{title}</Txt>
+      {rows.filter(Boolean).map((r) => (
+        <View key={r.label} style={[r.total ? styles.totalRow : styles.tr, { flexDirection: row }]}>
+          <View style={{ flex: 1 }}>
+            <Txt weight={r.total ? 'weightBold' : undefined} style={r.total ? { color: COLORS.primary } : r.value < 0 ? { color: COLORS.danger } : null}>{r.label}</Txt>
+            {r.hint ? <Txt muted size="small">{r.hint}</Txt> : null}
           </View>
-        ))}
-      </Card>
-    </View>
+          <Txt weight={r.total ? 'weightBold' : 'weightMedium'} style={[styles.amountCol, { textAlign: end, color: r.total ? COLORS.primary : r.value < 0 ? COLORS.danger : COLORS.textDark }]}>
+            {r.value === null || r.value === undefined ? '—' : amount(r.value, lang)}
+          </Txt>
+        </View>
+      ))}
+    </Card>
   );
 }
 
@@ -331,7 +326,6 @@ function FinancialTable({ f }) {
   const { t } = useI18n();
   return (
     <Table
-      icon="database-outline"
       title={t('report.financialTitle')}
       rows={[
         { label: t('report.fin.rent'), value: f.rentIncome },
@@ -350,7 +344,6 @@ function CashFlowTable({ c }) {
   const { t } = useI18n();
   return (
     <Table
-      icon="cash-multiple"
       title={t('report.cashTitle')}
       rows={[
         { label: t('report.cash.opening'), value: c.opening },
@@ -370,20 +363,14 @@ function OwnerTable({ o }) {
   const { t } = useI18n();
   if (!o.available) {
     return (
-      <View style={{ gap: SPACING.sm }}>
-        <Row>
-          <MaterialCommunityIcons name="account-cash-outline" size={20} color={COLORS.primaryDark} />
-          <Txt size="medium" weight="weightBold">{t('report.ownerTitle')}</Txt>
-        </Row>
-        <Card>
-          <Txt muted>{errorText(t, { code: o.reason })}</Txt>
-        </Card>
-      </View>
+      <Card style={styles.tableCard}>
+        <Txt display weight="weightBold" size={18} style={{ color: COLORS.primary }}>{t('report.ownerTitle')}</Txt>
+        <Txt muted>{errorText(t, { code: o.reason })}</Txt>
+      </Card>
     );
   }
   return (
     <Table
-      icon="account-cash-outline"
       title={t('report.ownerTitle')}
       rows={[
         { label: t('report.owner.collected'), value: o.rentCollected, hint: t('report.owner.collectedHint') },
@@ -400,15 +387,10 @@ function OwnerTable({ o }) {
 function OwnedNote() {
   const { t } = useI18n();
   return (
-    <View style={{ gap: SPACING.sm }}>
-      <Row>
-        <MaterialCommunityIcons name="account-cash-outline" size={20} color={COLORS.primaryDark} />
-        <Txt size="medium" weight="weightBold">{t('report.ownerTitle')}</Txt>
-      </Row>
-      <Card>
-        <Txt muted>{t('report.ownedNote')}</Txt>
-      </Card>
-    </View>
+    <Card style={styles.tableCard}>
+      <Txt display weight="weightBold" size={18} style={{ color: COLORS.primary }}>{t('report.ownerTitle')}</Txt>
+      <Txt muted>{t('report.ownedNote')}</Txt>
+    </Card>
   );
 }
 
@@ -417,13 +399,13 @@ function OwnedNote() {
 function ChartCard({ icon, title, total, children }) {
   const { lang } = useI18n();
   return (
-    <Card style={{ gap: SPACING.md, minHeight: 300 }}>
+    <Card style={[styles.tableCard, { gap: SPACING.md, minHeight: 320 }]}>
       <Row style={{ justifyContent: 'space-between', flexWrap: 'wrap' }}>
         <Row>
-          <MaterialCommunityIcons name={icon} size={20} color={COLORS.primaryDark} />
-          <Txt weight="weightBold">{title}</Txt>
+          <MaterialCommunityIcons name={icon} size={20} color={COLORS.accent} />
+          <Txt display weight="weightBold" size={18} style={{ color: COLORS.primary }}>{title}</Txt>
         </Row>
-        {total !== undefined ? <Badge label={`${amount(total, lang)}`} tone="info" /> : null}
+        {total !== undefined ? <Badge label={`${amount(total, lang)}`} tone="neutral" /> : null}
       </Row>
       {children}
     </Card>
@@ -437,8 +419,8 @@ function ReceivablesChart({ r }) {
       <BarChart
         format={(v) => amount(v, lang)}
         bars={[
-          { key: 'collected', label: t('report.collectedMonth'), value: r.collected, color: COLORS.success },
-          { key: 'arrears', label: t('report.arrearsTotal'), value: r.arrears, color: COLORS.danger },
+          { key: 'collected', label: t('report.collectedMonth'), value: r.collected, color: COLORS.primary },
+          { key: 'arrears', label: t('report.arrearsTotal'), value: r.arrears, color: COLORS.accent },
         ]}
       />
     </ChartCard>
@@ -474,22 +456,22 @@ function MaintenanceChart({ m, w }) {
 }
 
 const styles = StyleSheet.create({
-  controls: { gap: SPACING.md, alignItems: 'stretch', flexWrap: 'wrap' },
   list: { borderWidth: 1, borderColor: COLORS.border, borderRadius: RADIUS.md, overflow: 'hidden' },
   option: { paddingHorizontal: SPACING.md, paddingVertical: SPACING.md },
   divider: { borderTopWidth: 1, borderTopColor: COLORS.border },
-  band: { flexWrap: 'wrap', gap: SPACING.lg, rowGap: SPACING.xs, padding: SPACING.md, borderRadius: RADIUS.lg, backgroundColor: COLORS.primaryDark },
-  bandItem: { gap: 6, alignItems: 'center' },
+  // the emerald band
+  band: { backgroundColor: COLORS.band, borderRadius: RADIUS.lg, padding: SPACING.xl, gap: SPACING.xl },
+  bandHead: { gap: SPACING.lg, alignItems: 'stretch' },
+  kpiGrid: { flexWrap: 'wrap', gap: SPACING.md },
+  kpi: { flexGrow: 1, gap: 6, padding: SPACING.lg + 2, borderRadius: RADIUS.lg, backgroundColor: COLORS.bandCard, borderWidth: 1, borderColor: COLORS.bandBorder },
+  // alerts
   chips: { flexWrap: 'wrap', gap: SPACING.sm },
-  chip: { paddingHorizontal: SPACING.md, paddingVertical: SPACING.sm, borderRadius: RADIUS.sm, borderWidth: 1 },
-  chipWarn: { backgroundColor: COLORS.warningSoft, borderColor: '#EBCB8B' },
-  chipDanger: { backgroundColor: COLORS.dangerSoft, borderColor: '#F0B4AC' },
-  kpis: { flexWrap: 'wrap', gap: SPACING.md },
-  kpi: { flexGrow: 1, flexBasis: 200, borderRadius: RADIUS.lg, backgroundColor: COLORS.surface, overflow: 'hidden', borderWidth: 1, borderColor: COLORS.border },
-  kpiAccent: { width: 5, alignSelf: 'stretch' },
-  kpiBody: { flex: 1, gap: 4, padding: SPACING.lg },
-  tr: { paddingHorizontal: SPACING.md, paddingVertical: SPACING.sm + 2, alignItems: 'center', gap: SPACING.md, borderTopWidth: 1, borderTopColor: COLORS.border },
-  th: { borderTopWidth: 0, backgroundColor: COLORS.surfaceSoft },
-  totalRow: { borderTopWidth: 2, borderTopColor: COLORS.primaryDark, backgroundColor: COLORS.primarySoft },
-  amountCol: { width: 92, textAlign: 'center', fontVariant: ['tabular-nums'] },
+  chip: { paddingHorizontal: SPACING.md + 2, paddingVertical: SPACING.sm, borderRadius: RADIUS.pill },
+  chipWarn: { backgroundColor: COLORS.warningSoft },
+  chipDanger: { backgroundColor: COLORS.dangerSoft },
+  // tables
+  tableCard: { gap: 2, padding: SPACING.xl },
+  tr: { paddingVertical: SPACING.md - 1, alignItems: 'center', gap: SPACING.md, borderBottomWidth: 1, borderBottomColor: COLORS.border, borderStyle: 'dashed' },
+  totalRow: { marginTop: SPACING.sm, paddingVertical: SPACING.md, paddingHorizontal: SPACING.md + 2, alignItems: 'center', gap: SPACING.md, borderRadius: RADIUS.md, backgroundColor: COLORS.surfaceSoft },
+  amountCol: { minWidth: 96, fontVariant: ['tabular-nums'] },
 });

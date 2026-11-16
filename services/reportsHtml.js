@@ -15,17 +15,17 @@ function page(title, subtitle, company, body, lang) {
 <style>
   * { box-sizing: border-box; }
   body { font-family: -apple-system, "Segoe UI", Tahoma, Arial, sans-serif; color: #1f2937; margin: 0; padding: 24px; font-size: 12px; }
-  .head { display: flex; justify-content: space-between; gap: 16px; border-bottom: 2px solid #8F6A4C; padding-bottom: 10px; margin-bottom: 14px; }
-  .title { font-size: 18px; font-weight: 700; color: #8F6A4C; }
+  .head { display: flex; justify-content: space-between; gap: 16px; border-bottom: 2px solid #0F4D3F; padding-bottom: 10px; margin-bottom: 14px; }
+  .title { font-size: 18px; font-weight: 700; color: #0F4D3F; }
   .muted { color: #6b7280; }
-  h3 { font-size: 13px; margin: 16px 0 6px; color: #8F6A4C; }
+  h3 { font-size: 13px; margin: 16px 0 6px; color: #0F4D3F; }
   table { width: 100%; border-collapse: collapse; }
   th, td { padding: 6px 4px; border-bottom: 1px solid #f0ebe4; text-align: start; vertical-align: top; }
   th { color: #6b7280; font-weight: 600; font-size: 11px; }
   .num { text-align: end; white-space: nowrap; }
   .money { display: inline-flex; align-items: center; gap: 3px; direction: ltr; font-variant-numeric: tabular-nums; }
   .rial svg { height: 0.72em; width: auto; display: block; }
-  .total td { font-weight: 700; border-top: 2px solid #8F6A4C; }
+  .total td { font-weight: 700; border-top: 2px solid #0F4D3F; }
 </style>
 </head>
 <body>

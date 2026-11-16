@@ -1,102 +1,88 @@
+import { Platform } from 'react-native';
 import { WEB_SKIN } from './services/skin';
 
-// AqarTech design tokens — light beige & bronze identity (phone & tablet app, classic web look).
-// The web has its own look (services/skin.js): the same token names get other values below.
-// Use these tokens everywhere; never hard-code colors or sizes in screens.
+// AqarTech design tokens — "Ivory & Emerald" (العاجي والزمردي), the same identity on phone, tablet and web:
+// ivory pages, white cards with fine borders, deep emerald for actions and the report band, brass/champagne
+// for the few accents. Use these tokens everywhere; never hard-code colors or sizes in screens.
 
 export const COLORS = {
-  background: '#F5EFE6', // warm beige page background
-  surface: '#FFFFFF', // cards, inputs, sidebar
-  surfaceSoft: '#FBF8F3', // subtle panels, table headers
+  background: '#FAF7F0', // ivory page background
+  surface: '#FFFFFF', // cards, inputs, menus
+  surfaceSoft: '#F3EEE2', // totals, table headers, subtle panels (warm beige)
   card: '#FFFFFF', // kept for backward compatibility
 
-  primary: '#B68D6A', // bronze — main actions
-  primaryDark: '#8F6A4C', // pressed / headings accent
-  primarySoft: '#F1E7DC', // selected item background
-  secondary: '#B68D6A',
+  primary: '#0F4D3F', // emerald — main actions
+  primaryDark: '#0A3329', // pressed / headings accent
+  primarySoft: '#EEF3EF', // selected item background
+  secondary: '#0F4D3F',
 
-  textDark: '#3E3228', // main text
-  text: '#3E3228',
-  textMuted: '#96897F', // secondary text, placeholders
+  accent: '#A9864A', // brass — avatars, highlights, chart accent
+  accentSoft: '#E9D7AE', // champagne — the main button on the emerald band
+  onAccentSoft: '#0A3329',
+
+  textDark: '#1C2421', // main text
+  text: '#1C2421',
+  textMuted: '#5F6763', // secondary text, placeholders (4.5:1 on ivory)
   onPrimary: '#FFFFFF',
 
-  border: '#E3D9CD',
-  borderStrong: '#D8CFC4',
+  border: '#E6E0D2',
+  borderStrong: '#D6CEBC',
+
+  // the emerald band at the top of the dashboard / reports
+  band: '#0F4D3F',
+  bandText: '#FFFFFF',
+  bandMuted: '#D8D0BC',
+  bandCard: 'rgba(255, 255, 255, 0.07)',
+  bandBorder: 'rgba(233, 215, 174, 0.28)',
 
   // Status colors (each with a soft background)
-  success: '#1F8A5B',
-  successSoft: '#E5F4EC',
-  warning: '#B7791F',
-  warningSoft: '#FBF0DC',
-  danger: '#C0392B',
-  dangerSoft: '#FBE6E3',
-  info: '#2B6CB0',
+  success: '#1F7A52',
+  successSoft: '#E4F2EA',
+  warning: '#8A6416',
+  warningSoft: '#FFF4DC',
+  danger: '#9F3328',
+  dangerSoft: '#FBE6E2',
+  info: '#24609B',
   infoSoft: '#E3EEF9',
 
-  overlay: 'rgba(30, 22, 15, 0.35)',
+  overlay: 'rgba(10, 30, 25, 0.40)',
 };
 
 export const SPACING = { xs: 4, sm: 8, md: 12, lg: 16, xl: 24, xxl: 32 };
 
-export const RADIUS = { sm: 8, md: 12, lg: 16, pill: 999 };
+export const RADIUS = { sm: 10, md: 12, lg: 18, pill: 999 };
 
 export const FONT = {
   small: 12,
   body: 14,
   medium: 16,
-  title: 20,
+  title: 22,
   large: 26,
   weightRegular: '400',
   weightMedium: '600',
   weightBold: '700',
+  // headings and large numbers: Noto Kufi Arabic on the web (loaded in services/skin.js); the phone keeps its
+  // system font until the font files are added to the app
+  display: Platform.OS === 'web' ? "'Noto Kufi Arabic', 'IBM Plex Sans Arabic', sans-serif" : undefined,
 };
 
 // Legacy names used by older code
 export const SIZES = { base: 10, small: 13, font: 15, medium: 17, large: 22, radius: RADIUS.lg, padding: 20 };
 
 export const SHADOWS = {
-  card: { boxShadow: '0px 1px 3px rgba(62, 50, 40, 0.06), 0px 6px 18px rgba(62, 50, 40, 0.05)' },
-  floating: { boxShadow: '0px 6px 20px rgba(182, 141, 106, 0.18)' },
+  card: { boxShadow: '0px 1px 2px rgba(28, 36, 33, 0.04)' },
+  floating: { boxShadow: '0px 12px 32px rgba(10, 51, 41, 0.14)' },
 };
 
-// Side menu of the web look (dark). Defined for both looks so any screen may use them.
+// Menus (the web's top navigation, the phone's side menu): light, the selected item in soft emerald.
 COLORS.nav = COLORS.surface;
 COLORS.navText = COLORS.textDark;
 COLORS.navMuted = COLORS.textMuted;
 COLORS.navActive = COLORS.primarySoft;
-COLORS.navActiveText = COLORS.primaryDark;
+COLORS.navActiveText = COLORS.primary;
 COLORS.navBorder = COLORS.border;
 
-// ------------------------------------------------------------------ web look: slate & teal
-if (WEB_SKIN) {
-  Object.assign(COLORS, {
-    background: '#F3F5F9',
-    surface: '#FFFFFF',
-    surfaceSoft: '#F8FAFC',
-    card: '#FFFFFF',
-    primary: '#0F766E',
-    primaryDark: '#115E59',
-    primarySoft: '#E6F4F1',
-    secondary: '#0F766E',
-    textDark: '#0F172A',
-    text: '#0F172A',
-    textMuted: '#64748B',
-    onPrimary: '#FFFFFF',
-    border: '#E5E9F0',
-    borderStrong: '#CBD5E1',
-    overlay: 'rgba(15, 23, 42, 0.45)',
-    nav: '#0B1324',
-    navText: '#E2E8F0',
-    navMuted: '#94A3B8',
-    navActive: 'rgba(45, 212, 191, 0.12)',
-    navActiveText: '#5EEAD4',
-    navBorder: 'rgba(255, 255, 255, 0.08)',
-  });
-  Object.assign(RADIUS, { sm: 6, md: 8, lg: 12 });
-  Object.assign(SHADOWS, {
-    card: { boxShadow: '0px 1px 2px rgba(15, 23, 42, 0.05)' },
-    floating: { boxShadow: '0px 8px 24px rgba(15, 23, 42, 0.12)' },
-  });
-}
+// The web look only changes the frame (top navigation, wider pages), not the colors.
+export const WEB_LOOK = WEB_SKIN;
 
 export default { COLORS, SPACING, RADIUS, FONT, SIZES, SHADOWS };
