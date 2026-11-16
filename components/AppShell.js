@@ -135,108 +135,80 @@ function Brand({ compact }) {
 
 // ------------------------------------------------------------------ web look: top navigation bar
 
-// Rough width of a tab, to decide how many fit (Arabic and Latin at 14px, plus the tab's padding).
-const tabWidth = (label) => Math.round(String(label).length * 7.6) + 2 * SPACING.md + 4;
+// Rough width of a text at 14px (Arabic and Latin), to decide how compact the bar must be.
+const textWidth = (label) => Math.round(String(label).length * 8); // a little generous, so the bar never overflows
 
 /**
- * Logo, the sections as tabs, search, language, the person. Fits any width: on smaller screens the person
- * shows only the avatar, and the sections that do not fit go into a "More" menu (the open section stays visible).
+ * Logo, every section as a tab, search, language, the person with their name — always on ONE row.
+ * On narrower screens it tightens step by step until everything fits:
+ *   1. smaller spacing between tabs   2. the sections' short names ("الفريق" for "المستخدمون والأدوار")
+ *   3. the company name under the person's name and the app name next to the logo are dropped
+ *   4. (very narrow) tabs show their icon, the open one keeps its name.
  */
 function WebHeader({ items, active, onSelect, onSearch }) {
-  const { t, row, lang, setLang, isRTL } = useI18n();
+  const { t, row, lang, setLang } = useI18n();
   const { me, signOut } = useSession();
   const { width } = useWindowDimensions();
-  const [moreOpen, setMoreOpen] = useState(false);
   const other = LANGUAGES.find((l) => l.code !== lang);
   const displayName = me?.kind === 'admin' ? me.admin.name : me?.user?.name;
   const subtitle = me?.kind === 'admin' ? t('auth.adminSignInTitle') : me?.company?.name;
   const initials = (displayName ?? '?').trim().slice(0, 1).toUpperCase();
 
-  const compact = width < 1500; // avatar only, smaller gaps
-  const pad = width >= 1800 ? 48 : compact ? SPACING.xl : SPACING.xxl;
-  const logoW = 46 + SPACING.sm + Math.round(String(t('app.name')).length * 13);
-  const toolsW = 44 + (other ? 72 : 0) + (compact ? 92 : 300) + 2 * SPACING.sm;
-  const moreW = 112;
-  const available = width - 2 * pad - logoW - toolsW - 2 * SPACING.xl;
+  const short = (item) => item.tabLabel ?? (t(`tabs.${item.key}`) !== `tabs.${item.key}` ? t(`tabs.${item.key}`) : item.label);
+  const nameW = Math.min(170, Math.max(textWidth(displayName ?? ''), subtitle ? textWidth(subtitle) * 0.8 : 0));
 
-  // the tabs that fit, in order; the open one is always among them
-  const { shown, hidden } = useMemo(() => {
-    const total = items.reduce((sum, i) => sum + tabWidth(i.label) + 4, 0);
-    if (total <= available) return { shown: items, hidden: [] };
-    const room = available - moreW;
-    const out = [];
-    let used = 0;
-    for (const item of items) {
-      const w = tabWidth(item.label) + 4;
-      if (used + w > room) break;
-      out.push(item);
-      used += w;
-    }
-    const activeItem = items.find((i) => i.key === active);
-    if (activeItem && !out.includes(activeItem)) {
-      while (out.length && used + tabWidth(activeItem.label) + 4 > room) used -= tabWidth(out.pop().label) + 4;
-      out.push(activeItem);
-    }
-    return { shown: out, hidden: items.filter((i) => !out.includes(i)) };
-  }, [items, active, available]);
-
-  const tab = (item) => {
-    const selected = item.key === active;
-    return (
-      <Pressable
-        key={item.key}
-        onPress={() => onSelect(item.key)}
-        accessibilityRole="link"
-        accessibilityState={{ selected }}
-        style={({ hovered }) => [web.tab, selected ? web.tabActive : hovered && web.tabHover]}
-      >
-        <Txt numberOfLines={1} style={[web.tabText, selected && web.tabTextActive]}>{item.label}</Txt>
-      </Pressable>
-    );
-  };
+  // the most comfortable level that fits on one row
+  const level = useMemo(() => {
+    const pad = width >= 1800 ? 48 : SPACING.xl;
+    const tools = (withCompany) => 44 + (other ? 72 : 0) + 34 + (withCompany ? nameW : Math.min(nameW, 130)) + 30 + 20 + 3 * SPACING.sm;
+    const logo = (withName) => 42 + (withName ? SPACING.sm + Math.round(String(t('app.name')).length * 13) : 0);
+    const tabs = (labelOf, tabPad) => items.reduce((sum, i) => sum + textWidth(labelOf(i)) + 2 * tabPad + 4, 0);
+    const fits = (l) => {
+      const used = 2 * pad + 2 * SPACING.lg + logo(l.logoName) + tools(l.company);
+      if (l.icons) {
+        const activeItem = items.find((i) => i.key === active);
+        return used + items.length * 44 + (activeItem ? textWidth(short(activeItem)) + 8 : 0) <= width;
+      }
+      return used + tabs(l.labels === 'short' ? short : (i) => i.label, l.tabPad) <= width;
+    };
+    const levels = [
+      { pad, tabPad: SPACING.md, labels: 'full', company: true, logoName: true },
+      { pad, tabPad: SPACING.sm, labels: 'full', company: true, logoName: true },
+      { pad, tabPad: SPACING.sm, labels: 'short', company: true, logoName: true },
+      { pad, tabPad: SPACING.sm, labels: 'short', company: false, logoName: false },
+      { pad, tabPad: SPACING.sm, labels: 'short', company: false, logoName: false, icons: true },
+    ];
+    return levels.find(fits) ?? levels[levels.length - 1];
+  }, [width, items, active, other, nameW, t]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
-    <View style={[web.header, { flexDirection: row, paddingHorizontal: pad, gap: compact ? SPACING.lg : SPACING.xl }]}>
+    <View style={[web.header, { flexDirection: row, paddingHorizontal: level.pad, gap: SPACING.lg }]}>
       <Row gap={SPACING.sm} style={{ flexShrink: 0 }}>
         <View style={web.logo}>
           <MaterialCommunityIcons name="home-city-outline" size={22} color={COLORS.accentSoft} />
         </View>
-        <Txt display size={22} weight="weightBold" style={{ color: COLORS.primary }}>{t('app.name')}</Txt>
+        {level.logoName ? <Txt display size={22} weight="weightBold" style={{ color: COLORS.primary }}>{t('app.name')}</Txt> : null}
       </Row>
 
-      <View style={[web.tabs, { flexDirection: row, flex: 1 }]}>
-        {shown.map(tab)}
-        {hidden.length ? (
-          <View style={{ position: 'relative', zIndex: 20 }}>
+      <View style={[web.tabs, { flexDirection: row, flex: 1, minWidth: 0, overflow: 'hidden' }]}>
+        {items.map((item) => {
+          const selected = item.key === active;
+          const label = level.labels === 'short' ? short(item) : item.label;
+          const iconOnly = level.icons && !selected;
+          return (
             <Pressable
-              onPress={() => setMoreOpen((o) => !o)}
-              accessibilityRole="button"
-              accessibilityState={{ expanded: moreOpen }}
-              style={({ hovered }) => [web.tab, { flexDirection: row, alignItems: 'center', gap: 4 }, (moreOpen || hovered) && web.tabHover]}
+              key={item.key}
+              onPress={() => onSelect(item.key)}
+              accessibilityRole="link"
+              accessibilityLabel={item.label}
+              accessibilityState={{ selected }}
+              style={({ hovered }) => [web.tab, { paddingHorizontal: iconOnly ? 10 : level.tabPad, flexDirection: row }, selected ? web.tabActive : hovered && web.tabHover]}
             >
-              <Txt style={web.tabText}>{t('tabs.more')}</Txt>
-              <MaterialCommunityIcons name={moreOpen ? 'chevron-up' : 'chevron-down'} size={18} color={COLORS.textMuted} />
+              {level.icons ? <SectionIcon name={item.icon} size={20} color={selected ? COLORS.primary : COLORS.textMuted} /> : null}
+              {!iconOnly ? <Txt numberOfLines={1} style={[web.tabText, selected && web.tabTextActive]}>{label}</Txt> : null}
             </Pressable>
-            {moreOpen ? (
-              <View style={[web.menu, isRTL ? { right: 0 } : { left: 0 }]}>
-                {hidden.map((item) => (
-                  <Pressable
-                    key={item.key}
-                    onPress={() => {
-                      setMoreOpen(false);
-                      onSelect(item.key);
-                    }}
-                    accessibilityRole="link"
-                    style={({ hovered }) => [web.menuItem, { flexDirection: row }, hovered && { backgroundColor: COLORS.background }]}
-                  >
-                    <SectionIcon name={item.icon} size={18} color={COLORS.textMuted} />
-                    <Txt numberOfLines={1} style={{ flex: 1 }}>{item.label}</Txt>
-                  </Pressable>
-                ))}
-              </View>
-            ) : null}
-          </View>
-        ) : null}
+          );
+        })}
       </View>
 
       <Row gap={SPACING.sm} style={{ flexShrink: 0 }}>
@@ -249,15 +221,13 @@ function WebHeader({ items, active, onSelect, onSearch }) {
           </Pressable>
         ) : null}
         <View style={[web.person, { flexDirection: row }]}>
-          <View style={web.avatar} accessibilityLabel={displayName}>
+          <View style={web.avatar}>
             <Txt weight="weightBold" style={{ color: COLORS.onPrimary }}>{initials}</Txt>
           </View>
-          {!compact ? (
-            <View style={{ maxWidth: 170 }}>
-              <Txt weight="weightMedium" size="small" numberOfLines={1}>{displayName}</Txt>
-              {subtitle ? <Txt muted size={11} numberOfLines={1}>{subtitle}</Txt> : null}
-            </View>
-          ) : null}
+          <View style={{ maxWidth: level.company ? 170 : 130 }}>
+            <Txt weight="weightMedium" size="small" numberOfLines={1}>{displayName}</Txt>
+            {subtitle && level.company ? <Txt muted size={11} numberOfLines={1}>{subtitle}</Txt> : null}
+          </View>
           <IconButton icon="logout" size={18} color={COLORS.textMuted} label={t('auth.signOut')} onPress={signOut} />
         </View>
       </Row>
@@ -276,7 +246,7 @@ const web = StyleSheet.create({
   },
   logo: { width: 42, height: 42, borderRadius: RADIUS.md, backgroundColor: COLORS.primary, alignItems: 'center', justifyContent: 'center' },
   tabs: { alignItems: 'center', gap: 4 },
-  tab: { paddingHorizontal: SPACING.md, paddingVertical: 10, borderRadius: RADIUS.sm },
+  tab: { paddingVertical: 10, borderRadius: RADIUS.sm, alignItems: 'center', gap: 6 },
   tabHover: { backgroundColor: COLORS.background },
   tabActive: { backgroundColor: COLORS.primarySoft },
   tabText: { fontSize: FONT.body, color: COLORS.textMuted },
@@ -285,18 +255,6 @@ const web = StyleSheet.create({
   squareHover: { borderColor: COLORS.borderStrong, backgroundColor: COLORS.background },
   person: { alignItems: 'center', gap: SPACING.sm, paddingVertical: 5, paddingHorizontal: 6, borderRadius: RADIUS.pill, borderWidth: 1, borderColor: COLORS.border },
   avatar: { width: 34, height: 34, borderRadius: 17, backgroundColor: COLORS.accent, alignItems: 'center', justifyContent: 'center' },
-  menu: {
-    position: 'absolute',
-    top: 48,
-    minWidth: 240,
-    paddingVertical: SPACING.xs,
-    backgroundColor: COLORS.surface,
-    borderRadius: RADIUS.md,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    boxShadow: '0px 12px 32px rgba(10, 51, 41, 0.14)',
-  },
-  menuItem: { alignItems: 'center', gap: SPACING.sm, paddingHorizontal: SPACING.md, paddingVertical: SPACING.sm + 2 },
 });
 
 function Sidebar({ items, active, onSelect, onSearch }) {
