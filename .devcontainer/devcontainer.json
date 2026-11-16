@@ -1,0 +1,19 @@
+{
+  // Try AqarTech in the browser with GitHub Codespaces — nothing to install on your computer.
+  // Database (PostgreSQL), API and the web app start by themselves, with the demo data.
+  "name": "AqarTech",
+  "dockerComposeFile": "docker-compose.yml",
+  "service": "app",
+  "workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}",
+  "forwardPorts": [8081, 3000],
+  "portsAttributes": {
+    "8081": { "label": "AqarTech — web app", "onAutoForward": "openBrowser" },
+    "3000": { "label": "AqarTech — API", "onAutoForward": "silent" },
+    "5432": { "label": "PostgreSQL", "onAutoForward": "ignore" }
+  },
+  "postCreateCommand": "bash .devcontainer/setup.sh",
+  "postStartCommand": "bash .devcontainer/start.sh",
+  "customizations": {
+    "codespaces": { "openFiles": [".devcontainer/README.md"] }
+  }
+}

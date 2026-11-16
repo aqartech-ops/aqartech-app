@@ -63,3 +63,6 @@ report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
 # Uploaded documents (UPLOAD_DIR) and the OCR engine's language files (npm run ocr:setup)
 /storage
 /ocr-data
+
+# Codespaces: demo data already created
+/.demo-done
