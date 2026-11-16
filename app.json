@@ -25,7 +25,10 @@
       "output": "single"
     },
     "plugins": [
-      "expo-sharing"
+      "expo-sharing",
+      "expo-secure-store",
+      "expo-font",
+      "expo-status-bar"
     ]
   }
 }
