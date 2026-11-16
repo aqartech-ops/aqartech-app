@@ -1325,9 +1325,9 @@ export default {
 
   settings: {
     webLook: 'Web look',
-    webLookHint: 'Trial: the website has its own design — same system and data as the app. Your choice is kept in this browser.',
-    webLookNew: 'New (trial)',
-    webLookClassic: 'Classic',
+    webLookHint: 'Same colors on the web and the phone (Ivory & Emerald). "Top bar" puts the sections in a bar along the top; "Side menu" puts them in a menu at the side. Remembered in this browser.',
+    webLookNew: 'Top bar',
+    webLookClassic: 'Side menu',
     title: 'Settings',
     language: 'Language',
     profile: 'My profile',
@@ -1409,6 +1409,9 @@ export default {
     live: 'live',
     allProperties: 'All properties',
     allPropertiesCount: 'All properties ({{count}})',
+    liveNote: 'updated to today',
+    closedNote: 'whole month',
+    noChange: 'No change from last month',
     print: 'Print',
     pdf: 'PDF',
     propertyLabel: 'Property:',

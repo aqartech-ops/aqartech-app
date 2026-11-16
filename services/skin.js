@@ -1,7 +1,7 @@
 import { Platform } from 'react-native';
 
-// Web look (واجهة الويب) — TRIAL.
-// The web has its own presentation layer: its own colours, font, frame (dark side menu + top bar) and
+// Web look (واجهة الويب).
+// The web has its own presentation layer: its own font, frame (top navigation bar) and
 // table-style lists, on top of exactly the same screens, logic, permissions and data as the phone app.
 // Phone and tablet apps are never affected. On the web it is ON by default and can be switched back to
 // the classic look in Settings (stored per browser; switching reloads the page, because the design tokens
@@ -34,7 +34,7 @@ function installCss() {
   if (typeof document === 'undefined' || document.getElementById('aqartech-web-skin')) return;
   const link = document.createElement('link');
   link.rel = 'stylesheet';
-  link.href = 'https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap';
+  link.href = 'https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=Noto+Kufi+Arabic:wght@500;700;800&display=swap';
   document.head.appendChild(link);
 
   const family = `'${WEB_FONT}', system-ui, -apple-system, 'Segoe UI', Tahoma, sans-serif`;
@@ -44,9 +44,11 @@ function installCss() {
   style.textContent = `
     html, body { font-family: ${family}; -webkit-font-smoothing: antialiased; }
     [dir="auto"]:not([style*="font-family"]), [dir="auto"] span:not([style*="font-family"]), input, textarea { font-family: ${family} !important; }
-    * { scrollbar-width: thin; scrollbar-color: #CBD5E1 transparent; }
+    /* headings and large numbers (Txt display) */
+    [data-font="display"], [data-font="display"] span { font-family: 'Noto Kufi Arabic', ${family} !important; }
+    * { scrollbar-width: thin; scrollbar-color: #D6CEBC transparent; }
     ::-webkit-scrollbar { width: 8px; height: 8px; }
-    ::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 8px; }
+    ::-webkit-scrollbar-thumb { background: #D6CEBC; border-radius: 8px; }
   `;
   document.head.appendChild(style);
 }

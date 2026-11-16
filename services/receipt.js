@@ -29,12 +29,12 @@ export function receiptHtml(payment, t, lang) {
 <style>
   * { box-sizing: border-box; }
   body { font-family: -apple-system, "Segoe UI", Tahoma, Arial, sans-serif; color: #1f2937; margin: 0; padding: 32px; }
-  .receipt { max-width: 640px; margin: 0 auto; border: 2px solid #8F6A4C; border-radius: 16px; padding: 28px; }
+  .receipt { max-width: 640px; margin: 0 auto; border: 2px solid #0F4D3F; border-radius: 16px; padding: 28px; }
   .head { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; border-bottom: 1px solid #e5e7eb; padding-bottom: 16px; }
   .company { font-size: 20px; font-weight: 700; }
   .muted { color: #6b7280; font-size: 13px; }
-  .title { font-size: 18px; font-weight: 700; color: #8F6A4C; text-align: end; }
-  .amount { margin: 24px 0; padding: 18px; background: #F1E7DC; border-radius: 12px; text-align: center; }
+  .title { font-size: 18px; font-weight: 700; color: #0F4D3F; text-align: end; }
+  .amount { margin: 24px 0; padding: 18px; background: #F3EEE2; border-radius: 12px; text-align: center; }
   .amount .money { font-size: 30px; font-weight: 700; }
   .money { display: inline-flex; align-items: center; gap: 6px; direction: ltr; font-variant-numeric: tabular-nums; }
   .rial svg { height: 0.72em; width: auto; display: block; }

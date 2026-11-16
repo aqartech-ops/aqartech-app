@@ -5,7 +5,7 @@ import { esc } from './html';
 
 export const AGING_KEYS = ['0_30', '31_60', '61_90', '90_plus'];
 export const AGING_COLORS = { '0_30': '#1F8A5B', '31_60': '#E0A030', '61_90': '#D9772B', '90_plus': '#B03A2E' };
-const BAR_COLORS = ['#1F6E66', '#2B6CB0', '#8F6A4C', '#6B7A8F', '#B7791F'];
+const BAR_COLORS = ['#0F4D3F', '#A9864A', '#24609B', '#6B7A8F', '#8A6416'];
 
 const amount = (baisa, lang) => formatOMR(baisa ?? 0, lang, { withCurrency: false });
 /** A number inside Arabic text keeps its sign and % in place. */
@@ -72,8 +72,8 @@ function svgBars(bars, lang) {
       const h = Math.max(b.value ? 2 : 0, (Math.abs(b.value) / max) * 92);
       const x = slot * i + (slot - bw) / 2;
       return `<rect x="${x}" y="${base - h}" width="${bw}" height="${h}" rx="3" fill="${b.color}"/>
-        <text x="${x + bw / 2}" y="${base - h - 5}" font-size="10" text-anchor="middle" fill="#3E3228" font-weight="600">${esc(amount(b.value, lang))}</text>
-        <text x="${x + bw / 2}" y="${base + 16}" font-size="9.5" text-anchor="middle" fill="#7A6E64">${esc(b.label)}</text>`;
+        <text x="${x + bw / 2}" y="${base - h - 5}" font-size="10" text-anchor="middle" fill="#1C2421" font-weight="600">${esc(amount(b.value, lang))}</text>
+        <text x="${x + bw / 2}" y="${base + 16}" font-size="9.5" text-anchor="middle" fill="#5F6763">${esc(b.label)}</text>`;
     })
     .join('');
   return `<svg viewBox="0 0 ${W} ${H}" width="100%" height="${H}" xmlns="http://www.w3.org/2000/svg">${grid}<line x1="0" x2="${W}" y1="${base}" y2="${base}" stroke="#BFB5A9"/>${rects}</svg>`;
@@ -114,7 +114,7 @@ function page(data, t, lang, company) {
   const kpis = [
     k.occupancy ? kpi(pctText(k.occupancy.value), t('report.kpi.occupancy'), '#2B6CB0') : '',
     k.collectionRate ? kpi(pctText(k.collectionRate.value), t('report.kpi.collection'), '#1F8A5B') : '',
-    k.noi ? kpi(amount(k.noi.value, lang), t('report.kpi.noi'), '#8F6A4C') : '',
+    k.noi ? kpi(amount(k.noi.value, lang), t('report.kpi.noi'), '#0F4D3F') : '',
     k.arrears ? kpi(amount(k.arrears.value, lang), t('report.kpi.arrears'), '#B03A2E') : '',
   ].join('');
   const band = [
@@ -234,38 +234,38 @@ export function monthlyReportHtml(pages, t, lang, company) {
 <style>
   @page { size: A4 landscape; margin: 7mm; }
   * { box-sizing: border-box; }
-  body { font-family: "IBM Plex Sans Arabic", "Segoe UI", Tahoma, Arial, sans-serif; color: #3E3228; margin: 0; font-size: 10.5px; }
+  body { font-family: "IBM Plex Sans Arabic", "Segoe UI", Tahoma, Arial, sans-serif; color: #1C2421; margin: 0; font-size: 10.5px; }
   .page { page-break-after: always; padding: 2px; break-inside: avoid; }
   .page:last-child { page-break-after: auto; }
-  header { display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 2px solid #8F6A4C; padding-bottom: 6px; }
-  h1 { font-size: 17px; margin: 0; color: #8F6A4C; }
+  header { display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 2px solid #0F4D3F; padding-bottom: 6px; }
+  h1 { font-size: 17px; margin: 0; color: #0F4D3F; }
   h3 { font-size: 12px; margin: 0 0 6px; }
-  h3 small { font-weight: 500; color: #7A6E64; margin-inline-start: 8px; }
-  .muted { color: #7A6E64; }
-  .band { display: flex; flex-wrap: wrap; gap: 4px 18px; background: #8F6A4C; color: #fff; padding: 5px 10px; border-radius: 6px; margin: 6px 0; }
+  h3 small { font-weight: 500; color: #5F6763; margin-inline-start: 8px; }
+  .muted { color: #5F6763; }
+  .band { display: flex; flex-wrap: wrap; gap: 4px 18px; background: #0F4D3F; color: #fff; padding: 5px 10px; border-radius: 6px; margin: 6px 0; }
   .kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
-  .kpi { border: 1px solid #E3D9CD; border-inline-start: 5px solid; border-radius: 6px; padding: 4px 10px; }
+  .kpi { border: 1px solid #E6E0D2; border-inline-start: 5px solid; border-radius: 6px; padding: 4px 10px; }
   .kv { font-size: 17px; font-weight: 700; }
-  .kl { color: #7A6E64; }
-  .overview { background: #FBF8F3; border: 1px solid #E3D9CD; border-radius: 6px; padding: 5px 10px; margin: 6px 0; }
+  .kl { color: #5F6763; }
+  .overview { background: #FAF7F0; border: 1px solid #E6E0D2; border-radius: 6px; padding: 5px 10px; margin: 6px 0; }
   .overview p { margin: 4px 0 0; line-height: 1.6; }
   .grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 6px; }
-  .block { border: 1px solid #E3D9CD; border-radius: 6px; padding: 6px 8px; break-inside: avoid; }
+  .block { border: 1px solid #E6E0D2; border-radius: 6px; padding: 6px 8px; break-inside: avoid; }
   table { width: 100%; border-collapse: collapse; }
-  th { text-align: start; font-size: 9.5px; color: #7A6E64; border-bottom: 1px solid #E3D9CD; padding: 3px 4px; }
+  th { text-align: start; font-size: 9.5px; color: #5F6763; border-bottom: 1px solid #E6E0D2; padding: 3px 4px; }
   td { padding: 2px 4px; border-bottom: 1px solid #F0EAE2; }
   td.num, th.num { width: 34%; text-align: center; font-variant-numeric: tabular-nums; font-weight: 600; }
   td.neg { color: #B03A2E; }
-  tr.total td { font-weight: 700; border-top: 2px solid #8F6A4C; background: #F1E7DC; }
+  tr.total td { font-weight: 700; border-top: 2px solid #0F4D3F; background: #F3EEE2; }
   .donut { display: flex; align-items: center; gap: 10px; }
   .lg { display: flex; align-items: center; gap: 5px; margin: 3px 0; }
   .lg i { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
-  .wo { color: #7A6E64; margin-top: 4px; }
+  .wo { color: #5F6763; margin-top: 4px; }
   .sign { display: flex; justify-content: space-between; align-items: center; margin-top: 6px; }
   .stamp { width: 78px; height: 78px; border: 1.5px dashed #BFB5A9; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #BFB5A9; }
-  .line { flex: 1; margin-inline-start: 40px; border-bottom: 1px solid #3E3228; height: 34px; position: relative; max-width: 360px; }
-  .line span { position: absolute; bottom: -16px; inset-inline-start: 0; color: #7A6E64; }
-  footer { text-align: center; color: #7A6E64; margin-top: 10px; font-size: 9.5px; }
+  .line { flex: 1; margin-inline-start: 40px; border-bottom: 1px solid #1C2421; height: 34px; position: relative; max-width: 360px; }
+  .line span { position: absolute; bottom: -16px; inset-inline-start: 0; color: #5F6763; }
+  footer { text-align: center; color: #5F6763; margin-top: 10px; font-size: 9.5px; }
 </style>
 </head>
 <body>

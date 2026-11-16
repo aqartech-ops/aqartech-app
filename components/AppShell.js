@@ -44,17 +44,14 @@ export default function AppShell({ items, active, onNavigate, children }) {
     if (!IS_APP && typeof document !== 'undefined') document.title = title ? `${title} · ${t('app.name')}` : t('app.name');
   }, [title, t]);
 
-  // Web look (trial): dark side menu + top bar on wide screens. Same items, same navigation.
+  // Web look (Ivory & Emerald): a white navigation bar along the top on wide screens. Same items, same navigation.
   if (WEB_SKIN && fixedSidebar) {
     return (
-      <View style={[styles.root, { flexDirection: row }]}>
-        <WebNav items={items} active={active} onSelect={go} />
+      <View style={styles.root}>
+        <WebHeader items={items} active={active} onSelect={go} onSearch={() => setSearchOpen(true)} />
         <View style={{ flex: 1 }}>
-          <WebTopBar title={title} onSearch={() => setSearchOpen(true)} />
-          <View style={{ flex: 1 }}>
-            {banner}
-            {children}
-          </View>
+          {banner}
+          {children}
         </View>
         <SearchModal visible={searchOpen} onClose={() => setSearchOpen(false)} items={items} onNavigate={onNavigate} />
       </View>
@@ -129,115 +126,95 @@ function Brand({ compact }) {
   return (
     <Row gap={SPACING.sm}>
       <View style={styles.logo}>
-        <MaterialCommunityIcons name="home-city" size={compact ? 16 : 20} color={COLORS.onPrimary} />
+        <MaterialCommunityIcons name="home-city-outline" size={compact ? 16 : 20} color={COLORS.accentSoft} />
       </View>
-      {!compact ? <Txt size="medium" weight="weightBold">{t('app.name')}</Txt> : null}
+      {!compact ? <Txt display size="medium" weight="weightBold" style={{ color: COLORS.primary }}>{t('app.name')}</Txt> : null}
     </Row>
   );
 }
 
-// ------------------------------------------------------------------ web look (trial)
+// ------------------------------------------------------------------ web look: top navigation bar
 
-/** Dark side menu of the web look: brand, sections, signed-in person. */
-function WebNav({ items, active, onSelect }) {
-  const { t, row } = useI18n();
+/** Logo, the sections as a row of tabs (scrolls sideways when there are many), search, language, the person. */
+function WebHeader({ items, active, onSelect, onSearch }) {
+  const { t, row, lang, setLang } = useI18n();
   const { me, signOut } = useSession();
+  const other = LANGUAGES.find((l) => l.code !== lang);
   const displayName = me?.kind === 'admin' ? me.admin.name : me?.user?.name;
   const subtitle = me?.kind === 'admin' ? t('auth.adminSignInTitle') : me?.company?.name;
   const initials = (displayName ?? '?').trim().slice(0, 1).toUpperCase();
 
   return (
-    <View style={web.nav}>
-      <Row style={web.brand} gap={SPACING.sm}>
+    <View style={[web.header, { flexDirection: row }]}>
+      <Row gap={SPACING.sm} style={{ flexShrink: 0 }}>
         <View style={web.logo}>
-          <MaterialCommunityIcons name="home-city" size={18} color={COLORS.onPrimary} />
+          <MaterialCommunityIcons name="home-city-outline" size={22} color={COLORS.accentSoft} />
         </View>
-        <Txt size="medium" weight="weightBold" style={{ color: COLORS.navText }}>{t('app.name')}</Txt>
+        <Txt display size={22} weight="weightBold" style={{ color: COLORS.primary }}>{t('app.name')}</Txt>
       </Row>
 
-      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingHorizontal: SPACING.sm, paddingVertical: SPACING.sm, gap: 2 }}>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flex: 1 }} contentContainerStyle={[web.tabs, { flexDirection: row }]}>
         {items.map((item) => {
           const selected = item.key === active;
           return (
             <Pressable
               key={item.key}
               onPress={() => onSelect(item.key)}
-              accessibilityRole="button"
+              accessibilityRole="link"
               accessibilityState={{ selected }}
-              style={({ pressed, hovered }) => [
-                web.item,
-                { flexDirection: row },
-                selected ? web.itemActive : (hovered || pressed) && web.itemHover,
-              ]}
+              style={({ hovered }) => [web.tab, selected ? web.tabActive : hovered && web.tabHover]}
             >
-              <SectionIcon name={item.icon} size={19} color={selected ? COLORS.navActiveText : COLORS.navMuted} />
-              <Txt style={[web.itemText, selected && { color: COLORS.navActiveText, fontWeight: FONT.weightMedium }]} numberOfLines={1}>
-                {item.label}
-              </Txt>
+              <Txt numberOfLines={1} style={[web.tabText, selected && web.tabTextActive]}>{item.label}</Txt>
             </Pressable>
           );
         })}
       </ScrollView>
 
-      <Row style={web.person} gap={SPACING.sm}>
-        <View style={web.avatar}>
-          <Txt weight="weightBold" style={{ color: COLORS.navText }}>{initials}</Txt>
+      <Row gap={SPACING.sm} style={{ flexShrink: 0 }}>
+        <Pressable onPress={onSearch} accessibilityRole="search" accessibilityLabel={t('search.title')} style={({ hovered }) => [web.square, hovered && web.squareHover]}>
+          <MaterialCommunityIcons name="magnify" size={20} color={COLORS.textDark} />
+        </Pressable>
+        {other ? (
+          <Pressable onPress={() => setLang(other.code)} style={({ hovered }) => [web.square, { width: undefined, paddingHorizontal: SPACING.md }, hovered && web.squareHover]}>
+            <Txt weight="weightMedium" size="small">{other.label}</Txt>
+          </Pressable>
+        ) : null}
+        <View style={[web.person, { flexDirection: row }]}>
+          <View style={web.avatar}>
+            <Txt weight="weightBold" style={{ color: COLORS.onPrimary }}>{initials}</Txt>
+          </View>
+          <View style={{ maxWidth: 170 }}>
+            <Txt weight="weightMedium" size="small" numberOfLines={1}>{displayName}</Txt>
+            {subtitle ? <Txt muted size={11} numberOfLines={1}>{subtitle}</Txt> : null}
+          </View>
+          <IconButton icon="logout" size={18} color={COLORS.textMuted} label={t('auth.signOut')} onPress={signOut} />
         </View>
-        <View style={{ flex: 1, gap: 1 }}>
-          <Txt weight="weightMedium" numberOfLines={1} style={{ color: COLORS.navText }}>{displayName}</Txt>
-          {subtitle ? <Txt size="small" numberOfLines={1} style={{ color: COLORS.navMuted }}>{subtitle}</Txt> : null}
-        </View>
-        <IconButton icon="logout" size={19} color={COLORS.navMuted} label={t('auth.signOut')} onPress={signOut} />
       </Row>
     </View>
   );
 }
 
-/** Top bar of the web look: section name, search, language. */
-function WebTopBar({ title, onSearch }) {
-  const { t, row, lang, setLang } = useI18n();
-  const other = LANGUAGES.find((l) => l.code !== lang);
-  return (
-    <Row style={web.topBar} gap={SPACING.md}>
-      <Txt size="medium" weight="weightBold" style={{ flex: 1 }} numberOfLines={1}>{title}</Txt>
-      <Pressable onPress={onSearch} style={({ hovered }) => [web.search, { flexDirection: row }, hovered && { borderColor: COLORS.borderStrong }]} accessibilityRole="search">
-        <MaterialCommunityIcons name="magnify" size={18} color={COLORS.textMuted} />
-        <Txt muted style={{ flex: 1 }} numberOfLines={1}>{t('search.placeholder')}</Txt>
-      </Pressable>
-      {other ? (
-        <Pressable onPress={() => setLang(other.code)} style={({ hovered }) => [web.lang, { flexDirection: row }, hovered && { backgroundColor: COLORS.surfaceSoft }]}>
-          <MaterialCommunityIcons name="translate" size={18} color={COLORS.textMuted} />
-          <Txt weight="weightMedium">{other.label}</Txt>
-        </Pressable>
-      ) : null}
-    </Row>
-  );
-}
-
 const web = StyleSheet.create({
-  nav: { width: 248, height: '100%', backgroundColor: COLORS.nav },
-  brand: { paddingHorizontal: SPACING.lg, height: 60, borderBottomWidth: 1, borderBottomColor: COLORS.navBorder },
-  logo: { width: 30, height: 30, borderRadius: RADIUS.sm, backgroundColor: COLORS.primary, alignItems: 'center', justifyContent: 'center' },
-  item: { alignItems: 'center', gap: SPACING.md, paddingHorizontal: SPACING.md, paddingVertical: 10, borderRadius: RADIUS.md },
-  itemHover: { backgroundColor: 'rgba(255, 255, 255, 0.05)' },
-  itemActive: { backgroundColor: COLORS.navActive },
-  itemText: { color: COLORS.navText, fontSize: FONT.body, flex: 1 },
-  person: { padding: SPACING.md, borderTopWidth: 1, borderTopColor: COLORS.navBorder },
-  avatar: { width: 34, height: 34, borderRadius: 17, backgroundColor: 'rgba(255, 255, 255, 0.1)', alignItems: 'center', justifyContent: 'center' },
-  topBar: { height: 60, paddingHorizontal: SPACING.xl, backgroundColor: COLORS.surface, borderBottomWidth: 1, borderBottomColor: COLORS.border },
-  search: {
+  header: {
+    height: 76,
     alignItems: 'center',
-    gap: SPACING.sm,
-    width: 320,
-    maxWidth: '40%',
-    paddingHorizontal: SPACING.md,
-    paddingVertical: 8,
-    borderRadius: RADIUS.md,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    backgroundColor: COLORS.surfaceSoft,
+    gap: SPACING.xl,
+    paddingHorizontal: SPACING.xxl,
+    backgroundColor: COLORS.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
   },
-  lang: { alignItems: 'center', gap: 6, paddingHorizontal: SPACING.md, paddingVertical: 8, borderRadius: RADIUS.md },
+  logo: { width: 42, height: 42, borderRadius: RADIUS.md, backgroundColor: COLORS.primary, alignItems: 'center', justifyContent: 'center' },
+  tabs: { alignItems: 'center', gap: 4, paddingHorizontal: SPACING.sm },
+  tab: { paddingHorizontal: SPACING.lg, paddingVertical: 10, borderRadius: RADIUS.sm },
+  tabHover: { backgroundColor: COLORS.background },
+  tabActive: { backgroundColor: COLORS.primarySoft },
+  tabText: { fontSize: FONT.body, color: COLORS.textMuted },
+  tabTextActive: { color: COLORS.primary, fontWeight: FONT.weightBold },
+  square: { width: 44, height: 44, borderRadius: RADIUS.md, borderWidth: 1, borderColor: COLORS.border, alignItems: 'center', justifyContent: 'center', backgroundColor: COLORS.surface },
+  squareHover: { borderColor: COLORS.borderStrong, backgroundColor: COLORS.background },
+  person: { alignItems: 'center', gap: SPACING.sm, paddingVertical: 5, paddingHorizontal: 6, borderRadius: RADIUS.pill, borderWidth: 1, borderColor: COLORS.border },
+  avatar: { width: 34, height: 34, borderRadius: 17, backgroundColor: COLORS.accent, alignItems: 'center', justifyContent: 'center' },
 });
 
 function Sidebar({ items, active, onSelect, onSearch }) {

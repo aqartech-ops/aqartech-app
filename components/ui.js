@@ -10,7 +10,8 @@ import { WEB_SKIN } from '../services/skin';
 
 // Shared building blocks. All of them respect the current language direction.
 
-export function Txt({ style, muted, weight, size, children, ...rest }) {
+/** `display` = the heading font (titles, big numbers) — Noto Kufi Arabic on the web. */
+export function Txt({ style, muted, weight, size, display, children, ...rest }) {
   const { align } = useI18n();
   return (
     <Text
@@ -20,8 +21,10 @@ export function Txt({ style, muted, weight, size, children, ...rest }) {
         muted && { color: COLORS.textMuted },
         weight && { fontWeight: FONT[weight] ?? weight },
         size && { fontSize: FONT[size] ?? size },
+        display && FONT.display ? { fontFamily: FONT.display } : null,
         style,
       ]}
+      {...(display && FONT.display ? { dataSet: { font: 'display' } } : null)}
       {...rest}
     >
       {children}
@@ -57,8 +60,11 @@ export function Button({ id, title: defaultTitle, onPress, variant = 'primary', 
   if (hidden) return null;
   const palette = {
     primary: { bg: COLORS.primary, fg: COLORS.onPrimary, border: COLORS.primary },
-    secondary: { bg: COLORS.surface, fg: COLORS.textDark, border: COLORS.borderStrong },
-    ghost: { bg: 'transparent', fg: COLORS.primaryDark, border: 'transparent' },
+    secondary: { bg: COLORS.surface, fg: COLORS.primary, border: COLORS.borderStrong },
+    ghost: { bg: 'transparent', fg: COLORS.primary, border: 'transparent' },
+    accent: { bg: COLORS.accentSoft, fg: COLORS.onAccentSoft, border: COLORS.accentSoft },
+    // on the emerald band
+    onBand: { bg: 'transparent', fg: COLORS.bandText, border: COLORS.bandBorder },
     danger: { bg: COLORS.dangerSoft, fg: COLORS.danger, border: COLORS.dangerSoft },
   }[variant];
   const inactive = disabled || loading;
@@ -216,7 +222,7 @@ export function Screen({ title, subtitle, actions, children, scroll = true, back
       {title ? (
         <Row style={{ justifyContent: 'space-between', flexWrap: 'wrap', marginBottom: SPACING.lg }}>
           <View style={{ flexShrink: 1, gap: 2 }}>
-            <Txt size="title" weight="weightBold">{title}</Txt>
+            <Txt display size="title" weight="weightBold" style={{ color: COLORS.primaryDark }}>{title}</Txt>
             {subtitle ? <Txt muted>{subtitle}</Txt> : null}
           </View>
           {actions ? <Row>{actions}</Row> : null}
@@ -306,13 +312,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: SPACING.sm,
-    minHeight: WEB_SKIN ? 40 : 44,
-    paddingHorizontal: SPACING.lg,
+    minHeight: 46,
+    paddingHorizontal: SPACING.xl - 2,
     borderRadius: RADIUS.md,
     borderWidth: 1,
   },
-  buttonSmall: { minHeight: WEB_SKIN ? 32 : 34, paddingHorizontal: SPACING.md, borderRadius: RADIUS.sm },
-  buttonText: { fontSize: FONT.body, fontWeight: FONT.weightMedium },
+  buttonSmall: { minHeight: 36, paddingHorizontal: SPACING.md + 2, borderRadius: RADIUS.sm },
+  buttonText: { fontSize: FONT.body, fontWeight: FONT.weightBold },
   iconButton: { padding: 6, borderRadius: RADIUS.pill },
   back: {
     alignItems: 'center',
@@ -332,7 +338,7 @@ const styles = StyleSheet.create({
     borderColor: COLORS.borderStrong,
     borderRadius: RADIUS.md,
     paddingHorizontal: SPACING.md,
-    minHeight: WEB_SKIN ? 42 : 46,
+    minHeight: 46,
   },
   input: { flex: 1, fontSize: FONT.body, color: COLORS.textDark, paddingVertical: SPACING.sm, outlineStyle: 'none' },
   segmented: {
