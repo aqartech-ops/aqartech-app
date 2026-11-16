@@ -182,7 +182,8 @@
 
 ## 8. التقنيات (نفس أدوات المشروع)
 
-- **التطبيق:** Expo SDK 57، React Native، react-native-web (`App.js`، `screens/`، `services/`، `theme.js`).
+- **التطبيق:** Expo SDK 58 (React Native 0.88)، react-native-web (`App.js`، `screens/`، `services/`، `theme.js`).
+  - **الترقية من SDK 57 إلى 58 (حُسم 2026-11-16):** تطبيق Expo Go الحالي على الآيفون يدعم SDK 58 فقط، فلم يعد يفتح المشروع على 57. الترقية بالأمر `npx expo install expo@^58.0.0 --fix` ثم `npx expo-doctor`. الكود لا يستخدم أياً مما أُزيل في 58 (InteractionManager، خاصية animated في Modal، خصائص StatusBar القديمة، ImageBackground).
 - **الخادم:** NestJS + Prisma + PostgreSQL في `backend/` — مخطط قاعدة بيانات **واحد** في `backend/prisma/schema.prisma`.
 - الأسرار في `.env` فقط ولا تُرفع إلى GitHub (يوجد `.env.example`).
 
