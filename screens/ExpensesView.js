@@ -12,7 +12,7 @@ import { parseOMR } from '../services/money';
 import { matches } from '../services/text';
 import { Money, MoneyField } from '../components/Rial';
 import { DateField, formatDate, isDateText, today } from '../components/Fields';
-import { Badge, Button, Card, ChipSelect, EmptyState, ErrorBox, Field, FieldRow, IconButton, Loading, Row, Sheet, Txt, errorText } from '../components/ui';
+import { Badge, Button, Card, ChipSelect, EmptyState, ErrorBox, Field, FieldRow, IconButton, LinkText, Loading, Row, Sheet, Txt, errorText } from '../components/ui';
 import ExportButton from '../components/ExportButton';
 import { day, omr } from '../services/exportCsv';
 
@@ -80,7 +80,9 @@ export function PropertyUnitPicker({ value, onChange, onProperty, allowNone, uni
 
 // ================================================================ tab
 
-export function ExpensesTab({ editable, version, onChanged }) {
+export function ExpensesTab({ editable, version, onChanged, onNavigate }) {
+  const { levelOf: levelOfSection } = useSession();
+  const toProperty = onNavigate && levelOfSection('properties') !== 'HIDDEN' ? (id) => onNavigate('properties', { propertyId: id }) : null;
   const { t, lang } = useI18n();
   const asTable = useTableLayout(); // web look: the list is a table
   const [bearer, setBearer] = useState('all');
@@ -181,7 +183,7 @@ export function ExpensesTab({ editable, version, onChanged }) {
               ),
             },
             { key: 'category', label: t('table.category'), flex: 1.2, render: (x) => <Txt muted numberOfLines={1}>{categoryName(x.category, lang)}</Txt> },
-            { key: 'property', label: t('table.propertyUnit'), flex: 1.6, render: (x) => <Txt muted numberOfLines={1}>{x.property ? `${x.property.name}${x.unit ? ` · ${x.unit.number}` : ''}` : t('expenses.noProperty')}</Txt> },
+            { key: 'property', label: t('table.propertyUnit'), flex: 1.6, render: (x) => <LinkText muted onPress={x.property && toProperty ? () => toProperty(x.property.id) : null}>{x.property ? `${x.property.name}${x.unit ? ` · ${x.unit.number}` : ''}` : t('expenses.noProperty')}</LinkText> },
             { key: 'bearer', label: t('table.bearer'), flex: 1.1, render: (x) => <Badge label={t(`expenses.bearers.${x.bearer}`)} tone={BEARER_TONE[x.bearer]} /> },
             { key: 'amount', label: t('table.amount'), flex: 1.1, align: 'end', render: (x) => <Money baisa={x.amount} weight="weightBold" color={x.status === 'VOIDED' ? COLORS.textMuted : COLORS.danger} /> },
           ]}

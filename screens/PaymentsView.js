@@ -11,7 +11,7 @@ import { matches } from '../services/text';
 import { printReceipt, shareReceipt } from '../services/receipt';
 import { Money, MoneyField } from '../components/Rial';
 import { DateField, PickerButton, formatDate, isDateText, today } from '../components/Fields';
-import { Badge, Button, Card, ChipSelect, EmptyState, ErrorBox, Field, FieldRow, Loading, Row, Sheet, Txt, errorText } from '../components/ui';
+import { Badge, Button, Card, ChipSelect, EmptyState, ErrorBox, Field, FieldRow, LinkText, Loading, Row, Sheet, Txt, errorText } from '../components/ui';
 import ExportButton from '../components/ExportButton';
 import { day, omr } from '../services/exportCsv';
 
@@ -23,7 +23,9 @@ const moneyText = (baisa) => (baisa > 0 ? formatOMR(baisa, 'en', { withCurrency:
 
 // ================================================================ list
 
-export function PaymentsList({ onOpen, version }) {
+export function PaymentsList({ onOpen, version, onNavigate }) {
+  const { levelOf } = useSession();
+  const toTenants = onNavigate && levelOf('tenants') !== 'HIDDEN' ? (p) => onNavigate('tenants', p) : null;
   const { t, lang, forwardIcon } = useI18n();
   const asTable = useTableLayout(); // web look: the list is a table
   const [method, setMethod] = useState('all');
@@ -100,12 +102,12 @@ export function PaymentsList({ onOpen, version }) {
               flex: 2,
               render: (p) => (
                 <Row gap={SPACING.xs}>
-                  <Txt numberOfLines={1} style={{ flexShrink: 1 }}>{p.tenant.name}</Txt>
+                  <LinkText onPress={toTenants ? () => toTenants({ tenantId: p.tenant.id }) : null} style={{ flexShrink: 1 }}>{p.tenant.name}</LinkText>
                   {p.status === 'VOIDED' ? <Badge label={t('payments.voided')} tone="danger" /> : null}
                 </Row>
               ),
             },
-            { key: 'lease', label: t('table.lease'), flex: 1, render: (p) => <Txt muted numberOfLines={1}>{p.lease.number}</Txt> },
+            { key: 'lease', label: t('table.lease'), flex: 1, render: (p) => <LinkText muted onPress={toTenants ? () => toTenants({ leaseId: p.lease.id }) : null}>{p.lease.number}</LinkText> },
             {
               key: 'method',
               label: t('table.method'),

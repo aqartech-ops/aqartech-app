@@ -1056,6 +1056,7 @@ export default {
   },
 
   properties: {
+    newWorkOrder: 'طلب صيانة',
     title: 'العقارات',
     add: 'إضافة عقار',
     edit: 'تعديل العقار',
@@ -1089,6 +1090,9 @@ export default {
   },
 
   units: {
+    newLease: 'عقد جديد',
+    leaseUntil: 'حتى {{date}}',
+    statusFromLeaseHint: "حالة «مؤجرة» و«محجوزة» تتبع عقود الوحدة تلقائياً.",
     title: 'الوحدات',
     add: 'إضافة وحدة',
     addBulk: 'إضافة عدة وحدات',
@@ -1128,6 +1132,7 @@ export default {
   },
 
   leases: {
+    recordPayment: 'تسجيل دفعة',
     title: 'العقود',
     tabTenants: 'المستأجرون',
     tabLeases: 'العقود',
@@ -1616,6 +1621,7 @@ export default {
     'reset.invalidCode': 'الرمز غير صحيح أو منتهي الصلاحية. اطلب رمزاً جديداً.',
     'auth.wrongCurrentPassword': 'كلمة المرور الحالية غير صحيحة.',
     'units.numberTaken': 'رقم الوحدة موجود مسبقاً في هذا العقار.',
+    'units.statusFromLease': "حالة «مؤجرة» و«محجوزة» تتبع عقود الوحدة. أنهِ العقد أولاً، أو اختر «شاغرة» أو «صيانة».",
     'units.bulkRange': 'تحقق من النطاق: «إلى» يجب أن يكون بعد «من» (حد أقصى 300 وحدة دفعة واحدة).',
     'validation.nonNegativeInt': 'أدخل رقماً صحيحاً.',
     'validation.date': 'أدخل تاريخاً صحيحاً (سنة-شهر-يوم).',

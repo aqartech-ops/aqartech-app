@@ -10,6 +10,23 @@ import { WEB_SKIN } from '../services/skin';
 
 // Shared building blocks. All of them respect the current language direction.
 
+/**
+ * A name that opens its record (a tenant, a lease, a property…) — used inside lists, tables and detail pages.
+ * Without `onPress` it is plain text, so callers can pass a link only when the user may open that section.
+ */
+export function LinkText({ onPress, children, style, numberOfLines = 1, size, weight, muted }) {
+  if (!onPress) return <Txt style={style} numberOfLines={numberOfLines} size={size} weight={weight} muted={muted}>{children}</Txt>;
+  return (
+    <Pressable onPress={onPress} accessibilityRole="link" hitSlop={6} style={{ alignSelf: 'flex-start', maxWidth: '100%' }}>
+      {({ hovered }) => (
+        <Txt numberOfLines={numberOfLines} size={size} weight={weight ?? 'weightMedium'} style={[{ color: COLORS.primary }, hovered && { textDecorationLine: 'underline' }, style]}>
+          {children}
+        </Txt>
+      )}
+    </Pressable>
+  );
+}
+
 /** `display` = the heading font (titles, big numbers) — Noto Kufi Arabic on the web. */
 export function Txt({ style, muted, weight, size, display, children, ...rest }) {
   const { align } = useI18n();

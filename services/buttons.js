@@ -90,6 +90,7 @@ export const BUTTON_GROUPS = [
     ['properties.delete', 'common.delete', 'delete-outline'],
     ['properties.trash', 'common.trash', 'delete-restore'],
     ['properties.restore', 'common.restore', 'restore'],
+    ['properties.workOrder', 'properties.newWorkOrder', 'wrench-outline'],
     ['agreement.manage', 'agreement.edit', 'pencil-outline', FIXED_TEXT],
     ['agreement.end', 'agreement.end', null],
     ['partners.edit', 'partners.edit', 'pencil-outline'],
@@ -100,6 +101,8 @@ export const BUTTON_GROUPS = [
     ['units.delete', 'common.delete', 'delete-outline'],
     ['units.trash', 'common.trash', 'delete-restore'],
     ['units.restore', 'common.restore', 'restore'],
+    ['units.newLease', 'units.newLease', 'file-sign'],
+    ['units.workOrder', 'properties.newWorkOrder', 'wrench-outline'],
   ]],
   ['tenants', [
     ['tenants.add', 'tenants.add', 'account-plus-outline'],
@@ -108,6 +111,7 @@ export const BUTTON_GROUPS = [
     ['tenants.trash', 'common.trash', 'delete-restore'],
     ['tenants.restore', 'common.restore', 'restore'],
     ['tenants.statement', 'finance.statement', 'file-document-outline'],
+    ['tenants.recordPayment', 'leases.recordPayment', 'cash-plus'],
     ['tenants.call', 'buttons.call', 'phone-outline', FIXED_TEXT],
     ['tenants.whatsapp', 'buttons.whatsapp', 'whatsapp'],
     ['tenants.scanId', 'scan.scanId', 'text-recognition'],
@@ -121,6 +125,8 @@ export const BUTTON_GROUPS = [
     ['leases.terminate', 'leases.terminate', 'file-cancel-outline'],
     ['leases.delete', 'common.delete', 'delete-outline'],
     ['leases.newTenant', 'leases.newTenant', 'account-plus-outline'],
+    ['leases.recordPayment', 'leases.recordPayment', 'cash-plus'],
+    ['leases.addCheque', 'cheques.add', 'checkbook'],
   ]],
   ['owners', [
     ['owners.add', 'owners.add', 'plus'],

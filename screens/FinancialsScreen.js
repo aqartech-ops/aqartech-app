@@ -25,7 +25,7 @@ import { ClosingCard } from './ClosingView';
 const BUCKETS = ['0_30', '31_60', '61_90', '90_plus'];
 const BUCKET_COLOR = { '0_30': COLORS.warning, '31_60': '#C2410C', '61_90': COLORS.danger, '90_plus': '#7F1D1D' };
 
-export default function FinancialsScreen({ params }) {
+export default function FinancialsScreen({ params, onNavigate }) {
   const { t, lang } = useI18n();
   const { canEdit } = useSession();
   const editable = canEdit('financials');
@@ -73,17 +73,18 @@ export default function FinancialsScreen({ params }) {
           options={['receivables', 'payments', 'cheques', 'expenses', 'owners', 'municipality', 'reports', 'balances', 'journal'].map((v) => ({ value: v, label: t(`finance.tabs.${v}`) }))}
         />
         {tab === 'receivables' ? <Receivables key={version} onOpenTenant={setStatementOf} onCollect={editable ? collect : null} /> : null}
-        {tab === 'payments' ? <PaymentsList version={version} onOpen={setReceiptId} /> : null}
+        {tab === 'payments' ? <PaymentsList version={version} onOpen={setReceiptId} onNavigate={onNavigate} /> : null}
         {tab === 'cheques' ? (
           <ChequesTab
             editable={editable}
             version={version}
             focusId={params?.chequeId}
+            onNavigate={onNavigate}
             onChanged={() => setVersion((v) => v + 1)}
             onOpenReceipt={setReceiptId}
           />
         ) : null}
-        {tab === 'expenses' ? <ExpensesTab editable={editable} version={version} onChanged={() => setVersion((v) => v + 1)} /> : null}
+        {tab === 'expenses' ? <ExpensesTab editable={editable} version={version} onChanged={() => setVersion((v) => v + 1)} onNavigate={onNavigate} /> : null}
         {tab === 'owners' ? <OwnersTab editable={editable} version={version} onChanged={() => setVersion((v) => v + 1)} focusOwnerId={params?.ownerId} /> : null}
         {tab === 'municipality' ? <MunicipalityTab editable={editable} version={version} onChanged={() => setVersion((v) => v + 1)} /> : null}
         {tab === 'reports' ? <ReportsTab key={version} /> : null}
@@ -430,7 +431,7 @@ function StatementSheet({ tenantId, onClose, onCollect }) {
     if (!tenantId) return;
     setData(null);
     setError(null);
-    financeApi.statement(tenantId).then(setData).catch(setError);
+    financeApi.tenantStatement(tenantId).then(setData).catch(setError);
   }, [tenantId]);
 
   return (

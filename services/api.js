@@ -230,7 +230,7 @@ export const financeApi = {
   summary: () => api.get('/finance/summary'),
   receivables: (query) => api.get('/finance/receivables', query),
   balances: () => api.get('/finance/balances'),
-  statement: (tenantId) => api.get(`/finance/tenants/${tenantId}/statement`),
+  tenantStatement: (tenantId) => api.get(`/finance/tenants/${tenantId}/statement`),
   journal: (page = 1, all = false) => api.get('/finance/journal', all ? { all: '1' } : { page }),
   trialBalance: () => api.get('/finance/trial-balance'),
   tenantLeases: (tenantId) => api.get(`/finance/tenants/${tenantId}/leases`),

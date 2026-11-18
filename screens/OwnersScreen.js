@@ -37,9 +37,11 @@ import {
 
 /** Owners of the properties the company manages (الملاك), their bank details and their properties. */
 export default function OwnersScreen({ params, onNavigate }) {
-  const [selectedId, setSelectedId] = useState(params?.ownerId ?? null);
-  if (selectedId) return <OwnerDetail id={selectedId} onBack={() => setSelectedId(null)} onNavigate={onNavigate} />;
-  return <OwnerList onOpen={setSelectedId} />;
+  // Opening an owner is a navigation (the web address changes: refresh keeps it, Back returns to the list).
+  const selectedId = params?.ownerId ?? null;
+  const open = (id) => onNavigate?.('owners', id ? { ownerId: id } : null);
+  if (selectedId) return <OwnerDetail id={selectedId} onBack={() => open(null)} onNavigate={onNavigate} />;
+  return <OwnerList onOpen={open} />;
 }
 
 function OwnerList({ onOpen }) {

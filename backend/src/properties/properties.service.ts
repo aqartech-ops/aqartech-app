@@ -11,6 +11,8 @@ export const OWNERSHIPS = ['OWNED', 'MANAGED'] as const;
 export const CATEGORIES = ['BUILDING', 'VILLA_COMPOUND', 'VILLA', 'COMMERCIAL_COMPLEX', 'LAND', 'OTHER'] as const;
 export const UNIT_TYPES = ['APARTMENT', 'STUDIO', 'VILLA', 'ROOM', 'SHOP', 'OFFICE', 'WAREHOUSE', 'OTHER'] as const;
 export const UNIT_STATUSES = ['VACANT', 'OCCUPIED', 'MAINTENANCE', 'RESERVED'] as const;
+/** OCCUPIED / RESERVED come only from leases (LeasesService.syncUnitStatus); people may set only these. */
+export const MANUAL_UNIT_STATUSES = ['VACANT', 'MAINTENANCE'] as const;
 const MAX_BULK = 300;
 
 /** Properties the caller may see (company + role's property list). */
@@ -188,7 +190,13 @@ export class PropertiesService {
     const custom = await this.fields.apply('unit', src, unit);
     if (custom !== undefined) data.custom = custom;
     if (typeof data.number === 'string' && data.number !== unit.number) await this.assertNumbersFree(unit.propertyId, [data.number], id);
-    if (data.status && data.status !== unit.status) {
+    if (data.status === unit.status) delete data.status; // unchanged (the form always sends it)
+    if (data.status) {
+      const manual = (MANUAL_UNIT_STATUSES as readonly string[]).includes(data.status as string);
+      const leased = await this.prisma.lease.count({
+        where: { unitId: id, deletedAt: null, status: 'ACTIVE', endDate: { gte: new Date(new Date().toISOString().slice(0, 10)) } },
+      });
+      if (!manual || leased) throw new BadRequestException({ message: 'units.statusFromLease', field: 'status' });
       data.vacantSince = data.status === 'VACANT' ? new Date() : null;
     }
     const updated = await this.prisma.unit.update({ where: { id }, data });
@@ -278,7 +286,7 @@ export class PropertiesService {
     const data: Prisma.UnitUncheckedUpdateInput = {};
     if (has('number')) data.number = v.requiredString(src, 'number', 30);
     if (has('type')) data.type = v.oneOf(src, 'type', UNIT_TYPES, 'APARTMENT');
-    if (has('status')) data.status = v.oneOf(src, 'status', UNIT_STATUSES, 'VACANT');
+    if (has('status')) data.status = v.oneOf(src, 'status', creating ? MANUAL_UNIT_STATUSES : UNIT_STATUSES, 'VACANT');
     if (has('askingRent')) data.askingRent = v.optionalBaisa(src, 'askingRent') ?? 0;
     data.floor = v.nullableString(src, 'floor', 20);
     data.area = v.optionalNumber(src, 'area');

@@ -15,6 +15,8 @@ import { formatOMR, parseOMR } from '../services/money';
 import { matches } from '../services/text';
 import { Money, MoneyField } from '../components/Rial';
 import { LeaseMunicipalityCard } from './MunicipalityView';
+import { PaymentForm } from './PaymentsView';
+import { ChequeForm } from './ChequesView';
 import { DateField, PickerButton, dateText, formatDate, isDateText, today } from '../components/Fields';
 import {
   Badge,
@@ -26,6 +28,7 @@ import {
   ErrorBox,
   Field,
   FieldRow,
+  LinkText,
   Loading,
   Row,
   Screen,
@@ -216,11 +219,15 @@ export function TenantLeases({ tenantId, onOpen, onNew, editable }) {
 export function LeaseDetail({ id, onBack, onOpen, onOpenTenant, backLabel, onNavigate }) {
   const { t, lang, isRTL, start } = useI18n();
   const extraFields = useFieldRules('lease');
-  const { canEdit } = useSession();
+  const { canEdit, levelOf } = useSession();
   const editable = canEdit('tenants');
+  const canCollect = canEdit('financials');
+  const seeProperties = levelOf('properties') !== 'HIDDEN';
   const [lease, setLease] = useState(null);
   const [error, setError] = useState(null);
   const [editing, setEditing] = useState(null);
+  const [paying, setPaying] = useState(null);
+  const [addingCheque, setAddingCheque] = useState(false);
   const [terminating, setTerminating] = useState(false);
   const [renewing, setRenewing] = useState(false);
 
@@ -278,7 +285,6 @@ export function LeaseDetail({ id, onBack, onOpen, onOpenTenant, backLabel, onNav
 
   const left = daysLeft(lease.endDate);
   const info = [
-    [t('leases.unit'), `${lease.property.name} · ${lease.unit.number}`],
     [t('leases.startDate'), formatDate(lease.startDate, lang)],
     [t('leases.endDate'), formatDate(lease.endDate, lang)],
     [t('leases.frequency'), t(`leases.frequencyValues.${lease.paymentFrequency}`)],
@@ -312,6 +318,21 @@ export function LeaseDetail({ id, onBack, onOpen, onOpenTenant, backLabel, onNav
           </Row>
         ) : null}
 
+        {canCollect && ['ACTIVE', 'ENDED'].includes(lease.status) ? (
+          <Row style={{ flexWrap: 'wrap' }}>
+            <Button
+              id="leases.recordPayment"
+              small
+              icon="cash-plus"
+              title={t('leases.recordPayment')}
+              onPress={() => setPaying({ tenantId: lease.tenant.id, tenantName: lease.tenant.name, leaseId: lease.id })}
+            />
+            {lease.status === 'ACTIVE' ? (
+              <Button id="leases.addCheque" small variant="secondary" icon="checkbook" title={t('cheques.add')} onPress={() => setAddingCheque(true)} />
+            ) : null}
+          </Row>
+        ) : null}
+
         <Card style={{ gap: SPACING.sm }}>
           <Pressable onPress={() => onOpenTenant?.(lease.tenant.id)}>
             <Row style={{ justifyContent: 'space-between' }}>
@@ -319,6 +340,12 @@ export function LeaseDetail({ id, onBack, onOpen, onOpenTenant, backLabel, onNav
               <Txt weight="weightMedium" style={{ color: COLORS.primaryDark }}>{lease.tenant.name}</Txt>
             </Row>
           </Pressable>
+          <Row style={{ justifyContent: 'space-between' }}>
+            <Txt muted>{t('leases.unit')}</Txt>
+            <LinkText onPress={seeProperties && onNavigate ? () => onNavigate('properties', { propertyId: lease.property.id }) : null} style={{ flexShrink: 1 }}>
+              {`${lease.property.name} · ${lease.unit.number}`}
+            </LinkText>
+          </Row>
           {info.map(([label, value]) => (
             <Row key={label} style={{ justifyContent: 'space-between' }}>
               <Txt muted>{label}</Txt>
@@ -381,6 +408,23 @@ export function LeaseDetail({ id, onBack, onOpen, onOpenTenant, backLabel, onNav
         onClose={() => setEditing(null)}
         onSaved={() => {
           setEditing(null);
+          load();
+        }}
+      />
+      <PaymentForm
+        preset={paying}
+        onClose={() => setPaying(null)}
+        onSaved={() => {
+          setPaying(null);
+          load();
+        }}
+      />
+      <ChequeForm
+        visible={addingCheque}
+        preset={{ tenant: { id: lease.tenant.id, name: lease.tenant.name }, leaseId: lease.id }}
+        onClose={() => setAddingCheque(false)}
+        onSaved={() => {
+          setAddingCheque(false);
           load();
         }}
       />

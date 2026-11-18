@@ -13,6 +13,8 @@
   },
   "postCreateCommand": "bash .devcontainer/setup.sh",
   "postStartCommand": "bash .devcontainer/start.sh",
+  // opening the Codespace again (or a reconnect) starts anything that stopped; running servers are kept
+  "postAttachCommand": "bash .devcontainer/start.sh",
   "customizations": {
     "codespaces": { "openFiles": [".devcontainer/README.md"] }
   }
