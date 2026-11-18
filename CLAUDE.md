@@ -6,8 +6,8 @@ Read `docs/PROJECT.md` first: it is the source of truth for what we are building
 New decisions go into `docs/PROJECT.md` before they go into code.
 
 ## Stack (do not change tools)
-- App: Expo SDK 57 + React Native + react-native-web — one codebase for phone, tablet and web.
-  Files keep the existing layout: `App.js`, `screens/`, `services/`, `theme.js`. Read the Expo v57 docs before writing app code.
+- App: Expo SDK 58 + React Native + react-native-web — one codebase for phone, tablet and web.
+  Files keep the existing layout: `App.js`, `screens/`, `services/`, `theme.js`. Read the Expo v58 docs before writing app code.
 - Backend: NestJS + Prisma + PostgreSQL in `backend/`. The ONLY Prisma schema is `backend/prisma/schema.prisma`.
 
 ## Non-negotiable rules
