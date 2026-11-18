@@ -17,7 +17,8 @@ export function useTableLayout() {
  *  columns: [{ key, label, flex = 1, width, align: 'start' | 'end', render(row) }]
  *  rows, rowKey(row), onRowPress(row) (optional)
  */
-export default function DataTable({ columns, rows, rowKey = (r) => r.id, onRowPress }) {
+/** `highlightKey`: the row opened from a link elsewhere (dashboard alert, search) is shown highlighted. */
+export default function DataTable({ columns, rows, rowKey = (r) => r.id, onRowPress, highlightKey }) {
   const { row: dir } = useI18n();
   const cell = (c) => [styles.cell, c.width ? { width: c.width } : { flex: c.flex ?? 1 }, c.align === 'end' && { alignItems: 'flex-end' }];
 
@@ -35,7 +36,7 @@ export default function DataTable({ columns, rows, rowKey = (r) => r.id, onRowPr
           key={rowKey(r)}
           onPress={onRowPress ? () => onRowPress(r) : undefined}
           disabled={!onRowPress}
-          style={({ hovered, pressed }) => [styles.row, { flexDirection: dir }, i > 0 && styles.divider, (hovered || pressed) && onRowPress && { backgroundColor: COLORS.surfaceSoft }]}
+          style={({ hovered, pressed }) => [styles.row, { flexDirection: dir }, i > 0 && styles.divider, highlightKey && rowKey(r) === highlightKey && { backgroundColor: COLORS.primarySoft }, (hovered || pressed) && onRowPress && { backgroundColor: COLORS.surfaceSoft }]}
         >
           {columns.map((c) => (
             <View key={c.key} style={cell(c)}>

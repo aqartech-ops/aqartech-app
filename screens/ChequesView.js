@@ -10,7 +10,8 @@ import { omrInput, parseOMR } from '../services/money';
 import { matches } from '../services/text';
 import { Money, MoneyField } from '../components/Rial';
 import { DateField, PickerButton, formatDate, isDateText, today } from '../components/Fields';
-import { Badge, Button, Card, ChipSelect, EmptyState, ErrorBox, Field, FieldRow, Loading, Row, Sheet, Txt, errorText } from '../components/ui';
+import { Badge, Button, Card, ChipSelect, EmptyState, ErrorBox, Field, FieldRow, LinkText, Loading, Row, Sheet, Txt, errorText } from '../components/ui';
+import { useSession } from '../services/session';
 import { TenantPicker } from './PaymentsView';
 import ExportButton from '../components/ExportButton';
 import { day, omr } from '../services/exportCsv';
@@ -25,8 +26,10 @@ const isDue = (c) => new Date(c.dueDate).toISOString().slice(0, 10) <= todayText
 
 // ================================================================ tab
 
-export function ChequesTab({ editable, version, onChanged, onOpenReceipt, focusId }) {
+export function ChequesTab({ editable, version, onChanged, onOpenReceipt, focusId, onNavigate }) {
   const { t, lang, row } = useI18n();
+  const { levelOf } = useSession();
+  const toTenants = onNavigate && levelOf('tenants') !== 'HIDDEN' ? (p) => onNavigate('tenants', p) : null;
   const asTable = useTableLayout(); // web look: the list is a table
   const [filter, setFilter] = useState(focusId ? 'all' : 'toDeposit');
   const [text, setText] = useState('');
@@ -105,6 +108,7 @@ export function ChequesTab({ editable, version, onChanged, onOpenReceipt, focusI
       ) : asTable ? (
         <DataTable
           rows={visible}
+          highlightKey={focusId}
           columns={[
             {
               key: 'number',
@@ -121,8 +125,8 @@ export function ChequesTab({ editable, version, onChanged, onOpenReceipt, focusI
                 </View>
               ),
             },
-            { key: 'tenant', label: t('table.tenant'), flex: 1.6, render: (c) => <Txt numberOfLines={1}>{c.tenant.name}</Txt> },
-            { key: 'lease', label: t('table.lease'), flex: 1.8, render: (c) => <Txt muted numberOfLines={1}>{`${c.lease.number} · ${c.lease.property.name} · ${c.lease.unit.number}`}</Txt> },
+            { key: 'tenant', label: t('table.tenant'), flex: 1.6, render: (c) => <LinkText onPress={toTenants ? () => toTenants({ tenantId: c.tenant.id }) : null}>{c.tenant.name}</LinkText> },
+            { key: 'lease', label: t('table.lease'), flex: 1.8, render: (c) => <LinkText muted onPress={toTenants ? () => toTenants({ leaseId: c.lease.id }) : null}>{`${c.lease.number} · ${c.lease.property.name} · ${c.lease.unit.number}`}</LinkText> },
             { key: 'due', label: t('table.dueDate'), flex: 1, render: (c) => <Txt numberOfLines={1}>{formatDate(c.dueDate, lang)}</Txt> },
             {
               key: 'status',
@@ -294,9 +298,9 @@ function ActionSheet({ action, onClose, onDone }) {
 
 // ================================================================ lease chooser (tenant → lease)
 
-function LeaseChooser({ value, onChange, error }) {
+function LeaseChooser({ value, onChange, error, initialTenant = null, preferLeaseId = null }) {
   const { t } = useI18n();
-  const [tenant, setTenant] = useState(null);
+  const [tenant, setTenant] = useState(initialTenant);
   const [leases, setLeases] = useState(null);
   const [picking, setPicking] = useState(false);
 
@@ -307,7 +311,7 @@ function LeaseChooser({ value, onChange, error }) {
       .tenantLeases(tenant.id)
       .then((list) => {
         setLeases(list);
-        const active = list.find((l) => l.status === 'ACTIVE') ?? list[0];
+        const active = list.find((l) => l.id === preferLeaseId) ?? list.find((l) => l.status === 'ACTIVE') ?? list[0];
         if (active) onChange(active);
       })
       .catch(() => setLeases([]));
@@ -345,7 +349,8 @@ function LeaseChooser({ value, onChange, error }) {
 
 // ================================================================ single cheque
 
-function ChequeForm({ visible, onClose, onSaved }) {
+/** A post-dated cheque. `preset` = { tenant: { id, name }, leaseId } when opened from a lease's page. */
+export function ChequeForm({ visible, onClose, onSaved, preset }) {
   const { t, lang } = useI18n();
   const [lease, setLease] = useState(null);
   const [form, setForm] = useState({});
@@ -411,7 +416,7 @@ function ChequeForm({ visible, onClose, onSaved }) {
       }
     >
       {error && !error.field ? <ErrorBox error={error} /> : null}
-      <LeaseChooser value={lease} onChange={setLease} error={fieldError('leaseId')} />
+      <LeaseChooser value={lease} onChange={setLease} error={fieldError('leaseId')} initialTenant={preset?.tenant} preferLeaseId={preset?.leaseId} />
       {scan.element}
       <FieldRow>
         <Field label={t('payments.chequeNo')} value={form.number} onChangeText={set('number')} error={fieldError('number')} />
@@ -436,7 +441,7 @@ function nthNumber(first, offset) {
   return `${m[1]}${String(Number(m[2]) + offset).padStart(m[2].length, '0')}`;
 }
 
-function BulkChequesForm({ visible, onClose, onSaved }) {
+export function BulkChequesForm({ visible, onClose, onSaved, preset }) {
   const { t, lang } = useI18n();
   const [lease, setLease] = useState(null);
   const [plan, setPlan] = useState(null);
@@ -508,7 +513,7 @@ function BulkChequesForm({ visible, onClose, onSaved }) {
     >
       {error && !error.field ? <ErrorBox error={error} /> : null}
       <Txt muted size="small">{t('cheques.bulkHint')}</Txt>
-      <LeaseChooser value={lease} onChange={setLease} error={fieldError('leaseId')} />
+      <LeaseChooser value={lease} onChange={setLease} error={fieldError('leaseId')} initialTenant={preset?.tenant} preferLeaseId={preset?.leaseId} />
       <FieldRow>
         <Field label={t('payments.bankName')} value={form.bankName} onChangeText={(v) => setForm((f) => ({ ...f, bankName: v }))} error={fieldError('bankName')} />
         <Field

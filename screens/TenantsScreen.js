@@ -14,6 +14,7 @@ import { matches } from '../services/text';
 import DataTable, { useTableLayout } from '../components/DataTable';
 import { DateField, dateText, formatDate, isDateText } from '../components/Fields';
 import { LeaseDetail, LeaseForm, LeasesTab, TenantLeases } from './LeasesView';
+import { PaymentForm } from './PaymentsView';
 import DocumentsPanel from '../components/DocumentsPanel';
 import { scannedName, useScanFill } from '../components/ScanFill';
 import {
@@ -46,33 +47,37 @@ function idState(idExpiry) {
   return null;
 }
 
-/** Tenants (المستأجرون) — records only — and their leases (العقود), in two tabs. */
+/**
+ * Tenants (المستأجرون) — records only — and their leases (العقود), in two tabs.
+ * Opening a tenant or a lease is a navigation (the web address changes: refresh keeps it, Back returns to the list).
+ */
 export default function TenantsScreen({ params, onNavigate }) {
   const { t } = useI18n();
   const [tab, setTab] = useState(params?.leaseId || params?.tab === 'leases' ? 'leases' : 'tenants');
-  const [tenantId, setTenantId] = useState(params?.tenantId ?? null);
-  const [leaseId, setLeaseId] = useState(params?.leaseId ?? null);
+  const tenantId = params?.tenantId ?? null;
+  const leaseId = params?.leaseId ?? null;
+  const go = (p) => onNavigate?.('tenants', p);
+  const openTenant = (id) => go({ tenantId: id });
+  // a lease opened from its tenant's page goes back to that tenant
+  const openLease = (id, fromTenant) => go({ leaseId: id, ...(fromTenant ? { tenantId: fromTenant } : {}) });
 
   if (leaseId) {
     return (
       <LeaseDetail
         key={leaseId}
         id={leaseId}
-        onBack={() => setLeaseId(null)}
+        onBack={() => (tenantId ? openTenant(tenantId) : go({ tab: 'leases' }))}
         backLabel={tenantId ? t('leases.tenant') : t('leases.title')}
-        onOpen={setLeaseId}
+        onOpen={(id) => openLease(id, tenantId)}
         onNavigate={onNavigate}
-        onOpenTenant={(id) => {
-          setLeaseId(null);
-          setTenantId(id);
-        }}
+        onOpenTenant={openTenant}
       />
     );
   }
-  if (tenantId) return <TenantDetail id={tenantId} onBack={() => setTenantId(null)} onOpenLease={setLeaseId} onNavigate={onNavigate} />;
+  if (tenantId) return <TenantDetail id={tenantId} onBack={() => go(null)} onOpenLease={(id) => openLease(id, tenantId)} onNavigate={onNavigate} />;
   const tabs = <TabSwitch value={tab} onChange={setTab} />;
-  if (tab === 'leases') return <LeasesList tabs={tabs} onOpen={setLeaseId} />;
-  return <TenantList tabs={tabs} onOpen={setTenantId} openCreate={!!params?.create} />;
+  if (tab === 'leases') return <LeasesList tabs={tabs} onOpen={(id) => openLease(id)} />;
+  return <TenantList tabs={tabs} onOpen={openTenant} openCreate={!!params?.create} />;
 }
 
 function TabSwitch({ value, onChange }) {
@@ -272,6 +277,7 @@ function TenantDetail({ id, onBack, onOpenLease, onNavigate }) {
   const [error, setError] = useState(null);
   const [editing, setEditing] = useState(null);
   const [newLease, setNewLease] = useState(null);
+  const [paying, setPaying] = useState(null);
   const [leasesVersion, setLeasesVersion] = useState(0);
 
   const load = useCallback(async () => {
@@ -350,13 +356,21 @@ function TenantDetail({ id, onBack, onOpenLease, onNavigate }) {
           </View>
         ) : null}
         {levelOf('financials') !== 'HIDDEN' ? (
-          <Button id="tenants.statement"
-            variant="secondary"
-            icon="file-document-outline"
-            title={t('finance.statement')}
-            onPress={() => onNavigate?.('financials', { tenantId: id })}
-            style={{ alignSelf: start }}
-          />
+          <Row style={{ flexWrap: 'wrap' }}>
+            {canEdit('financials') ? (
+              <Button id="tenants.recordPayment"
+                icon="cash-plus"
+                title={t('leases.recordPayment')}
+                onPress={() => setPaying({ tenantId: id, tenantName: tenant.name })}
+              />
+            ) : null}
+            <Button id="tenants.statement"
+              variant="secondary"
+              icon="file-document-outline"
+              title={t('finance.statement')}
+              onPress={() => onNavigate?.('financials', { tenantId: id })}
+            />
+          </Row>
         ) : null}
         {tenant.phone ? (
           <Row style={{ flexWrap: 'wrap' }}>
@@ -400,6 +414,14 @@ function TenantDetail({ id, onBack, onOpenLease, onNavigate }) {
           setNewLease(null);
           setLeasesVersion((v) => v + 1);
           if (saved?.id) onOpenLease(saved.id);
+        }}
+      />
+      <PaymentForm
+        preset={paying}
+        onClose={() => setPaying(null)}
+        onSaved={() => {
+          setPaying(null);
+          setLeasesVersion((v) => v + 1);
         }}
       />
       <TenantForm

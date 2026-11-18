@@ -1056,6 +1056,7 @@ export default {
   },
 
   properties: {
+    newWorkOrder: 'New work order',
     title: 'Properties',
     add: 'Add property',
     edit: 'Edit property',
@@ -1089,6 +1090,9 @@ export default {
   },
 
   units: {
+    newLease: 'New lease',
+    leaseUntil: 'until {{date}}',
+    statusFromLeaseHint: "Occupied and reserved follow the unit's leases automatically.",
     title: 'Units',
     add: 'Add unit',
     addBulk: 'Add many',
@@ -1128,6 +1132,7 @@ export default {
   },
 
   leases: {
+    recordPayment: 'Record payment',
     title: 'Leases',
     tabTenants: 'Tenants',
     tabLeases: 'Leases',
@@ -1616,6 +1621,7 @@ export default {
     'reset.invalidCode': 'The code is wrong or expired. Request a new one.',
     'auth.wrongCurrentPassword': 'Your current password is not correct.',
     'units.numberTaken': 'This unit number already exists in this property.',
+    'units.statusFromLease': "Occupied / reserved follow the unit's leases. End or terminate the lease first, or choose Vacant or Maintenance.",
     'units.bulkRange': 'Check the range: "to" must be after "from" (max 300 units at once).',
     'validation.nonNegativeInt': 'Enter a whole number.',
     'validation.date': 'Enter a valid date (YYYY-MM-DD).',

@@ -34,11 +34,15 @@ import {
   Txt,
   errorText,
   toLatinDigits,
+  LinkText,
 } from '../components/ui';
+import { LeaseForm } from './LeasesView';
+import { formatDate } from '../components/Fields';
 
 const CATEGORIES = ['BUILDING', 'VILLA_COMPOUND', 'VILLA', 'COMMERCIAL_COMPLEX', 'LAND', 'OTHER'];
 const UNIT_TYPES = ['APARTMENT', 'STUDIO', 'VILLA', 'ROOM', 'SHOP', 'OFFICE', 'WAREHOUSE', 'OTHER'];
-const UNIT_STATUSES = ['VACANT', 'OCCUPIED', 'MAINTENANCE', 'RESERVED'];
+// Occupied / reserved follow the unit's leases; people only switch between these two.
+const MANUAL_UNIT_STATUSES = ['VACANT', 'MAINTENANCE'];
 export const UNIT_STATUS_TONE = { VACANT: 'info', OCCUPIED: 'success', MAINTENANCE: 'warning', RESERVED: 'neutral' };
 const CATEGORY_ICON = {
   BUILDING: 'office-building-outline',
@@ -64,13 +68,11 @@ const moneyOrNull = (text) => (String(text ?? '').trim() ? parseOMR(text) ?? NaN
 const moneyText = (baisa) => (baisa === null || baisa === undefined ? '' : formatOMR(baisa, 'en', { withCurrency: false }).replace(/,/g, ''));
 
 export default function PropertiesScreen({ params, onNavigate }) {
-  const [selectedId, setSelectedId] = useState(params?.propertyId ?? null);
+  // Opening a property is a navigation (the web address changes: refresh keeps it, Back returns to the list).
+  const selectedId = params?.propertyId ?? null;
   // Coming from an owner's page: open the agreement / partners editor with that owner
   const [linkOwnerId, setLinkOwnerId] = useState(params?.linkOwnerId ?? null);
-
-  useEffect(() => {
-    if (params?.propertyId) setSelectedId(params.propertyId);
-  }, [params]);
+  const open = (id) => onNavigate?.('properties', id ? { propertyId: id } : null);
 
   if (selectedId) {
     return (
@@ -78,7 +80,7 @@ export default function PropertiesScreen({ params, onNavigate }) {
         id={selectedId}
         linkOwnerId={linkOwnerId}
         onLinkHandled={() => setLinkOwnerId(null)}
-        onBack={() => setSelectedId(null)}
+        onBack={() => open(null)}
         onNavigate={onNavigate}
       />
     );
@@ -87,13 +89,11 @@ export default function PropertiesScreen({ params, onNavigate }) {
     <PropertyList
       openCreate={!!params?.create}
       createAsManaged={!!linkOwnerId}
-      onOpen={setSelectedId}
+      onOpen={open}
       onNavigate={onNavigate}
     />
   );
 }
-
-// =================================================================== list
 
 function PropertyList({ onOpen, openCreate, createAsManaged }) {
   const { t } = useI18n();
@@ -263,8 +263,15 @@ function OccupancyBar({ stats: s }) {
 function PropertyDetail({ id, onBack, linkOwnerId, onLinkHandled, onNavigate }) {
   const { t, lang, isRTL, start } = useI18n();
   const extraFields = useFieldRules('property');
-  const { canEdit } = useSession();
+  const { canEdit, levelOf } = useSession();
   const editable = canEdit('properties');
+  const canLease = canEdit('tenants');
+  const canMaintain = canEdit('maintenance');
+  const seeLeases = levelOf('tenants') !== 'HIDDEN';
+  const [newLease, setNewLease] = useState(null); // a lease being created for a vacant unit
+  // maintenance request for the building or one unit: opens the maintenance form prefilled
+  const requestMaintenance = (unit) =>
+    onNavigate?.('maintenance', { create: true, preset: { propertyId: property.id, property: { id: property.id, name: property.name, ownership: property.ownership }, unitId: unit?.id ?? null } });
   const [property, setProperty] = useState(null);
   const [error, setError] = useState(null);
   const [editingProperty, setEditingProperty] = useState(null);
@@ -422,6 +429,11 @@ function PropertyDetail({ id, onBack, linkOwnerId, onLinkHandled, onNavigate }) 
 
         <Row style={{ justifyContent: 'space-between', flexWrap: 'wrap' }}>
           <Txt size="medium" weight="weightBold">{t('units.title')}</Txt>
+          {editable || canMaintain ? (
+            <Row style={{ flexWrap: 'wrap' }}>
+              {canMaintain ? <Button id="properties.workOrder" small variant="secondary" icon="wrench-outline" title={t('properties.newWorkOrder')} onPress={() => requestMaintenance(null)} /> : null}
+            </Row>
+          ) : null}
           {editable ? (
             <Row style={{ flexWrap: 'wrap' }}>
               <Button id="units.trash" small variant={deletedUnits ? 'primary' : 'secondary'} icon="delete-restore" title={t('common.trash')} onPress={toggleDeletedUnits} />
@@ -473,17 +485,23 @@ function PropertyDetail({ id, onBack, linkOwnerId, onLinkHandled, onNavigate }) 
                         unit.status === 'VACANT' && unit.vacantSince
                           ? t('units.vacantSince', { date: new Date(unit.vacantSince).toLocaleDateString(lang === 'ar' ? 'ar-OM' : 'en-GB') })
                           : null,
-                        unit.leases?.[0]
-                          ? t('leases.unitLease', {
-                              tenant: unit.leases[0].tenant.name,
-                              date: new Date(unit.leases[0].endDate).toLocaleDateString(lang === 'ar' ? 'ar-OM' : 'en-GB'),
-                            })
-                          : null,
                       ]
                         .filter(Boolean)
                         .join(' · ')}
                     </Txt>
+                    {unit.leases?.[0] ? (
+                      <Row gap={4} style={{ flexWrap: 'wrap' }}>
+                        <LinkText size="small" onPress={seeLeases ? () => onNavigate?.('tenants', { leaseId: unit.leases[0].id }) : undefined}>
+                          {unit.leases[0].tenant.name}
+                        </LinkText>
+                        <Txt muted size="small">{t('units.leaseUntil', { date: formatDate(unit.leases[0].endDate, lang) })}</Txt>
+                      </Row>
+                    ) : null}
                   </View>
+                  {unit.status === 'VACANT' && canLease ? (
+                    <Button id="units.newLease" small variant="secondary" icon="file-sign" title={t('units.newLease')} onPress={() => setNewLease({ unitId: unit.id, unit, property })} />
+                  ) : null}
+                  {canMaintain ? <IconButton id="units.workOrder" icon="wrench-outline" label={t('properties.newWorkOrder')} onPress={() => requestMaintenance(unit)} /> : null}
                   {unit.askingRent ? <Money baisa={unit.askingRent} size={14} weight="weightMedium" /> : null}
                   {editable ? (
                     <IconButton id="units.delete" icon="delete-outline" color={COLORS.danger} label={t('common.delete')} onPress={() => removeUnit(unit)} />
@@ -501,6 +519,15 @@ function PropertyDetail({ id, onBack, linkOwnerId, onLinkHandled, onNavigate }) 
         onSaved={() => {
           setEditingProperty(null);
           load();
+        }}
+      />
+      <LeaseForm
+        lease={newLease}
+        onClose={() => setNewLease(null)}
+        onSaved={(saved) => {
+          setNewLease(null);
+          if (saved?.id) onNavigate?.('tenants', { leaseId: saved.id });
+          else load();
         }}
       />
       <UnitForm
@@ -723,7 +750,13 @@ function UnitForm({ propertyId, unit, onClose, onSaved }) {
       <Txt weight="weightMedium" size="small">{t('units.type')}</Txt>
       <ChipSelect value={form.type} onChange={set('type')} options={UNIT_TYPES.map((v) => ({ value: v, label: t(`units.typeValues.${v}`) }))} />
       <Txt weight="weightMedium" size="small">{t('units.status')}</Txt>
-      <ChipSelect value={form.status} onChange={set('status')} options={UNIT_STATUSES.map((v) => ({ value: v, label: t(`units.statusValues.${v}`) }))} />
+      {MANUAL_UNIT_STATUSES.includes(unit?.status ?? 'VACANT') ? (
+        <ChipSelect value={form.status} onChange={set('status')} options={MANUAL_UNIT_STATUSES.map((v) => ({ value: v, label: t(`units.statusValues.${v}`) }))} />
+      ) : (
+        <Badge label={t(`units.statusValues.${unit.status}`)} tone={UNIT_STATUS_TONE[unit.status]} />
+      )}
+      <Txt muted size="small">{t('units.statusFromLeaseHint')}</Txt>
+      {fieldError('status') ? <Txt size="small" style={{ color: COLORS.danger }}>{fieldError('status')}</Txt> : null}
       <MoneyField {...rules.props('askingRent', t('units.askingRent'))} value={form.askingRent} onChangeText={set('askingRent')} error={fieldError('askingRent')} />
       <FieldRow>
         <Field {...rules.props('area', t('units.area'))} value={form.area} onChangeText={set('area')} keyboardType="decimal-pad" inputMode="decimal" error={fieldError('area')} />

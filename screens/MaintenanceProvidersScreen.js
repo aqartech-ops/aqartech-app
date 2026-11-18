@@ -13,7 +13,7 @@ import { formatOMR, parseOMR } from '../services/money';
 import { matches } from '../services/text';
 import { Money, MoneyField } from '../components/Rial';
 import { DateField, formatDate, isDateText, today } from '../components/Fields';
-import { Badge, Button, Card, ChipSelect, EmptyState, ErrorBox, Field, FieldRow, IconButton, Loading, Row, Screen, Segmented, Sheet, Txt, errorText } from '../components/ui';
+import { Badge, Button, Card, ChipSelect, EmptyState, ErrorBox, Field, FieldRow, IconButton, LinkText, Loading, Row, Screen, Segmented, Sheet, Txt, errorText } from '../components/ui';
 import { BEARERS, PAID_FROM, PropertyUnitPicker } from './ExpensesView';
 
 // Maintenance (الصيانة): work orders and contractors. Closing a work order with a cost records the expense.
@@ -23,7 +23,7 @@ const PRIORITY_TONE = { URGENT: 'danger', HIGH: 'warning', NORMAL: 'info', LOW: 
 const STATUS_TONE = { OPEN: 'warning', IN_PROGRESS: 'info', DONE: 'success', CANCELLED: 'neutral' };
 const moneyText = (baisa) => (baisa ? formatOMR(baisa, 'en', { withCurrency: false }).replace(/,/g, '') : '');
 
-export default function MaintenanceProvidersScreen({ params }) {
+export default function MaintenanceProvidersScreen({ params, onNavigate }) {
   const { t } = useI18n();
   const { canEdit } = useSession();
   const editable = canEdit('maintenance');
@@ -39,7 +39,7 @@ export default function MaintenanceProvidersScreen({ params }) {
             { value: 'vendors', label: t('maintenance.tabs.vendors') },
           ]}
         />
-        {tab === 'orders' ? <WorkOrders editable={editable} openCreate={!!params?.create} focusId={params?.workOrderId} /> : <Vendors editable={editable} />}
+        {tab === 'orders' ? <WorkOrders editable={editable} openCreate={!!params?.create} preset={params?.preset} focusId={params?.workOrderId} onNavigate={onNavigate} /> : <Vendors editable={editable} />}
       </View>
     </Screen>
   );
@@ -47,14 +47,17 @@ export default function MaintenanceProvidersScreen({ params }) {
 
 // ================================================================ work orders
 
-function WorkOrders({ editable, openCreate, focusId }) {
+/** `preset` = { propertyId, property, unitId } when opened from a property's page. */
+function WorkOrders({ editable, openCreate, preset, focusId, onNavigate }) {
   const { t, lang, forwardIcon } = useI18n();
+  const { levelOf } = useSession();
+  const openProperty = levelOf('properties') !== 'HIDDEN' && onNavigate ? (w) => () => onNavigate('properties', { propertyId: w.property.id }) : () => undefined;
   const asTable = useTableLayout(); // web look: the list is a table
   const [filter, setFilter] = useState(focusId ? 'all' : 'open');
   const [text, setText] = useState('');
   const [rows, setRows] = useState(null);
   const [error, setError] = useState(null);
-  const [editing, setEditing] = useState(openCreate && editable ? {} : null);
+  const [editing, setEditing] = useState(openCreate && editable ? (preset && typeof preset === 'object' ? preset : {}) : null);
   const [openId, setOpenId] = useState(focusId ?? null);
 
   const load = useCallback(async () => {
@@ -91,11 +94,12 @@ function WorkOrders({ editable, openCreate, focusId }) {
       ) : asTable ? (
         <DataTable
           rows={visible}
+          highlightKey={focusId}
           onRowPress={(w) => setOpenId(w.id)}
           columns={[
             { key: 'number', label: t('table.number'), flex: 0.9, render: (w) => <Txt weight="weightMedium" numberOfLines={1}>{w.number}</Txt> },
             { key: 'title', label: t('table.request'), flex: 2.2, render: (w) => <Txt numberOfLines={1}>{w.title}</Txt> },
-            { key: 'unit', label: t('table.propertyUnit'), flex: 1.8, render: (w) => <Txt muted numberOfLines={1}>{`${w.property.name} · ${w.unit ? w.unit.number : t('expenses.commonArea')}`}</Txt> },
+            { key: 'unit', label: t('table.propertyUnit'), flex: 1.8, render: (w) => <LinkText onPress={openProperty(w)}>{`${w.property.name} · ${w.unit ? w.unit.number : t('expenses.commonArea')}`}</LinkText> },
             { key: 'vendor', label: t('table.vendor'), flex: 1.3, render: (w) => <Txt muted numberOfLines={1}>{w.vendor?.name ?? '—'}</Txt> },
             { key: 'priority', label: t('table.priority'), flex: 1, render: (w) => <Badge label={t(`maintenance.priorities.${w.priority}`)} tone={PRIORITY_TONE[w.priority]} /> },
             { key: 'status', label: t('table.status'), flex: 1.1, render: (w) => <Badge label={t(`maintenance.statuses.${w.status}`)} tone={STATUS_TONE[w.status]} /> },
