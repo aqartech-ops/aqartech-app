@@ -1037,6 +1037,7 @@ export default {
     loadMore: 'عرض المزيد',
   },
   dashboard: {
+    quickTitle: 'إجراء سريع',
     hello: 'أهلاً، {{name}}',
     overview: 'هذه نظرة عامة على محفظتك العقارية.',
     occupancy: 'نسبة الإشغال',
@@ -1407,6 +1408,11 @@ export default {
 
   // التقرير الشهري للعقار في لوحة التحكم
   report: {
+    thisMonth: 'هذا الشهر',
+    prevMonth: 'الشهر السابق',
+    otherMonth: 'شهر آخر…',
+    vsLastMonth: 'عن الشهر السابق',
+    alertsTitle: 'تنبيهات',
     title: 'التقرير الشهري للعقار',
     printTitle: 'تقرير الأداء الشهري — {{name}}',
     property: 'العقار',

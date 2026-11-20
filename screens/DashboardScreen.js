@@ -87,7 +87,8 @@ function CompanyDashboard({ onNavigate }) {
   const quick = data?.quickActions ?? [];
 
   return (
-    <Screen title={t('dashboard.hello', { name: me.user.name })} subtitle={t('dashboard.overview')}>
+    // no page title: the report's own title row heads the page (corporate look); the person's name is in the top bar
+    <Screen>
       <ErrorBox error={error} onRetry={load} />
 
       {subscription && subStatus !== 'ACTIVE' ? (
@@ -123,34 +124,8 @@ function CompanyDashboard({ onNavigate }) {
 
       {data === null && !error ? <Loading /> : null}
 
-      {quick.length ? (
-        <Row style={{ flexWrap: 'wrap', marginBottom: SPACING.md }}>
-          {quick.includes('tenants') ? (
-            <Button id="dashboard.newTenant" icon="account-plus-outline" title={t('dashboard.newTenant')} onPress={() => onNavigate?.('tenants', { create: true })} style={{ flexGrow: 1 }} />
-          ) : null}
-          {quick.includes('properties') ? (
-            <Button id="dashboard.addProperty"
-              variant="secondary"
-              icon="home-plus-outline"
-              title={t('properties.add')}
-              onPress={() => onNavigate?.('properties', { create: true })}
-              style={{ flexGrow: 1 }}
-            />
-          ) : null}
-          {quick.includes('maintenance') ? (
-            <Button id="dashboard.newWorkOrder"
-              variant="secondary"
-              icon="wrench-outline"
-              title={t('maintenance.add')}
-              onPress={() => onNavigate?.('maintenance', { create: true })}
-              style={{ flexGrow: 1 }}
-            />
-          ) : null}
-        </Row>
-      ) : null}
-
       {/* the monthly property report (Liwan layout): building + month, KPIs, tables, charts, printable */}
-      {data ? <MonthlyReport onNavigate={onNavigate} /> : null}
+      {data ? <MonthlyReport onNavigate={onNavigate} aside={quick.length ? <QuickActions quick={quick} onNavigate={onNavigate} /> : null} /> : null}
 
       {w.metrics ? (
         <>
@@ -189,6 +164,25 @@ function CompanyDashboard({ onNavigate }) {
         </>
       ) : null}
     </Screen>
+  );
+}
+
+/** The side column's «quick action» card: only the sections the person may edit. */
+function QuickActions({ quick, onNavigate }) {
+  const { t } = useI18n();
+  return (
+    <Card style={{ gap: SPACING.sm, padding: SPACING.lg + 4 }}>
+      <Txt display weight="weightMedium" size="medium" style={{ marginBottom: 2 }}>{t('dashboard.quickTitle')}</Txt>
+      {quick.includes('tenants') ? (
+        <Button id="dashboard.newTenant" variant="secondary" icon="account-plus-outline" title={t('dashboard.newTenant')} onPress={() => onNavigate?.('tenants', { create: true })} />
+      ) : null}
+      {quick.includes('properties') ? (
+        <Button id="dashboard.addProperty" variant="secondary" icon="home-plus-outline" title={t('properties.add')} onPress={() => onNavigate?.('properties', { create: true })} />
+      ) : null}
+      {quick.includes('maintenance') ? (
+        <Button id="dashboard.newWorkOrder" variant="secondary" icon="wrench-outline" title={t('maintenance.add')} onPress={() => onNavigate?.('maintenance', { create: true })} />
+      ) : null}
+    </Card>
   );
 }
 
