@@ -1,0 +1,44 @@
+# Preview link (رابط تجريبي للمراجعة) on Render — temporary, for reviewers. NOT the production setup (see docs/DEPLOY.md).
+# One web service serves the website and the API (/api), plus a free PostgreSQL database.
+# Free plan limits: the service sleeps after 15 minutes without visits (first visit then takes about a minute),
+# uploaded files are lost when it restarts, and the free database expires 30 days after it is created.
+# Guide (Arabic): docs/PREVIEW.md
+services:
+  - type: web
+    name: aqartech-preview
+    runtime: node
+    plan: free
+    branch: main
+    buildCommand: >-
+      npm ci &&
+      EXPO_PUBLIC_API_URL=/api npx expo export -p web &&
+      cd backend && npm ci && npx prisma generate && npm run build
+    startCommand: cd backend && node scripts/preview-start.mjs
+    healthCheckPath: /api/plans
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: DATABASE_URL
+        fromDatabase:
+          name: aqartech-preview-db
+          property: connectionString
+      - key: JWT_SECRET
+        generateValue: true
+      - key: ADMIN_2FA_KEY
+        generateValue: true
+      - key: ADMIN_PASSWORD
+        generateValue: true
+      - key: ADMIN_EMAIL
+        value: admin@aqartech.test
+      - key: SEED_DEMO
+        value: "1"
+      - key: API_PREFIX
+        value: api
+      - key: WEB_DIR
+        value: ../dist
+
+databases:
+  - name: aqartech-preview-db
+    plan: free
+    databaseName: aqartech
+    user: aqartech
