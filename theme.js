@@ -1,12 +1,12 @@
 import { Platform } from 'react-native';
 import { WEB_SKIN } from './services/skin';
 
-// AqarTech design tokens — "Ivory & Emerald" (العاجي والزمردي), the same identity on phone, tablet and web:
-// ivory pages, white cards with fine borders, deep emerald for actions and the report band, brass/champagne
-// for the few accents. Use these tokens everywhere; never hard-code colors or sizes in screens.
+// AqarTech design tokens — "Ivory & Emerald" (العاجي والزمردي), corporate layout (المؤسسية), the same identity on
+// phone, tablet and web: a slim emerald bar on top, ivory pages, white cards with fine borders, one color for numbers
+// (red only for arrears), brass/champagne for the few accents. Use these tokens everywhere; never hard-code colors.
 
 export const COLORS = {
-  background: '#FAF7F0', // ivory page background
+  background: '#F7F4EC', // ivory page background
   surface: '#FFFFFF', // cards, inputs, menus
   surfaceSoft: '#F3EEE2', // totals, table headers, subtle panels (warm beige)
   card: '#FFFFFF', // kept for backward compatibility
@@ -25,8 +25,10 @@ export const COLORS = {
   textMuted: '#5F6763', // secondary text, placeholders (4.5:1 on ivory)
   onPrimary: '#FFFFFF',
 
-  border: '#E6E0D2',
-  borderStrong: '#D6CEBC',
+  border: '#ECE6D8',
+  borderStrong: '#DDD5C3',
+  hairline: '#F1ECE1', // rows inside cards
+  overline: '#8A6D36', // small brass label above titles (4.6:1 on white)
 
   // the emerald band at the top of the dashboard / reports
   band: '#0F4D3F',
@@ -74,7 +76,15 @@ export const SHADOWS = {
   floating: { boxShadow: '0px 12px 32px rgba(10, 51, 41, 0.14)' },
 };
 
-// Menus (the web's top navigation, the phone's side menu): light, the selected item in soft emerald.
+// The slim emerald bar on top (web navigation, the phone's top bar)
+COLORS.header = COLORS.primary;
+COLORS.headerText = '#FFFFFF';
+COLORS.headerMuted = '#D6E2DB';
+COLORS.headerActive = 'rgba(255, 255, 255, 0.12)';
+COLORS.headerHover = 'rgba(255, 255, 255, 0.07)';
+COLORS.headerDivider = 'rgba(255, 255, 255, 0.2)';
+
+// Side menu (phone) and the classic web sidebar: light, the selected item in soft emerald.
 COLORS.nav = COLORS.surface;
 COLORS.navText = COLORS.textDark;
 COLORS.navMuted = COLORS.textMuted;

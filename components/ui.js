@@ -371,8 +371,8 @@ const styles = StyleSheet.create({
   segmentText: { color: COLORS.textMuted, fontSize: FONT.body, textAlign: 'center' },
   badge: { paddingHorizontal: SPACING.sm, paddingVertical: 3, borderRadius: RADIUS.pill, alignSelf: 'flex-start' },
   screen: { flex: 1, backgroundColor: COLORS.background },
-  // on the web the page uses the screen up to very wide monitors (where lines would get too long)
-  screenInner: { flexGrow: 1, padding: WEB_SKIN ? SPACING.xxl : SPACING.lg, width: '100%', maxWidth: WEB_SKIN ? 1760 : 1200, alignSelf: 'center' },
+  // on the web the page is a centered column (corporate look): calmer on wide monitors, lines never too long
+  screenInner: { flexGrow: 1, padding: WEB_SKIN ? SPACING.xxl : SPACING.lg, width: '100%', maxWidth: WEB_SKIN ? 1360 : 1200, alignSelf: 'center' },
   empty: { alignItems: 'center', justifyContent: 'center', gap: SPACING.md, padding: SPACING.xxl },
   errorBox: {
     flexDirection: 'row',

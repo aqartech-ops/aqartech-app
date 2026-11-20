@@ -1037,6 +1037,7 @@ export default {
     loadMore: 'Load more',
   },
   dashboard: {
+    quickTitle: 'Quick action',
     hello: 'Hello, {{name}}',
     overview: 'Here is an overview of your portfolio.',
     occupancy: 'Occupancy rate',
@@ -1407,6 +1408,11 @@ export default {
 
   // Monthly property report on the dashboard
   report: {
+    thisMonth: 'This month',
+    prevMonth: 'Last month',
+    otherMonth: 'Other month…',
+    vsLastMonth: 'vs last month',
+    alertsTitle: 'Alerts',
     title: 'Monthly property report',
     printTitle: 'Monthly property management report — {{name}}',
     property: 'Property',

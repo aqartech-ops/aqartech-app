@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Modal, Platform, Pressable, ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { StatusBar } from 'expo-status-bar';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { COLORS, FONT, RADIUS, SPACING } from '../theme';
 import { BREAKPOINTS } from '../services/config';
@@ -44,7 +45,7 @@ export default function AppShell({ items, active, onNavigate, children }) {
     if (!IS_APP && typeof document !== 'undefined') document.title = title ? `${title} · ${t('app.name')}` : t('app.name');
   }, [title, t]);
 
-  // Web look (Ivory & Emerald): a white navigation bar along the top on wide screens. Same items, same navigation.
+  // Web look (Ivory & Emerald, corporate): a slim emerald navigation bar along the top on wide screens.
   if (WEB_SKIN && fixedSidebar) {
     return (
       <View style={styles.root}>
@@ -59,8 +60,10 @@ export default function AppShell({ items, active, onNavigate, children }) {
   }
 
   return (
-    <SafeAreaView style={styles.root} edges={IS_APP ? ['top'] : ['top', 'bottom']}>
-      <View style={[styles.body, { flexDirection: row }]}>
+    // the app: the area under the phone's status bar takes the emerald of the top bar
+    <SafeAreaView style={[styles.root, IS_APP && { backgroundColor: COLORS.header }]} edges={IS_APP ? ['top'] : ['top', 'bottom']}>
+      {IS_APP ? <StatusBar style="light" /> : null}
+      <View style={[styles.body, { flexDirection: row, backgroundColor: COLORS.background }]}>
         {fixedSidebar ? (
           <View style={{ width: 260 }}>
             <Sidebar items={items} active={active} onSelect={go} onSearch={() => setSearchOpen(true)} />
@@ -70,10 +73,10 @@ export default function AppShell({ items, active, onNavigate, children }) {
         <View style={{ flex: 1 }}>
           {!fixedSidebar ? (
             <Row style={styles.topBar}>
-              <IconButton icon="menu" size={26} label={t('common.menu')} onPress={() => setMenuOpen(true)} style={{ padding: 10 }} />
-              <Txt size="medium" weight="weightBold" style={{ flex: 1 }} numberOfLines={1}>{title}</Txt>
-              <IconButton icon="magnify" size={26} label={t('search.title')} onPress={() => setSearchOpen(true)} style={{ padding: 10 }} />
-              <Brand compact />
+              <IconButton icon="menu" size={26} color={COLORS.headerText} label={t('common.menu')} onPress={() => setMenuOpen(true)} style={{ padding: 10 }} />
+              <Txt size="medium" weight="weightMedium" style={{ flex: 1, color: COLORS.headerText }} numberOfLines={1}>{title}</Txt>
+              <IconButton icon="magnify" size={26} color={COLORS.headerText} label={t('search.title')} onPress={() => setSearchOpen(true)} style={{ padding: 10 }} />
+              <MaterialCommunityIcons name="home-city-outline" size={22} color={COLORS.accentSoft} style={{ paddingHorizontal: 6 }} />
             </Row>
           ) : null}
           <View style={{ flex: 1 }}>
@@ -184,10 +187,8 @@ function WebHeader({ items, active, onSelect, onSearch }) {
   return (
     <View style={[web.header, { flexDirection: row, paddingHorizontal: level.pad, gap: SPACING.lg }]}>
       <Row gap={SPACING.sm} style={{ flexShrink: 0 }}>
-        <View style={web.logo}>
-          <MaterialCommunityIcons name="home-city-outline" size={22} color={COLORS.accentSoft} />
-        </View>
-        {level.logoName ? <Txt display size={22} weight="weightBold" style={{ color: COLORS.primary }}>{t('app.name')}</Txt> : null}
+        <MaterialCommunityIcons name="home-city-outline" size={24} color={COLORS.accentSoft} />
+        {level.logoName ? <Txt display size={18} weight="weightBold" style={{ color: COLORS.headerText }}>{t('app.name')}</Txt> : null}
       </Row>
 
       <View style={[web.tabs, { flexDirection: row, flex: 1, minWidth: 0, overflow: 'hidden' }]}>
@@ -204,7 +205,7 @@ function WebHeader({ items, active, onSelect, onSearch }) {
               accessibilityState={{ selected }}
               style={({ hovered }) => [web.tab, { paddingHorizontal: iconOnly ? 10 : level.tabPad, flexDirection: row }, selected ? web.tabActive : hovered && web.tabHover]}
             >
-              {level.icons ? <SectionIcon name={item.icon} size={20} color={selected ? COLORS.primary : COLORS.textMuted} /> : null}
+              {level.icons ? <SectionIcon name={item.icon} size={20} color={selected ? COLORS.headerText : COLORS.headerMuted} /> : null}
               {!iconOnly ? <Txt numberOfLines={1} style={[web.tabText, selected && web.tabTextActive]}>{label}</Txt> : null}
             </Pressable>
           );
@@ -213,48 +214,43 @@ function WebHeader({ items, active, onSelect, onSearch }) {
 
       <Row gap={SPACING.sm} style={{ flexShrink: 0 }}>
         <Pressable onPress={onSearch} accessibilityRole="search" accessibilityLabel={t('search.title')} style={({ hovered }) => [web.square, hovered && web.squareHover]}>
-          <MaterialCommunityIcons name="magnify" size={20} color={COLORS.textDark} />
+          <MaterialCommunityIcons name="magnify" size={20} color={COLORS.headerText} />
         </Pressable>
         {other ? (
           <Pressable onPress={() => setLang(other.code)} style={({ hovered }) => [web.square, { width: undefined, paddingHorizontal: SPACING.md }, hovered && web.squareHover]}>
-            <Txt weight="weightMedium" size="small">{other.label}</Txt>
+            <Txt weight="weightMedium" size="small" style={{ color: COLORS.headerText }}>{other.label}</Txt>
           </Pressable>
         ) : null}
+        <View style={web.divider} />
         <View style={[web.person, { flexDirection: row }]}>
           <View style={web.avatar}>
-            <Txt weight="weightBold" style={{ color: COLORS.onPrimary }}>{initials}</Txt>
+            <Txt weight="weightBold" style={{ color: COLORS.onAccentSoft }}>{initials}</Txt>
           </View>
           <View style={{ maxWidth: level.company ? 170 : 130 }}>
-            <Txt weight="weightMedium" size="small" numberOfLines={1}>{displayName}</Txt>
-            {subtitle && level.company ? <Txt muted size={11} numberOfLines={1}>{subtitle}</Txt> : null}
+            <Txt weight="weightMedium" size="small" numberOfLines={1} style={{ color: COLORS.headerText }}>{displayName}</Txt>
+            {subtitle && level.company ? <Txt size={11} numberOfLines={1} style={{ color: COLORS.headerMuted }}>{subtitle}</Txt> : null}
           </View>
-          <IconButton icon="logout" size={18} color={COLORS.textMuted} label={t('auth.signOut')} onPress={signOut} />
+          <IconButton icon="logout" size={18} color={COLORS.headerMuted} label={t('auth.signOut')} onPress={signOut} />
         </View>
       </Row>
     </View>
   );
 }
 
+// the slim emerald bar (المؤسسية): white text, the open section on a light veil, tools without boxes
 const web = StyleSheet.create({
-  header: {
-    height: 76,
-    alignItems: 'center',
-    backgroundColor: COLORS.surface,
-    zIndex: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
-  },
-  logo: { width: 42, height: 42, borderRadius: RADIUS.md, backgroundColor: COLORS.primary, alignItems: 'center', justifyContent: 'center' },
-  tabs: { alignItems: 'center', gap: 4 },
-  tab: { paddingVertical: 10, borderRadius: RADIUS.sm, alignItems: 'center', gap: 6 },
-  tabHover: { backgroundColor: COLORS.background },
-  tabActive: { backgroundColor: COLORS.primarySoft },
-  tabText: { fontSize: FONT.body, color: COLORS.textMuted },
-  tabTextActive: { color: COLORS.primary, fontWeight: FONT.weightBold },
-  square: { width: 44, height: 44, borderRadius: RADIUS.md, borderWidth: 1, borderColor: COLORS.border, alignItems: 'center', justifyContent: 'center', backgroundColor: COLORS.surface },
-  squareHover: { borderColor: COLORS.borderStrong, backgroundColor: COLORS.background },
-  person: { alignItems: 'center', gap: SPACING.sm, paddingVertical: 5, paddingHorizontal: 6, borderRadius: RADIUS.pill, borderWidth: 1, borderColor: COLORS.border },
-  avatar: { width: 34, height: 34, borderRadius: 17, backgroundColor: COLORS.accent, alignItems: 'center', justifyContent: 'center' },
+  header: { height: 60, alignItems: 'center', backgroundColor: COLORS.header, zIndex: 10 },
+  tabs: { alignItems: 'center', gap: 2 },
+  tab: { paddingVertical: 8, borderRadius: RADIUS.sm - 2, alignItems: 'center', gap: 6 },
+  tabHover: { backgroundColor: COLORS.headerHover },
+  tabActive: { backgroundColor: COLORS.headerActive },
+  tabText: { fontSize: FONT.body, color: COLORS.headerMuted },
+  tabTextActive: { color: COLORS.headerText, fontWeight: FONT.weightMedium },
+  square: { width: 44, height: 44, borderRadius: RADIUS.sm, alignItems: 'center', justifyContent: 'center' },
+  squareHover: { backgroundColor: COLORS.headerHover },
+  divider: { width: 1, height: 24, backgroundColor: COLORS.headerDivider },
+  person: { alignItems: 'center', gap: SPACING.sm },
+  avatar: { width: 32, height: 32, borderRadius: 16, backgroundColor: COLORS.accentSoft, alignItems: 'center', justifyContent: 'center' },
 });
 
 function Sidebar({ items, active, onSelect, onSearch }) {
@@ -323,13 +319,7 @@ function Sidebar({ items, active, onSelect, onSearch }) {
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: COLORS.background },
   body: { flex: 1 },
-  topBar: {
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.sm,
-    backgroundColor: COLORS.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
-  },
+  topBar: { paddingHorizontal: SPACING.sm, paddingVertical: 2, backgroundColor: COLORS.header },
   sidebar: {
     width: '100%',
     minWidth: 240,
